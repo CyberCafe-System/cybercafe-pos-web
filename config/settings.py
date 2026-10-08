@@ -34,7 +34,7 @@ if not SECRET_KEY:
     raise environ.ImproperlyConfigured('SECRET_KEY_TOKEN must not be empty.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG')
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -48,7 +48,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'usuarios',
 ]
+
+AUTH_USER_MODEL = 'usuarios.Usuario'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -83,18 +86,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
-DB_NAME = env('DB_NAME', '')
+DB_NAME = env('DB_NAME', default='') #type: ignore
 if DB_NAME:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
             'NAME': DB_NAME,
-            'USER': env('DB_USER', ''),
-            'PASSWORD': env('DB_PASSWORD', ''),
-            'HOST': env('DB_HOST', ''),
-            'PORT': env('DB_PORT', '3306'),
+            'USER': env('DB_USER', default=''), #type: ignore
+            'PASSWORD': env('DB_PASSWORD', default=''), #type: ignore
+            'HOST': env('DB_HOST', default=''), #type: ignore
+            'PORT': env('DB_PORT', default='3306'), #type: ignore
             'OPTIONS': {
-                'charset': env('DB_CHARSET', 'utf8mb4'),
+                'charset': env('DB_CHARSET', default='utf8mb4'),#type: ignore
             },
         }
     }
@@ -129,9 +132,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = env('LANGUAGE_CODE', 'en-us')
+LANGUAGE_CODE = env('LANGUAGE_CODE', default='en-us') #type: ignore
 
-TIME_ZONE = env('TIME_ZONE', 'UTC')
+TIME_ZONE = env('TIME_ZONE', default='UTC') #type: ignore
 
 USE_I18N = True
 
@@ -149,11 +152,11 @@ STATIC_URL = 'static/'
 
 EMAIL_BACKEND = env(
     'EMAIL_BACKEND',
-    'django.core.mail.backends.console.EmailBackend',
+    default='django.core.mail.backends.console.EmailBackend', #type: ignore
 )
-EMAIL_HOST = env('EMAIL_HOST', '')
+EMAIL_HOST = env('EMAIL_HOST', default='')#type: ignore
 EMAIL_PORT = env('EMAIL_PORT')
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', '')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')#type: ignore
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')#type: ignore
 EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 EMAIL_USE_SSL = env('EMAIL_USE_SSL')
