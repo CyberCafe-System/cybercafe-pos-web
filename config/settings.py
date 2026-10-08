@@ -160,3 +160,7 @@ EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')#type: ignore
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')#type: ignore
 EMAIL_USE_TLS = env('EMAIL_USE_TLS')
 EMAIL_USE_SSL = env('EMAIL_USE_SSL')
+
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.Argon2PasswordHasher'
+]
