@@ -48,6 +48,10 @@ cybercafe-pos-web/
 │   ├── models.py
 │   ├── tests.py
 │   └── views.py
+├── usuarios/
+│   ├── admin.py
+│   ├── migrations/
+│   └── models.py
 ├── templates/
 │   ├── index.html
 │   └── pages/
@@ -65,6 +69,7 @@ cybercafe-pos-web/
 
 - `config/`: configuración principal del proyecto Django.
 - `pos_app/`: aplicación principal del sistema POS.
+- `usuarios/`: autenticación y gestión de usuarios basada en la tabla existente `usuarios`.
 - `templates/`: archivos HTML para las vistas del proyecto.
 - `static/`: recursos frontend (CSS, JS, imágenes y assets).
 - `manage.py`: punto de entrada para ejecutar comandos de Django.
@@ -141,6 +146,15 @@ Si deseas crear un usuario administrador para pruebas:
 ```bash
 python manage.py createsuperuser
 ```
+
+El modelo de autenticación de Django está vinculado a la tabla MySQL existente
+`usuarios`; no crea ni reemplaza esa tabla. El comando `createsuperuser` solicita
+nombre de usuario, nombre, correo, rol (el ID de un registro existente en `roles`)
+y contraseña. Django asigna automáticamente `is_superuser=True` y `activo=True`.
+La migración inicial registra ambos modelos sin recrear esas tablas; una migración
+adicional agrega un índice único para `username`, sin cambiar filas ni claves
+foráneas existentes. La gestión de usuarios requiere que la base MySQL configurada
+contenga las tablas `usuarios` y `roles`; la base SQLite vacía no las crea.
 
 ---
 
