@@ -110,7 +110,27 @@ pip install -r requirements.txt
 
 ## Configuración inicial
 
-Este proyecto ya incluye una configuración base de Django, pero aun se encuentra en desarrollo. Para inicializar la base de datos local:
+1. Crea el archivo `.env` a partir de la plantilla:
+
+```bash
+cp .env_example .env
+```
+
+En Windows PowerShell:
+
+```powershell
+Copy-Item .env_example .env
+```
+
+2. Configura `SECRET_KEY_TOKEN` con una clave nueva. Puedes generarla con:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+3. Para desarrollo local, conserva `DEBUG=True` y los hosts de ejemplo. Si configuras `DB_NAME`, Django usará MySQL con los valores `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT` y `DB_CHARSET`. Si `DB_NAME` está vacío, usará SQLite en `db.sqlite3`. El backend de correo por defecto imprime los mensajes en consola; puedes cambiarlo mediante las variables `EMAIL_*`.
+
+El archivo `.env` contiene configuración privada y no debe subirse al repositorio. Para inicializar la base de datos:
 
 ```bash
 python manage.py migrate
