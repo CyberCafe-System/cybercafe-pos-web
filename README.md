@@ -48,6 +48,10 @@ cybercafe-pos-web/
 │   ├── models.py
 │   ├── tests.py
 │   └── views.py
+├── usuarios/
+│   ├── admin.py
+│   ├── migrations/
+│   └── models.py
 ├── templates/
 │   ├── index.html
 │   └── pages/
@@ -65,6 +69,7 @@ cybercafe-pos-web/
 
 - `config/`: configuración principal del proyecto Django.
 - `pos_app/`: aplicación principal del sistema POS.
+- `usuarios/`: autenticación y gestión de usuarios basada en la tabla existente `usuarios`.
 - `templates/`: archivos HTML para las vistas del proyecto.
 - `static/`: recursos frontend (CSS, JS, imágenes y assets).
 - `manage.py`: punto de entrada para ejecutar comandos de Django.
@@ -110,7 +115,27 @@ pip install -r requirements.txt
 
 ## Configuración inicial
 
-Este proyecto ya incluye una configuración base de Django, pero aun se encuentra en desarrollo. Para inicializar la base de datos local:
+1. Crea el archivo `.env` a partir de la plantilla:
+
+```bash
+cp .env_example .env
+```
+
+En Windows PowerShell:
+
+```powershell
+Copy-Item .env_example .env
+```
+
+2. Configura `SECRET_KEY_TOKEN` con una clave nueva. Puedes generarla con:
+
+```bash
+python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
+```
+
+3. Para desarrollo local, conserva `DEBUG=True` y los hosts de ejemplo. Si configuras `DB_NAME`, Django usará MySQL con los valores `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT` y `DB_CHARSET`. Si `DB_NAME` está vacío, usará SQLite en `db.sqlite3`. El backend de correo por defecto imprime los mensajes en consola; puedes cambiarlo mediante las variables `EMAIL_*`.
+
+El archivo `.env` contiene configuración privada y no debe subirse al repositorio. Para inicializar la base de datos:
 
 ```bash
 python manage.py migrate
@@ -121,6 +146,15 @@ Si deseas crear un usuario administrador para pruebas:
 ```bash
 python manage.py createsuperuser
 ```
+
+El modelo de autenticación de Django está vinculado a la tabla MySQL existente
+`usuarios`; no crea ni reemplaza esa tabla. El comando `createsuperuser` solicita
+nombre de usuario, nombre, correo, rol (el ID de un registro existente en `roles`)
+y contraseña. Django asigna automáticamente `is_superuser=True` y `activo=True`.
+La migración inicial registra ambos modelos sin recrear esas tablas; una migración
+adicional agrega un índice único para `username`, sin cambiar filas ni claves
+foráneas existentes. La gestión de usuarios requiere que la base MySQL configurada
+contenga las tablas `usuarios` y `roles`; la base SQLite vacía no las crea.
 
 ---
 
