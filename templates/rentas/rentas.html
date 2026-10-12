@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Control de Rentas y Equipos</h3>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">
+        <i class="bi bi-plus-circle"></i> Nueva Renta
+    </button>
+</div>
+
+
+<div class="row g-4">
+    
+    
+    {% for equipo in equipos %}
+    <div class="col-md-3 col-sm-6">
+        <!-- Borde dinámico según el estado -->
+        <div class="card shadow-sm border-0 border-top border-4 h-100 
+            {% if equipo.estado == 'DISPONIBLE' %} border-success 
+            {% elif equipo.estado == 'EN_MANTENIMIENTO' %} border-warning 
+            {% else %} border-secondary {% endif %}">
+            
+            <div class="card-body text-center d-flex flex-column">
+                
+               
+                {% if equipo.tipo == 'CONSOLA' %}
+                    <i class="bi bi-controller text-dark mb-2" style="font-size: 3rem;"></i>
+                {% else %}
+                    <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
+                {% endif %}
+
+                <h5 class="card-title fw-bold">{{ equipo.nombre }}</h5>
+                
+                <!-- CLIENTE ACTUAL (Muestra el nombre o guiones si está vacío) -->
+                <p class="text-dark small mb-1 fw-bold">
+                    <i class="bi bi-person-fill text-primary"></i> Cliente: {{ equipo.cliente_actual|default:"--" }}
+                </p>
+                
+                <p class="text-muted small mt-auto mb-3">Tarifa: ${{ equipo.tarifa_por_hora }}/hr</p>
+                
+       
+                {% if equipo.estado == 'DISPONIBLE' %}
+                    <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">Asignar tiempo</button>
+                {% else %}
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-secondary w-50" data-bs-toggle="modal" data-bs-target="#modalEstadoRenta" title="Detalles de Renta"><i class="bi bi-info-circle"></i></button>
+                        <button class="btn btn-danger w-50" data-bs-toggle="modal" data-bs-target="#modalFinalizarRenta" title="Finalizar/Cobrar"><i class="bi bi-stop-circle"></i></button>
+                    </div>
+                {% endif %}
+                
+            </div>
+        </div>
+    </div>
+    
+    {% empty %}
+    <!-- Mensaje si la base de datos está vacía -->
+    <div class="col-12 text-center text-muted my-5">
+        <i class="bi bi-display" style="font-size: 3rem;"></i>
+        <p class="mt-2">No hay equipos registrados actualmente.</p>
+    </div>
+    {% endfor %}
+
+</div>
+
+
+{% include 'rentas/crear.html' %}
+{% include 'rentas/estado.html' %}
+{% include 'rentas/finalizar.html' %}
+
+{% endblock %}

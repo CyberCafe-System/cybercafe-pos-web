@@ -1,0 +1,52 @@
+<!-- Modal Crear Componente -->
+<div class="modal fade" id="modalCrearComponente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'crear_componente' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Componente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre / Modelo</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo de Periférico</label>
+                        <select name="tipo" class="form-select">
+                            <option value="MOUSE">Mouse</option>
+                            <option value="TECLADO">Teclado</option>
+                            <option value="MONITOR">Monitor</option>
+                            <option value="CONTROL">Control</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Asignar a Equipo (Opcional)</label>
+                        <select name="equipo_id" class="form-select">
+                            <option value="">-- Sin Asignar (En bodega) --</option>
+                            <!-- Backend: Iterar equipos -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado Físico</label>
+                        <select name="estado" class="form-select">
+                            <option value="DISPONIBLE">Disponible / Buen estado</option>
+                            <option value="DANIOS_MENORES">Daños Menores</option>
+                            <option value="REQUIERE_REEMPLAZO">Requiere Reemplazo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

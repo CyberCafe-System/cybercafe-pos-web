@@ -1,0 +1,39 @@
+<!-- Modal Modificar Componente -->
+<div class="modal fade" id="modalModificarComponente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'modificar_componente' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Modificar Componente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="componente_id" value="{{ componente.componente_id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Asignar a Equipo</label>
+                        <select name="equipo_id" class="form-select">
+                            <option value="">-- Sin Asignar --</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado Físico</label>
+                        <select name="estado" class="form-select">
+                            <option value="DISPONIBLE">Disponible</option>
+                            <option value="DANIOS_MENORES">Daños Menores</option>
+                            <option value="REQUIERE_REEMPLAZO">Requiere Reemplazo</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2">{{ componente.observaciones }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

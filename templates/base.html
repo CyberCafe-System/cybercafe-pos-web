@@ -1,0 +1,59 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}The COFFEE LAN{% endblock %}</title>
+    
+    <link href="{% static 'bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <!-- CSS Principal -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    
+    <div id="wrapper">
+        <nav id="sidebar-wrapper">
+            <div class="sidebar-header">
+                <h4 class="brand-text">THE COFFEE LAN</h4>
+            </div>
+            
+            <ul class="sidebar-nav">
+                <li><a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}"><i class="bi bi-grid-1x2-fill"></i> Panel Principal</a></li>
+                <li><a href="{% url 'rentas' %}" class="{% if request.resolver_match.url_name == 'rentas' %}active{% endif %}"><i class="bi bi-pc-display"></i> Rentas y Equipos</a></li>
+                <li><a href="{% url 'pos' %}" class="{% if request.resolver_match.url_name == 'pos' %}active{% endif %}"><i class="bi bi-cart2"></i> Punto de Venta</a></li>
+                <li><a href="{% url 'clientes' %}" class="{% if request.resolver_match.url_name == 'clientes' %}active{% endif %}"><i class="bi bi-people-fill"></i> Clientes</a></li>
+                <li><a href="{% url 'inventario' %}" class="{% if request.resolver_match.url_name == 'inventario' %}active{% endif %}"><i class="bi bi-box-seam"></i> Inventario</a></li>
+                <li><a href="{% url 'equipos' %}" class="{% if request.resolver_match.url_name == 'equipos' %}active{% endif %}"><i class="bi bi-display"></i> Equipos</a></li>
+                <li><a href="{% url 'componentes' %}" class="{% if request.resolver_match.url_name == 'componentes' %}active{% endif %}"><i class="bi bi-mouse"></i> Componentes</a></li>
+                <li><a href="{% url 'usuarios' %}" class="{% if request.resolver_match.url_name == 'usuarios' %}active{% endif %}"><i class="bi bi-person-badge"></i> Usuarios</a></li>
+                
+                <li><a href="{% url 'reportes' %}" class="{% if request.resolver_match.url_name == 'reportes' %}active{% endif %}"><i class="bi bi-file-earmark-pdf-fill"></i> Reportes Generales</a></li>
+            </ul>
+        </nav>
+
+        <div id="page-content-wrapper">
+            <header class="top-header">
+                <button class="btn-toggle-menu" id="menu-toggle"><i class="bi bi-list"></i></button>
+                <div class="user-profile">
+                    <span><i class="bi bi-person-circle"></i> {{ user.username|default:"Cajero" }}</span>
+                    <a href="{% url 'logout' %}" class="btn btn-sm btn-outline-danger ms-3">Salir</a>
+                </div>
+            </header>
+
+            <main class="main-content">
+                {% block contenido %}{% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="{% static 'bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    
+    <!-- JS Principal -->
+    <script src="{% static 'js/script.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

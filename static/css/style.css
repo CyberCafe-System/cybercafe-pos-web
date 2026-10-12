@@ -1,0 +1,245 @@
+
+:root {
+    --clr-espresso: #231710; /* Café oscuro del menú */
+    --clr-cobre: #a96603;    /* Naranja/Café del logo y botones */
+    --clr-crema: #f5f0e6;    /* Crema claro */
+    --font-ui: 'Poppins', sans-serif;
+}
+
+body {
+    font-family: var(--font-ui);
+    background-color: #f2f2f2; 
+}
+
+
+#wrapper {
+    display: flex;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+}
+
+
+.main-content h3 {
+    font-weight: 750; 
+    color: var(--clr-espresso); 
+    margin-bottom: 20px;
+}
+
+/* Menú Lateral (Sidebar) */
+#sidebar-wrapper {
+    width: 250px;
+    background-color: var(--clr-espresso);
+    color: white;
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 25px 20px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.brand-text {
+    color: var(--clr-cobre);
+    font-weight: 900;
+    margin: 0;
+    letter-spacing: 1px;
+}
+
+.sidebar-nav {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0 0;
+}
+
+.sidebar-nav li a {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    color: rgba(255, 255, 255, 0.986);
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.sidebar-nav li a i {
+    margin-right: 15px;
+    font-size: 1.2rem;
+}
+
+.sidebar-nav li a:hover, 
+.sidebar-nav li a.active {
+    background-color: rgba(176, 107, 5, 0.15);
+    color: var(--clr-cobre);
+    border-left: 4px solid var(--clr-cobre);
+}
+
+
+#page-content-wrapper {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.top-header {
+    background-color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 10;
+}
+
+.btn-toggle-menu {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    color: var(--clr-espresso);
+    cursor: pointer;
+    padding: 0;
+}
+
+.user-profile {
+    font-weight: 600;
+    color: var(--clr-espresso);
+    display: flex;
+    align-items: center;
+}
+
+.user-profile i {
+    font-size: 1.5rem;
+    margin-right: 8px;
+    color: var(--clr-cobre);
+}
+
+.main-content {
+    padding: 30px;
+    flex-grow: 1;
+}
+
+
+.login-bg {
+    background-image: url('../img/fondo_login.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-ui);
+}
+
+.login-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* Panel difuminado */
+.glass-panel {
+    background: rgba(255, 255, 255, 0.503);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.503);
+    border-radius: 35px;
+    padding: 40px 50px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+}
+
+/* Tipografía y Logo en Login */
+.glass-logo {
+    width: 110px;
+    margin-bottom: 5px;
+}
+
+.glass-title {
+    font-size: 2.2rem;
+    margin-bottom: 5px;
+}
+
+.fw-black {
+    font-weight: 800;
+}
+
+.text-warning-custom {
+    color: var(--clr-cobre);
+}
+
+/* Controles de formulario*/
+.glass-label {
+    font-weight: 550; 
+    color: #1a1a1a;
+    margin-bottom: 10px;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+}
+
+.icon-circle-glass {
+    background-color: var(--clr-cobre);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    margin-right: 12px;
+}
+
+.glass-input {
+    border-radius: 50px;
+    padding: 12px 20px;
+    border: none;
+    font-size: 1rem;
+}
+
+.glass-input:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(176, 107, 5, 0.4);
+}
+
+/* Botones y Enlaces (Letras afinadas) */
+.glass-btn {
+    background-color: var(--clr-cobre);
+    color: #000;
+    font-weight: 700; 
+    font-size: 1.15rem;
+    border-radius: 50px;
+    padding: 10px 40px;
+    border: none;
+    transition: all 0.3s;
+}
+
+.glass-btn:hover {
+    background-color: #8c5304;
+    color: #fff;
+}
+
+.glass-footer {
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    font-weight: 600; 
+}
+
+.glass-link {
+    color: var(--clr-cobre);
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.glass-link:hover {
+    text-decoration: underline;
+}

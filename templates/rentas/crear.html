@@ -1,0 +1,31 @@
+<div class="modal fade" id="modalNuevaRenta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'crear_renta' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Iniciar Renta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Equipo</label>
+                        <select name="equipo_id" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Cliente</label>
+                        <select name="cliente_id" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tiempo (Minutos)</label>
+                        <input type="number" name="tiempo_de_renta" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Iniciar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
