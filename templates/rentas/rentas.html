@@ -13,59 +13,48 @@
 <div class="row g-4">
     
     
-    {% for equipo in equipos %}
     <div class="col-md-3 col-sm-6">
-        <!-- Borde dinámico según el estado -->
-        <div class="card shadow-sm border-0 border-top border-4 h-100 
-            {% if equipo.estado == 'DISPONIBLE' %} border-success 
-            {% elif equipo.estado == 'EN_MANTENIMIENTO' %} border-warning 
-            {% else %} border-secondary {% endif %}">
-            
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-success">
             <div class="card-body text-center d-flex flex-column">
-                
-               
-                {% if equipo.tipo == 'CONSOLA' %}
-                    <i class="bi bi-controller text-dark mb-2" style="font-size: 3rem;"></i>
-                {% else %}
-                    <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
-                {% endif %}
-
-                <h5 class="card-title fw-bold">{{ equipo.nombre }}</h5>
-                
-                <!-- CLIENTE ACTUAL (Muestra el nombre o guiones si está vacío) -->
-                <p class="text-dark small mb-1 fw-bold">
-                    <i class="bi bi-person-fill text-primary"></i> Cliente: {{ equipo.cliente_actual|default:"--" }}
-                </p>
-                
-                <p class="text-muted small mt-auto mb-3">Tarifa: ${{ equipo.tarifa_por_hora }}/hr</p>
-                
-       
-                {% if equipo.estado == 'DISPONIBLE' %}
-                    <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">Asignar tiempo</button>
-                {% else %}
-                    <div class="d-flex gap-2">
-                        <button class="btn btn-outline-secondary w-50" data-bs-toggle="modal" data-bs-target="#modalEstadoRenta" title="Detalles de Renta"><i class="bi bi-info-circle"></i></button>
-                        <button class="btn btn-danger w-50" data-bs-toggle="modal" data-bs-target="#modalFinalizarRenta" title="Finalizar/Cobrar"><i class="bi bi-stop-circle"></i></button>
-                    </div>
-                {% endif %}
-                
+                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">PC-01 VIP</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $1.50/hr</p>
+                <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">Asignar tiempo</button>
             </div>
         </div>
     </div>
-    
-    {% empty %}
-    <!-- Mensaje si la base de datos está vacía -->
-    <div class="col-12 text-center text-muted my-5">
-        <i class="bi bi-display" style="font-size: 3rem;"></i>
-        <p class="mt-2">No hay equipos registrados actualmente.</p>
+
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-secondary">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="bi bi-controller text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">Consola PS5</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: Carlos Mendoza</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $2.50/hr</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary w-50" title="Detalles"><i class="bi bi-info-circle"></i></button>
+                    <button class="btn btn-danger w-50" title="Finalizar/Cobrar"><i class="bi bi-stop-circle"></i></button>
+                </div>
+            </div>
+        </div>
     </div>
-    {% endfor %}
+
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-warning">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">PC-04 Básica</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $1.00/hr</p>
+                <button class="btn btn-warning w-100 text-dark fw-bold" disabled><i class="bi bi-tools me-2"></i>Mantenimiento</button>
+            </div>
+        </div>
+    </div>
 
 </div>
 
-
 {% include 'rentas/crear.html' %}
-{% include 'rentas/estado.html' %}
-{% include 'rentas/finalizar.html' %}
-
 {% endblock %}

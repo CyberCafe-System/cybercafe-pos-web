@@ -1,14 +1,20 @@
 
 :root {
-    --clr-espresso: #231710; /* Café oscuro del menú */
-    --clr-cobre: #a96603;    /* Naranja/Café del logo y botones */
+    --clr-espresso: #2c1e16; /* Café oscuro del menú */
+    --clr-cobre: #855204;    /* Naranja/Café del logo y botones */
     --clr-crema: #f5f0e6;    /* Crema claro */
     --font-ui: 'Poppins', sans-serif;
+
+   
+    --stat-color-1: #2c1e16; /* Tarjeta 1: Ingresos del día */
+    --stat-color-2: #b06b05; /* Tarjeta 2: Equipos activos */
+    --stat-color-3: #198754; /* Tarjeta 3: Ventas de productos*/
+    --stat-color-4: #0d6efd; /* Tarjeta 4: Clientes registrados (Azul) */
 }
 
 body {
     font-family: var(--font-ui);
-    background-color: #f2f2f2; 
+    background-color: #f4f6f9;
 }
 
 
@@ -18,18 +24,9 @@ body {
     height: 100vh;
     overflow: hidden;
 }
-
-
-.main-content h3 {
-    font-weight: 750; 
-    color: var(--clr-espresso); 
-    margin-bottom: 20px;
-}
-
-/* Menú Lateral (Sidebar) */
 #sidebar-wrapper {
     width: 250px;
-    background-color: var(--clr-espresso);
+    background: linear-gradient(180deg, #452f23 0%, #140d09 100%);
     color: white;
     flex-shrink: 0;
     transition: all 0.3s ease;
@@ -38,29 +35,34 @@ body {
 }
 
 .sidebar-header {
-    padding: 25px 20px;
+    padding: 20px 15px;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.brand-text {
-    color: var(--clr-cobre);
-    font-weight: 900;
-    margin: 0;
-    letter-spacing: 1px;
+
+.sidebar-logo {
+    max-width: 120px;
+    height: auto;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-logo:hover {
+    transform: scale(1.05);
 }
 
 .sidebar-nav {
     list-style: none;
     padding: 0;
-    margin: 20px 0 0 0;
+    margin: 15px 0 0 0;
+    overflow-y: auto;
 }
 
 .sidebar-nav li a {
     display: flex;
     align-items: center;
-    padding: 15px 25px;
-    color: rgba(255, 255, 255, 0.986);
+    padding: 13px 25px;
+    color: rgba(255, 255, 255, 0.75);
     text-decoration: none;
     font-weight: 500;
     transition: all 0.3s;
@@ -73,12 +75,12 @@ body {
 
 .sidebar-nav li a:hover, 
 .sidebar-nav li a.active {
-    background-color: rgba(176, 107, 5, 0.15);
+    background-color: rgba(176, 107, 5, 0.2);
     color: var(--clr-cobre);
     border-left: 4px solid var(--clr-cobre);
 }
 
-
+/* Contenedor Central y Barra Superior */
 #page-content-wrapper {
     flex-grow: 1;
     display: flex;
@@ -123,6 +125,12 @@ body {
     flex-grow: 1;
 }
 
+.main-content h3 {
+    font-weight: 700;
+    color: var(--clr-espresso);
+    margin-bottom: 0;
+}
+
 
 .login-bg {
     background-image: url('../img/fondo_login.jpg');
@@ -144,12 +152,11 @@ body {
     padding: 20px;
 }
 
-/* Panel difuminado */
 .glass-panel {
-    background: rgba(255, 255, 255, 0.503);
+    background: rgba(255, 255, 255, 0.35);
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
-    border: 1px solid rgba(255, 255, 255, 0.503);
+    border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 35px;
     padding: 40px 50px;
     width: 100%;
@@ -157,7 +164,6 @@ body {
     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
-/* Tipografía y Logo en Login */
 .glass-logo {
     width: 110px;
     margin-bottom: 5px;
@@ -176,9 +182,8 @@ body {
     color: var(--clr-cobre);
 }
 
-/* Controles de formulario*/
 .glass-label {
-    font-weight: 550; 
+    font-weight: 500;
     color: #1a1a1a;
     margin-bottom: 10px;
     font-size: 1.05rem;
@@ -211,11 +216,10 @@ body {
     box-shadow: 0 0 0 3px rgba(176, 107, 5, 0.4);
 }
 
-/* Botones y Enlaces (Letras afinadas) */
 .glass-btn {
     background-color: var(--clr-cobre);
     color: #000;
-    font-weight: 700; 
+    font-weight: 600;
     font-size: 1.15rem;
     border-radius: 50px;
     padding: 10px 40px;
@@ -231,7 +235,7 @@ body {
 .glass-footer {
     font-size: 0.95rem;
     color: #1a1a1a;
-    font-weight: 600; 
+    font-weight: 500;
 }
 
 .glass-link {
@@ -242,4 +246,66 @@ body {
 
 .glass-link:hover {
     text-decoration: underline;
+}
+
+
+/* Asterisco rojo automático para campos obligatorios */
+.required-field::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: 700;
+}
+
+/* Tarjetas de Estadísticas Personalizables */
+.stat-card {
+    border: none;
+    border-radius: 15px;
+    color: #ffffff;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    overflow: hidden;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.stat-card-1 { background: linear-gradient(135deg, var(--stat-color-1), #4a3326); }
+.stat-card-2 { background: linear-gradient(135deg, var(--stat-color-2), #d98814); }
+.stat-card-3 { background: linear-gradient(135deg, var(--stat-color-3), #24b36b); }
+.stat-card-4 { background: linear-gradient(135deg, var(--stat-color-4), #3d8bfd); }
+
+.stat-icon {
+    font-size: 2.5rem;
+    opacity: 0.8;
+}
+
+
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.btn-sm {
+    padding: 5px 10px;
+    border-radius: 6px;
+}
+
+
+.btn-coffee {
+    background-color: var(--clr-espresso);
+    color: #ffffff;
+    border: none;
+}
+
+.btn-coffee:hover {
+    background-color: var(--clr-cobre);
+    color: #ffffff;
 }

@@ -1,39 +1,63 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Generación de Reportes</h3>
+    <h3>Historial de Ventas y Tickets</h3>
+    <button class="btn btn-outline-dark">
+        <i class="bi bi-printer"></i> Imprimir Reporte
+    </button>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-file-earmark-bar-graph text-primary mb-3" style="font-size: 3rem;"></i>
-                <h5>Corte de Caja Diario</h5>
-                <p class="text-muted">Incluye detalle de ingresos por rentas y cafetería del día en curso.</p>
-                <form method="GET" action="#">
-                    <!-- El action se conectara a la vista Django que genera el PDF -->
-                    <button type="submit" class="btn btn-danger mt-3">
-                        <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
-                    </button>
-                </form>
+<!-- Filtros de búsqueda -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha de Inicio</label>
+                <input type="date" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha Fin</label>
+                <input type="date" class="form-control">
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button class="btn btn-coffee w-100"><i class="bi bi-search me-2"></i>Buscar Ventas</button>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-body text-center py-5">
-                <i class="bi bi-box-seam text-success mb-3" style="font-size: 3rem;"></i>
-                <h5>Reporte de Inventario</h5>
-                <p class="text-muted">Lista completa de existencias, precios y productos bajos en stock.</p>
-                <form method="GET" action="#">
-                    <button type="submit" class="btn btn-danger mt-3">
-                        <i class="bi bi-file-earmark-pdf-fill"></i> Descargar PDF
-                    </button>
-                </form>
-            </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>N° Ticket</th>
+                        <th>Fecha y Hora</th>
+                        <th>Atendido por</th>
+                        <th>Cliente</th>
+                        <th>Artículos / Concepto</th>
+                        <th>Total</th>
+                        <th class="text-end">Acción</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Fila de ejemplo -->
+                    <tr>
+                        <td class="fw-bold">#TK-1050</td>
+                        <td>14 Oct 2026, 02:15 PM</td>
+                        <td>Edwin Cruz</td>
+                        <td>Cliente General</td>
+                        <td>2x Doritos, 1x Coca-Cola</td>
+                        <td class="fw-bold text-success">$2.50</td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary" title="Ver Detalle Ticket"><i class="bi bi-eye"></i></button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

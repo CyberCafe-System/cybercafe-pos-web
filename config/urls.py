@@ -17,6 +17,7 @@ urlpatterns = [
     path('pos/', TemplateView.as_view(template_name='pos/pos.html'), name='pos'),
     path('clientes/', TemplateView.as_view(template_name='clientes/clientes.html'), name='clientes'),
     path('inventario/', TemplateView.as_view(template_name='inventario/inventario.html'), name='inventario'),
+    path('categorias/', TemplateView.as_view(template_name='categorias/categorias.html'), name='categorias'),
     path('equipos/', TemplateView.as_view(template_name='equipos/equipos.html'), name='equipos'),
     path('componentes/', TemplateView.as_view(
         template_name='componentes/componentes.html'), name='componentes'),
@@ -52,8 +53,14 @@ urlpatterns = [
         template_name='inventario/inventario.html'), name='modificar_producto'),
     path('eliminar_producto/', TemplateView.as_view(
         template_name='inventario/inventario.html'), name='eliminar_producto'),
+
+    # Categorías
     path('crear_categoria/', TemplateView.as_view(
-        template_name='inventario/inventario.html'), name='crear_categoria'),
+        template_name='categorias/categorias.html'), name='crear_categoria'),
+    path('modificar_categoria/', TemplateView.as_view(
+        template_name='categorias/categorias.html'), name='modificar_categoria'),
+    path('eliminar_categoria/', TemplateView.as_view(
+        template_name='categorias/categorias.html'), name='eliminar_categoria'),
 
     # Equipos
     path('crear_equipo/', TemplateView.as_view(template_name='equipos/equipos.html'),
