@@ -1,0 +1,32 @@
+<!-- Plantilla base de Usuarios -->
+{% extends 'base.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Gestión de Usuarios</h3>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearUsuario">Nuevo Usuario</button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Backend: Iterar usuarios -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'usuarios/crear.html' %}
+{% include 'usuarios/modificar.html' %}
+{% include 'usuarios/eliminar.html' %}
+{% endblock %}

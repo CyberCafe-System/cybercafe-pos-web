@@ -1,0 +1,47 @@
+<!-- Modal Modificar Cliente -->
+<div class="modal fade" id="modalModificarCliente" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'modificar_cliente' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Modificar Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="cliente_id" value="{{ cliente.cliente_id }}">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ cliente.nombre }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Apellido</label>
+                            <input type="text" name="apellido" class="form-control" value="{{ cliente.apellido }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">DUI</label>
+                        <input type="text" name="dui" class="form-control" value="{{ cliente.dui }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Dirección</label>
+                        <input type="text" name="direccion" class="form-control" value="{{ cliente.direccion }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="number" name="telefono" class="form-control" value="{{ cliente.telefono }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Correo</label>
+                        <input type="email" name="correo" class="form-control" value="{{ cliente.correo }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

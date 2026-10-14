@@ -1,0 +1,35 @@
+<!-- Modal Modificar Producto -->
+<div class="modal fade" id="modalModificarProducto" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'modificar_producto' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Modificar Producto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre del Producto</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ producto.nombre }}" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Precio Venta</label>
+                            <input type="number" step="0.01" name="precio_venta" class="form-control" value="{{ producto.precio_venta }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Cantidad (Stock)</label>
+                            <input type="number" name="cantidad" class="form-control" value="{{ producto.cantidad }}" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

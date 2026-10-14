@@ -1,0 +1,36 @@
+<!-- Modal Modificar Usuario -->
+<div class="modal fade" id="modalModificarUsuario" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'modificar_usuario' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Modificar Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="usuario_id" value="{{ usuario.usuario_id }}">
+                    <div class="mb-3">
+                        <label class="form-label">Rol</label>
+                        <select name="rol_id" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nombre Completo</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ usuario.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado</label>
+                        <select name="activo" class="form-select">
+                            <option value="1">Activo</option>
+                            <option value="0">Inactivo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

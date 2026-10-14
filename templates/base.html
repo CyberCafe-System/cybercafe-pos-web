@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POS - The COFFEE LAN</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+</head>
+<body>
+
+    <div id="wrapper">
+        <div id="sidebar-wrapper">
+            <div class="sidebar-header">
+                <a href="{% url 'inicio' %}">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo The COFFEE LAN" class="sidebar-logo">
+                </a>
+            </div>
+            <ul class="sidebar-nav">
+                <li>
+                    <a href="{% url 'inicio' %}"><i class="bi bi-speedometer2"></i> Panel Principal</a>
+                </li>
+                <li>
+                    <a href="{% url 'rentas' %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
+                </li>
+                <li>
+                    <a href="{% url 'pos' %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
+                </li>
+                <li>
+                    <a href="{% url 'inventario' %}"><i class="bi bi-box-seam"></i> Inventario</a>
+                </li>
+                <li>
+                    <a href="{% url 'categorias' %}"><i class="bi bi-tags"></i> Categorías</a>
+                </li>
+                <li>
+                    <a href="{% url 'equipos' %}"><i class="bi bi-cpu"></i> Equipos</a>
+                </li>
+                <li>
+                    <a href="{% url 'componentes' %}"><i class="bi bi-mouse2"></i> Componentes</a>
+                </li>
+                <li>
+                    <a href="{% url 'clientes' %}"><i class="bi bi-people"></i> Clientes</a>
+                </li>
+                <li>
+                    <a href="{% url 'usuarios' %}"><i class="bi bi-person-badge"></i> Usuarios</a>
+                </li>
+                <li>
+                    <a href="{% url 'reportes' %}"><i class="bi bi-graph-up"></i> Reportes</a>
+                </li>
+            </ul>
+        </div>
+
+        <div id="page-content-wrapper">
+            <header class="top-header">
+                <button class="btn-toggle-menu" id="menu-toggle">
+                    <i class="bi bi-list"></i>
+                </button>
+                <div class="user-profile dropdown">
+                    <a href="#" class="text-decoration-none text-dark dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i>
+                        <span>{{ request.user.username|default:"Administrador" }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><a class="dropdown-item text-danger" href="{% url 'logout' %}"><i class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</a></li>
+                    </ul>
+                </div>
+            </header>
+
+            <main class="main-content">
+                {% block contenido %}
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.getElementById("menu-toggle").addEventListener("click", function(e) {
+            e.preventDefault();
+            const sidebar = document.getElementById("sidebar-wrapper");
+            sidebar.style.marginLeft = sidebar.style.marginLeft === "-250px" ? "0" : "-250px";
+        });
+    </script>
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

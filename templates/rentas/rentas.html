@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Control de Rentas y Equipos</h3>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">
+        <i class="bi bi-plus-circle"></i> Nueva Renta
+    </button>
+</div>
+
+
+<div class="row g-4">
+    
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-success">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">PC-01 VIP</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $1.50/hr</p>
+                <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">Asignar tiempo</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-secondary">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="bi bi-controller text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">Consola PS5</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: Carlos Mendoza</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $2.50/hr</p>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary w-50" title="Detalles"><i class="bi bi-info-circle"></i></button>
+                    <button class="btn btn-danger w-50" title="Finalizar/Cobrar"><i class="bi bi-stop-circle"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-md-3 col-sm-6">
+        <div class="card shadow-sm border-0 border-top border-4 h-100 border-warning">
+            <div class="card-body text-center d-flex flex-column">
+                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
+                <h5 class="card-title fw-bold">PC-04 Básica</h5>
+                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
+                <p class="text-muted small mt-auto mb-3">Tarifa: $1.00/hr</p>
+                <button class="btn btn-warning w-100 text-dark fw-bold" disabled><i class="bi bi-tools me-2"></i>Mantenimiento</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% include 'rentas/crear.html' %}
+{% endblock %}

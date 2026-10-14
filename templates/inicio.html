@@ -1,0 +1,196 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Panel de Operaciones y Estadísticas</h3>
+    <span class="badge bg-dark px-3 py-2 fs-6"><i class="bi bi-calendar3 me-2"></i>Resumen General</span>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card stat-card stat-card-1 shadow-sm h-100">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h6 class="text-uppercase mb-1 opacity-75">Ingresos de Hoy</h6>
+                    <h3 class="fw-bold mb-0 text-white">${{ ingresos_hoy|default:"145.50" }}</h3>
+                </div>
+                <i class="bi bi-cash-coin stat-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card stat-card stat-card-2 shadow-sm h-100">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h6 class="text-uppercase mb-1 opacity-75">Equipos en Uso</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ equipos_activos|default:"8 / 12" }}</h3>
+                </div>
+                <i class="bi bi-pc-display stat-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card stat-card stat-card-3 shadow-sm h-100">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h6 class="text-uppercase mb-1 opacity-75">Ventas POS Hoy</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ ventas_hoy|default:"34" }}</h3>
+                </div>
+                <i class="bi bi-bag-check stat-icon"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card stat-card stat-card-4 shadow-sm h-100">
+            <div class="card-body d-flex justify-content-between align-items-center p-4">
+                <div>
+                    <h6 class="text-uppercase mb-1 opacity-75">Clientes Activos</h6>
+                    <h3 class="fw-bold mb-0 text-white">{{ total_clientes|default:"120" }}</h3>
+                </div>
+                <i class="bi bi-people stat-icon"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="row g-4 mb-4">
+    <!-- Gráfica de Ingresos de la Semana -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-warning me-2"></i>Ingresos de los Últimos 7 Días</h5>
+            </div>
+            <div class="card-body px-4 pb-4">
+                <canvas id="graficaIngresos" height="110"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-trophy text-warning me-2"></i>Top Productos Vendidos</h5>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center px-4 pb-4">
+                <canvas id="graficaTopProductos" height="220"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Últimas Ventas y Rentas Realizadas</h5>
+        <a href="#" class="btn btn-sm btn-coffee">Ver Todo el Historial</a>
+    </div>
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th># Ticket</th>
+                        <th>Cliente</th>
+                        <th>Concepto / Detalle</th>
+                        <th>Atendido por</th>
+                        <th>Hora</th>
+                        <th>Total</th>
+                        <th>Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for venta in ultimas_ventas %}
+                    <tr>
+                        <td class="fw-bold">#{{ venta.id }}</td>
+                        <td>{{ venta.cliente.nombre|default:"Cliente General" }}</td>
+                        <td>{{ venta.concepto }}</td>
+                        <td>{{ venta.usuario.username }}</td>
+                        <td>{{ venta.fecha_hora|date:"H:i A" }}</td>
+                        <td class="fw-bold text-success">${{ venta.total }}</td>
+                        <td><span class="badge bg-success">Pagado</span></td>
+                    </tr>
+                    {% empty %}
+                    <!-- Datos de muestra mientras el backend conecta la vista -->
+                    <tr>
+                        <td class="fw-bold">#1045</td>
+                        <td>Carlos Mendoza</td>
+                        <td>Renta PC-03 (2 Horas) + 1x Café Helado</td>
+                        <td>admin</td>
+                        <td>04:15 PM</td>
+                        <td class="fw-bold text-success">$4.50</td>
+                        <td><span class="badge bg-success">Completado</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">#1044</td>
+                        <td>Cliente General</td>
+                        <td>2x Doritos Nacho, 2x Coca-Cola Lata</td>
+                        <td>cajero1</td>
+                        <td>03:50 PM</td>
+                        <td class="fw-bold text-success">$3.80</td>
+                        <td><span class="badge bg-success">Completado</span></td>
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">#1043</td>
+                        <td>Andrea Gómez</td>
+                        <td>Renta Consola PS5-01 (1 Hora)</td>
+                        <td>cajero1</td>
+                        <td>03:10 PM</td>
+                        <td class="fw-bold text-success">$2.00</td>
+                        <td><span class="badge bg-success">Completado</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  
+    const ctxIngresos = document.getElementById('graficaIngresos').getContext('2d');
+    new Chart(ctxIngresos, {
+        type: 'bar',
+        data: {
+            labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
+            datasets: [{
+                label: 'Ingresos ($ USD)',
+                data: [85, 92, 78, 110, 145, 190, 160],
+                backgroundColor: '#b06b05',
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+
+    
+    const ctxTop = document.getElementById('graficaTopProductos').getContext('2d');
+    new Chart(ctxTop, {
+        type: 'doughnut',
+        data: {
+            labels: ['Café Frappé', 'Coca-Cola', 'Maruchan', 'Doritos', 'Galletas'],
+            datasets: [{
+                data: [35, 25, 20, 12, 8],
+                backgroundColor: ['#2c1e16', '#b06b05', '#198754', '#0d6efd', '#6c757d'],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+</script>
+{% endblock %}

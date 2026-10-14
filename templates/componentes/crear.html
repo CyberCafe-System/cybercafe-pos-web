@@ -1,0 +1,56 @@
+<!-- Modal Crear Componente -->
+<div class="modal fade" id="modalCrearComponente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-mouse2 me-2"></i>Registrar Componente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="#">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Nombre / Tipo de Componente</label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej. Teclado Mecánico, Mouse Gamer, Monitor 24''" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Marca / Modelo</label>
+                            <input type="text" name="marca_modelo" class="form-control" placeholder="Ej. Logitech G203" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Número de Serie</label>
+                            <input type="text" name="numero_serie" class="form-control" placeholder="Opcional">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Asignar a Dispositivo (Equipo)</label>
+                        <select name="equipo_id" class="form-select" required>
+                            <option value="">-- Dejar en Bodega (Sin asignar) --</option>
+                            {% for equipo in equipos %}
+                                <option value="{{ equipo.id }}">{{ equipo.nombre }} ({{ equipo.tipo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Estado del Componente</label>
+                        <select name="estado" class="form-select" required>
+                            <option value="OPERATIVO">Operativo</option>
+                            <option value="EN_REVISION">En Revisión</option>
+                            <option value="DANADO">Dañado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee"><i class="bi bi-save me-1"></i> Guardar Componente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

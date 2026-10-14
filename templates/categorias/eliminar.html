@@ -1,0 +1,24 @@
+<!-- Modal Eliminar Categoría -->
+<div class="modal fade" id="modalEliminarCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Categoría</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="#">
+                {% csrf_token %}
+                <input type="hidden" name="categoria_id" value="{{ categoria.id }}">
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-trash text-danger display-4 mb-3 d-block"></i>
+                    <h5 class="fw-bold">¿Estás seguro de eliminar esta categoría?</h5>
+                    <p class="text-muted mb-0">Esta acción no se puede deshacer y podría afectar a los productos asociados.</p>
+                </div>
+                <div class="modal-footer border-0 justify-content-center pb-4">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger px-4"><i class="bi bi-trash me-1"></i> Sí, Eliminar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

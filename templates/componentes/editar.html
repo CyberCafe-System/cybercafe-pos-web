@@ -1,0 +1,59 @@
+<!-- Modal Editar Componente -->
+<div class="modal fade" id="modalEditarComponente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-primary text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Editar / Reasignar Componente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="#">
+                {% csrf_token %}
+                <input type="hidden" name="componente_id" value="{{ comp.id }}">
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Nombre / Tipo de Componente</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ comp.nombre }}" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold required-field">Marca / Modelo</label>
+                            <input type="text" name="marca_modelo" class="form-control" value="{{ comp.marca_modelo }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Número de Serie</label>
+                            <input type="text" name="numero_serie" class="form-control" value="{{ comp.numero_serie }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Dispositivo Asignado</label>
+                        <select name="equipo_id" class="form-select" required>
+                            <option value="">-- En Bodega (Sin asignar) --</option>
+                            {% for equipo in equipos %}
+                                <option value="{{ equipo.id }}" {% if comp.equipo.id == equipo.id %}selected{% endif %}>
+                                    {{ equipo.nombre }} ({{ equipo.tipo }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold required-field">Estado</label>
+                        <select name="estado" class="form-select" required>
+                            <option value="OPERATIVO" {% if comp.estado == 'OPERATIVO' %}selected{% endif %}>Operativo</option>
+                            <option value="EN_REVISION" {% if comp.estado == 'EN_REVISION' %}selected{% endif %}>En Revisión</option>
+                            <option value="DANADO" {% if comp.estado == 'DANADO' %}selected{% endif %}>Dañado</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i> Actualizar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

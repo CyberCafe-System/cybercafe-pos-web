@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Gestión de Clientes</h3>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearCliente">Nuevo Cliente</button>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Nombre</th>
+                    <th>DUI</th>
+                    <th>Teléfono</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Juan Perez</td>
+                    <td>12345678-9</td>
+                    <td>7777-8888</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarCliente">Eliminar</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% include 'clientes/crear.html' %}
+{% include 'clientes/eliminar.html' %}
+{% endblock %}

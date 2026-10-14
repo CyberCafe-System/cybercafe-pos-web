@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>Catalogo de Equipos</h3>
+    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearEquipo">Agregar Equipo</button>
+</div>
+
+<!-- Tabla de equipos -->
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Identificador</th>
+                    <th>Tipo</th>
+                    <th>Tarifa (hr)</th>
+                    <th>Estado Físico</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Iteracion de backend -->
+                <tr>
+                    <td>PC-01</td>
+                    <td>PC</td>
+                    <td>$2.00</td>
+                    <td>DISPONIBLE</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary">Editar</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal Crear Equipo -->
+<div class="modal fade" id="modalCrearEquipo" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'crear_equipo' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Registrar Equipo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre/Identificador</label>
+                        <input type="text" name="nombre" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tipo</label>
+                        <select name="tipo" class="form-select">
+                            <option value="PC">PC</option>
+                            <option value="CONSOLA">Consola</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Tarifa por Hora</label>
+                        <input type="number" step="0.01" name="tarifa_por_hora" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Estado Fisico</label>
+                        <select name="estado" class="form-select">
+                            <option value="DISPONIBLE">Disponible</option>
+                            <option value="DANIOS_MENORES">Daños Menores</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
+                            <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
