@@ -80,7 +80,7 @@ class Usuario(AbstractBaseUser):
         return self.activo
 
     @is_active.setter
-    def is_active(self, value):
+    def is_active(self, value): #type: ignore
         self.activo = value
 
     @property
