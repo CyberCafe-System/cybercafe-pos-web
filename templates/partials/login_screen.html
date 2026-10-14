@@ -1,0 +1,55 @@
+{% load static %}
+<div class="login-wrapper">
+    <div class="glass-panel">
+
+        <div class="text-center mb-3">
+            <img src="{% static 'img/logo.png' %}" alt="Logo Coffee LAN" class="glass-logo">
+        </div>
+        <div class="glass-title text-center">
+            <span class="text-dark fw-normal">The</span>
+            <span class="fw-black text-dark">COFFEE</span>
+            <span class="fw-black text-warning-custom">LAN</span>
+        </div>
+        <h5 class="text-center fw-bold text-dark mb-4">Inicia Sesión</h5>
+
+        <form method="POST" action="{{ form_action }}">
+            {% csrf_token %}
+
+            {% if form.errors %}
+            <div class="alert alert-danger rounded-4 py-2 text-center small mb-3">
+                Usuario o contraseña incorrectos.
+            </div>
+            {% endif %}
+
+            {% if next %}
+            <input type="hidden" name="next" value="{{ next }}">
+            {% endif %}
+
+            <div class="mb-4">
+                <label class="glass-label">
+                    <div class="icon-circle-glass"><i class="bi bi-person-fill"></i></div>
+                    Nombre de Usuario
+                </label>
+                <input type="text" name="username" class="form-control glass-input" required autofocus>
+            </div>
+
+            <div class="mb-4">
+                <label class="glass-label">
+                    <div class="icon-circle-glass"><i class="bi bi-lock-fill"></i></div>
+                    Contraseña
+                </label>
+                <input type="password" name="password" class="form-control glass-input" placeholder="••••••••••••" required>
+            </div>
+
+            <div class="text-center mt-5">
+                <button type="submit" class="btn glass-btn">Iniciar Sesión</button>
+            </div>
+        </form>
+
+        <div class="text-center mt-4 glass-footer">
+            Si olvidaste tu contraseña.<br>
+            <a href="#" class="glass-link">Notifica al Administrador</a>
+        </div>
+
+    </div>
+</div>
