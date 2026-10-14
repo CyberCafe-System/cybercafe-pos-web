@@ -6,6 +6,7 @@ from categorias import views as categorias_views
 from clientes import views as clientes_views
 from config.views import ProtectedTemplateView
 from inventario import views as inventario_views
+from usuarios import views as usuarios_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -30,7 +31,7 @@ urlpatterns = [
     path('equipos/', ProtectedTemplateView.as_view(template_name='equipos/equipos.html'), name='equipos'),
     path('componentes/', ProtectedTemplateView.as_view(
         template_name='componentes/componentes.html'), name='componentes'),
-    path('usuarios/', ProtectedTemplateView.as_view(template_name='usuarios/usuarios.html'), name='usuarios'),
+    path('usuarios/', usuarios_views.usuario_list, name='usuarios'),
     path('reportes/', ProtectedTemplateView.as_view(template_name='reportes.html'),
          name='reportes'),
 
@@ -78,10 +79,7 @@ urlpatterns = [
         template_name='componentes/componentes.html'), name='eliminar_componente'),
 
     # Usuarios
-    path('crear_usuario/', ProtectedTemplateView.as_view(template_name='usuarios/usuarios.html'),
-         name='crear_usuario'),
-    path('modificar_usuario/', ProtectedTemplateView.as_view(
-        template_name='usuarios/usuarios.html'), name='modificar_usuario'),
-    path('eliminar_usuario/', ProtectedTemplateView.as_view(
-        template_name='usuarios/usuarios.html'), name='eliminar_usuario'),
+    path('crear_usuario/', usuarios_views.usuario_create, name='crear_usuario'),
+    path('modificar_usuario/', usuarios_views.usuario_edit, name='modificar_usuario'),
+    path('desactivar_usuario/', usuarios_views.usuario_toggle, name='desactivar_usuario'),
 ]
