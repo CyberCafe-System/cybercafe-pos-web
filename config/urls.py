@@ -2,6 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
+from categorias import views as categorias_views
 from config.views import ProtectedTemplateView
 
 urlpatterns = [
@@ -23,7 +24,7 @@ urlpatterns = [
     path('pos/', ProtectedTemplateView.as_view(template_name='pos/pos.html'), name='pos'),
     path('clientes/', ProtectedTemplateView.as_view(template_name='clientes/clientes.html'), name='clientes'),
     path('inventario/', ProtectedTemplateView.as_view(template_name='inventario/inventario.html'), name='inventario'),
-    path('categorias/', ProtectedTemplateView.as_view(template_name='categorias/categorias.html'), name='categorias'),
+    path('categorias/', categorias_views.categoria_list, name='categorias'),
     path('equipos/', ProtectedTemplateView.as_view(template_name='equipos/equipos.html'), name='equipos'),
     path('componentes/', ProtectedTemplateView.as_view(
         template_name='componentes/componentes.html'), name='componentes'),
@@ -61,12 +62,9 @@ urlpatterns = [
         template_name='inventario/inventario.html'), name='eliminar_producto'),
 
     # Categorías
-    path('crear_categoria/', ProtectedTemplateView.as_view(
-        template_name='categorias/categorias.html'), name='crear_categoria'),
-    path('modificar_categoria/', ProtectedTemplateView.as_view(
-        template_name='categorias/categorias.html'), name='modificar_categoria'),
-    path('eliminar_categoria/', ProtectedTemplateView.as_view(
-        template_name='categorias/categorias.html'), name='eliminar_categoria'),
+    path('crear_categoria/', categorias_views.categoria_create, name='crear_categoria'),
+    path('modificar_categoria/', categorias_views.categoria_edit, name='modificar_categoria'),
+    path('desactivar_categoria/', categorias_views.categoria_toggle, name='desactivar_categoria'),
 
     # Equipos
     path('crear_equipo/', ProtectedTemplateView.as_view(template_name='equipos/equipos.html'),

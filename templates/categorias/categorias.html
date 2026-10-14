@@ -16,7 +16,7 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" class="form-control border-start-0" placeholder="Buscar categoría por nombre...">
+                    <input type="text" id="buscadorCategorias" class="form-control border-start-0" placeholder="Buscar categoría por nombre...">
                 </div>
             </div>
         </div>
@@ -39,34 +39,51 @@
                 </thead>
                 <tbody>
                     {% for categoria in categorias %}
-                    <tr>
-                        <td class="fw-bold">#{{ categoria.id }}</td>
+                    <tr class="fila-categoria" data-busqueda="{{ categoria.nombre|lower }} {{ categoria.descripcion|default:''|lower }}">
+                        <td class="fw-bold">#{{ categoria.categoria_id }}</td>
                         <td class="fw-semibold">{{ categoria.nombre }}</td>
                         <td class="text-muted">{{ categoria.descripcion|default:"Sin descripción" }}</td>
                         <td>
-                            {% if categoria.activo %}
+                            {% if categoria.activa %}
                                 <span class="badge bg-success">Activa</span>
                             {% else %}
                                 <span class="badge bg-secondary">Inactiva</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria" title="Editar">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria"
+                                data-id="{{ categoria.categoria_id }}" data-nombre="{{ categoria.nombre }}" data-descripcion="{{ categoria.descripcion|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarCategoria" title="Eliminar">
-                                <i class="bi bi-trash"></i>
-                            </button>
+                            <form method="POST" action="{% url 'desactivar_categoria' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="categoria_id" value="{{ categoria.categoria_id }}">
+                                {% if categoria.activa %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning me-1" title="Desactivar">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success me-1" title="Activar">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr>
+                    <tr class="fila-vacia">
                         <td colspan="5" class="text-center text-muted py-4">
                             <i class="bi bi-tags fs-2 d-block mb-2"></i>
                             No hay categorías registradas aún.
                         </td>
                     </tr>
                     {% endfor %}
+                    <tr id="sinResultadosCategorias" class="d-none">
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron categorías.
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -76,6 +93,34 @@
 
 {% include 'categorias/crear.html' %}
 {% include 'categorias/editar.html' %}
-{% include 'categorias/eliminar.html' %}
+
+<script>
+    document.querySelectorAll('.btn-editar').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('editarCategoriaId').value = btn.dataset.id;
+            document.getElementById('editarCategoriaNombre').value = btn.dataset.nombre;
+            document.getElementById('editarCategoriaDescripcion').value = btn.dataset.descripcion;
+        });
+    });
+
+    const buscador = document.getElementById('buscadorCategorias');
+    if (buscador) {
+        const filas = document.querySelectorAll('.fila-categoria');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosCategorias');
+
+        buscador.addEventListener('input', function () {
+            const termino = buscador.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+</script>
 
 {% endblock %}
