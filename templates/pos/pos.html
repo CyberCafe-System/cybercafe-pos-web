@@ -3,26 +3,61 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Punto de Venta</h3>
-    <button class="btn btn-danger"><i class="bi bi-file-earmark-pdf-fill"></i> Generar Último Ticket PDF</button>
+    <h3 class="mb-0">Punto de Venta</h3>
+    {% if ultima_venta_id %}
+    <a href="{% url 'ticket_pdf' %}" target="_blank" class="btn btn-danger">
+        <i class="bi bi-file-earmark-pdf-fill"></i> Generar Último Ticket PDF
+    </a>
+    {% else %}
+    <button class="btn btn-danger" disabled>
+        <i class="bi bi-file-earmark-pdf-fill"></i> Generar Último Ticket PDF
+    </button>
+    {% endif %}
 </div>
 
 <div class="row">
     <div class="col-lg-8">
+        <div class="mb-3">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto por nombre o categoría...">
+            </div>
+        </div>
+
         <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
-            <div class="col">
+            {% for producto in productos %}
+            <div class="col fila-producto-pos" data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
                 <div class="card shadow-sm border-0 h-100 rounded-3 overflow-hidden">
-                    <img src="{% static 'img/logo.png' %}" class="card-img-top" style="height: 130px; object-fit: cover;">
+                    <div class="d-flex align-items-center justify-content-center bg-light" style="height: 100px;">
+                        <i class="bi bi-cup-hot fs-1 text-muted"></i>
+                    </div>
                     <div class="card-body text-center p-2 d-flex flex-column">
-                        <small class="text-muted d-block mb-1">Bebidas</small>
-                        <h6 class="card-title fw-bold mb-1">Soda Cola</h6>
-                        <p class="text-success fw-bold mb-2">$1.50</p>
+                        <small class="text-muted d-block mb-1">{{ producto.categoria.nombre }}</small>
+                        <h6 class="card-title fw-bold mb-1">{{ producto.nombre }}</h6>
+                        <span class="badge {% if producto.cantidad > 0 %}bg-light text-dark{% else %}bg-danger{% endif %} mb-2">Stock: {{ producto.cantidad }}</span>
+                        <p class="text-success fw-bold mb-2">${{ producto.precio_venta|floatformat:2 }}</p>
                         <form method="POST" action="{% url 'agregar_carrito' %}" class="mt-auto">
                             {% csrf_token %}
-                            <input type="hidden" name="producto_id" value="1">
-                            <button type="submit" class="btn btn-primary btn-sm w-100 rounded-pill">Añadir</button>
+                            <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <button type="submit" class="btn btn-coffee btn-sm w-100 rounded-pill" {% if producto.cantidad == 0 %}disabled{% endif %}>
+                                <i class="bi bi-cart-plus"></i> Añadir
+                            </button>
                         </form>
                     </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-light border text-center text-muted py-4">
+                    <i class="bi bi-box-seam fs-2 d-block mb-2"></i>
+                    No hay productos activos para vender.
+                </div>
+            </div>
+            {% endfor %}
+            <div class="col-12 d-none" id="sinResultadosPos">
+                <div class="alert alert-light border text-center text-muted py-3">
+                    <i class="bi bi-search me-1"></i> No se encontraron productos.
                 </div>
             </div>
         </div>
@@ -34,15 +69,68 @@
                 <h5 class="fw-bold mb-0">Resumen de Orden</h5>
             </div>
             <div class="card-body">
-                <div class="d-flex justify-content-between mb-4 fs-5 fw-bold">
+                {% if items %}
+                <ul class="list-group list-group-flush mb-3">
+                    {% for item in items %}
+                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold">{{ item.producto.nombre }}</div>
+                            <small class="text-muted">{{ item.cantidad }} x ${{ item.producto.precio_venta|floatformat:2 }}</small>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold">${{ item.subtotal|floatformat:2 }}</span>
+                            <form method="POST" action="{% url 'quitar_carrito' %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="producto_id" value="{{ item.producto.producto_id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Quitar">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <div class="d-flex justify-content-between text-muted">
+                    <span>Subtotal</span><span>${{ subtotal|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between text-muted">
+                    <span>IVA ({{ iva_porcentaje }}%)</span><span>${{ iva|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-4 mt-2 fs-5 fw-bold">
                     <span>Total:</span>
-                    <span class="text-success">$7.35</span>
+                    <span class="text-success">${{ total|floatformat:2 }}</span>
                 </div>
                 <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" data-bs-toggle="modal" data-bs-target="#modalProcesarVenta">Procesar Pago</button>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-cart fs-1 d-block mb-2"></i>
+                    El carrito está vacío.
+                </div>
+                <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" disabled>Procesar Pago</button>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 {% include 'pos/venta.html' %}
+
+<script>
+    const buscadorPos = document.getElementById('buscadorProductos');
+    if (buscadorPos) {
+        const tarjetas = document.querySelectorAll('.fila-producto-pos');
+        const sinResultados = document.getElementById('sinResultadosPos');
+        buscadorPos.addEventListener('input', function () {
+            const termino = buscadorPos.value.trim().toLowerCase();
+            let visibles = 0;
+            tarjetas.forEach(function (tarjeta) {
+                const coincide = tarjeta.dataset.busqueda.includes(termino);
+                tarjeta.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || tarjetas.length === 0);
+        });
+    }
+</script>
 {% endblock %}

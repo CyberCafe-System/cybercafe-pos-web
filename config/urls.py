@@ -6,6 +6,7 @@ from categorias import views as categorias_views
 from clientes import views as clientes_views
 from config.views import ProtectedTemplateView
 from inventario import views as inventario_views
+from pos_app import views as pos_views
 from usuarios import views as usuarios_views
 
 urlpatterns = [
@@ -24,7 +25,7 @@ urlpatterns = [
 
     # --- PANTALLAS DE OPERACION PRINCIPALES ---
     path('rentas/', ProtectedTemplateView.as_view(template_name='rentas/rentas.html'), name='rentas'),
-    path('pos/', ProtectedTemplateView.as_view(template_name='pos/pos.html'), name='pos'),
+    path('pos/', pos_views.pos, name='pos'),
     path('clientes/', clientes_views.cliente_list, name='clientes'),
     path('inventario/', inventario_views.producto_list, name='inventario'),
     path('categorias/', categorias_views.categoria_list, name='categorias'),
@@ -43,10 +44,11 @@ urlpatterns = [
          name='finalizar_renta'),
 
     # POS
-    path('agregar_carrito/', ProtectedTemplateView.as_view(template_name='pos/pos.html'),
-         name='agregar_carrito'),
-    path('procesar_venta/', ProtectedTemplateView.as_view(template_name='pos/pos.html'),
-         name='procesar_venta'),
+    path('agregar_carrito/', pos_views.agregar_carrito, name='agregar_carrito'),
+    path('quitar_carrito/', pos_views.quitar_carrito, name='quitar_carrito'),
+    path('procesar_venta/', pos_views.procesar_venta, name='procesar_venta'),
+    path('ticket_pdf/', pos_views.ticket_pdf, name='ticket_pdf'),
+    path('ticket_pdf/<int:venta_id>/', pos_views.ticket_pdf, name='ticket_pdf_venta'),
 
     # Clientes
     path('crear_cliente/', clientes_views.cliente_create, name='crear_cliente'),

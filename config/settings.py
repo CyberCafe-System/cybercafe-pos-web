@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'usuarios',
     'categorias',
     'inventario',
-    'clientes'
+    'clientes',
+    'pos_app'
 ]
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
