@@ -9,32 +9,32 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <input type="hidden" name="cliente_id" value="{{ cliente.cliente_id }}">
+                    <input type="hidden" name="cliente_id" id="editarClienteId">
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Nombre</label>
-                            <input type="text" name="nombre" class="form-control" value="{{ cliente.nombre }}" required>
+                            <label class="form-label fw-semibold required-field">Nombre</label>
+                            <input type="text" name="nombre" id="editarClienteNombre" class="form-control" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label">Apellido</label>
-                            <input type="text" name="apellido" class="form-control" value="{{ cliente.apellido }}" required>
+                            <label class="form-label fw-semibold required-field">Apellido</label>
+                            <input type="text" name="apellido" id="editarClienteApellido" class="form-control" required>
                         </div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">DUI</label>
-                        <input type="text" name="dui" class="form-control" value="{{ cliente.dui }}" required>
+                        <label class="form-label fw-semibold required-field">DUI</label>
+                        <input type="text" name="dui" id="editarClienteDui" class="form-control" maxlength="10" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Dirección</label>
-                        <input type="text" name="direccion" class="form-control" value="{{ cliente.direccion }}" required>
+                        <label class="form-label fw-semibold required-field">Teléfono</label>
+                        <input type="number" name="telefono" id="editarClienteTelefono" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Teléfono</label>
-                        <input type="number" name="telefono" class="form-control" value="{{ cliente.telefono }}" required>
+                        <label class="form-label fw-semibold required-field">Dirección</label>
+                        <input type="text" name="direccion" id="editarClienteDireccion" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Correo</label>
-                        <input type="email" name="correo" class="form-control" value="{{ cliente.correo }}">
+                        <label class="form-label fw-semibold">Correo (Opcional)</label>
+                        <input type="email" name="correo" id="editarClienteCorreo" class="form-control">
                     </div>
                 </div>
                 <div class="modal-footer">

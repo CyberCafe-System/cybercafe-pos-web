@@ -3,6 +3,7 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
 from categorias import views as categorias_views
+from clientes import views as clientes_views
 from config.views import ProtectedTemplateView
 from inventario import views as inventario_views
 
@@ -23,7 +24,7 @@ urlpatterns = [
     # --- PANTALLAS DE OPERACION PRINCIPALES ---
     path('rentas/', ProtectedTemplateView.as_view(template_name='rentas/rentas.html'), name='rentas'),
     path('pos/', ProtectedTemplateView.as_view(template_name='pos/pos.html'), name='pos'),
-    path('clientes/', ProtectedTemplateView.as_view(template_name='clientes/clientes.html'), name='clientes'),
+    path('clientes/', clientes_views.cliente_list, name='clientes'),
     path('inventario/', inventario_views.producto_list, name='inventario'),
     path('categorias/', categorias_views.categoria_list, name='categorias'),
     path('equipos/', ProtectedTemplateView.as_view(template_name='equipos/equipos.html'), name='equipos'),
@@ -47,12 +48,8 @@ urlpatterns = [
          name='procesar_venta'),
 
     # Clientes
-    path('crear_cliente/', ProtectedTemplateView.as_view(template_name='clientes/clientes.html'),
-         name='crear_cliente'),
-    path('modificar_cliente/', ProtectedTemplateView.as_view(
-        template_name='clientes/clientes.html'), name='modificar_cliente'),
-    path('eliminar_cliente/', ProtectedTemplateView.as_view(
-        template_name='clientes/clientes.html'), name='eliminar_cliente'),
+    path('crear_cliente/', clientes_views.cliente_create, name='crear_cliente'),
+    path('modificar_cliente/', clientes_views.cliente_edit, name='modificar_cliente'),
 
     # Inventario
     path('crear_producto/', inventario_views.producto_create, name='crear_producto'),
