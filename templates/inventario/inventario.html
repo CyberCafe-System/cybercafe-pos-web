@@ -4,10 +4,22 @@
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3>Inventario de Productos</h3>
-    <!-- Se eliminó el botón de categorías -->
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearProducto">
         <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
     </button>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto por nombre...">
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="card shadow-sm border-0 rounded-4">
@@ -23,25 +35,72 @@
                         <th>Stock</th>
                         <th>Precio Compra</th>
                         <th>Precio Venta</th>
+                        <th>Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Fila de ejemplo para la presentación -->
-                    <tr>
+                    {% for producto in productos %}
+                    <tr class="fila-producto" data-busqueda="{{ producto.nombre|lower }}">
                         <td>
-                            <!-- Imagen de muestra (Puedes poner una URL de internet o de tu static) -->
-                            <img src="https://via.placeholder.com/50" class="rounded shadow-sm" alt="Producto" style="width: 50px; height: 50px; object-fit: cover;">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-light rounded shadow-sm" style="width: 50px; height: 50px;">
+                                <i class="bi bi-image text-muted"></i>
+                            </span>
                         </td>
-                        <td class="fw-bold">#101</td>
-                        <td class="fw-semibold">Doritos Nacho</td>
-                        <td>Snacks</td>
-                        <td><span class="badge bg-success">45</span></td>
-                        <td>$0.50</td>
-                        <td class="fw-bold text-success">$0.85</td>
+                        <td class="fw-bold">#{{ producto.producto_id }}</td>
+                        <td class="fw-semibold">{{ producto.nombre }}</td>
+                        <td>{{ producto.categoria.nombre }}</td>
+                        <td>
+                            {% if producto.cantidad > 0 %}
+                                <span class="badge bg-success">{{ producto.cantidad }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ producto.cantidad }}</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ producto.precio_compra|floatformat:2 }}</td>
+                        <td class="fw-bold text-success">${{ producto.precio_venta|floatformat:2 }}</td>
+                        <td>
+                            {% if producto.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1" data-bs-toggle="modal" data-bs-target="#modalEditarProducto"><i class="bi bi-pencil-square"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminarProducto"><i class="bi bi-trash"></i></button>
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto" data-bs-toggle="modal" data-bs-target="#modalModificarProducto"
+                                data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
+                                data-categoria="{{ producto.categoria_id }}"
+                                data-precio-compra="{{ producto.precio_compra }}" data-precio-venta="{{ producto.precio_venta }}"
+                                data-cantidad="{{ producto.cantidad }}" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <form method="POST" action="{% url 'desactivar_producto' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                                {% if producto.activo %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activar">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="fila-vacia">
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="bi bi-box-seam fs-2 d-block mb-2"></i>
+                            No hay productos registrados aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="sinResultadosProductos" class="d-none">
+                        <td colspan="9" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron productos.
                         </td>
                     </tr>
                 </tbody>
@@ -52,4 +111,37 @@
 
 {% include 'inventario/crear.html' %}
 {% include 'inventario/modificar.html' %}
+
+<script>
+    document.querySelectorAll('.btn-editar-producto').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('editarProductoId').value = btn.dataset.id;
+            document.getElementById('editarProductoNombre').value = btn.dataset.nombre;
+            document.getElementById('editarProductoCategoria').value = btn.dataset.categoria;
+            document.getElementById('editarProductoPrecioCompra').value = btn.dataset.precioCompra;
+            document.getElementById('editarProductoPrecioVenta').value = btn.dataset.precioVenta;
+            document.getElementById('editarProductoCantidad').value = btn.dataset.cantidad;
+        });
+    });
+
+    const buscadorProductos = document.getElementById('buscadorProductos');
+    if (buscadorProductos) {
+        const filas = document.querySelectorAll('.fila-producto');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosProductos');
+
+        buscadorProductos.addEventListener('input', function () {
+            const termino = buscadorProductos.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+</script>
+
 {% endblock %}

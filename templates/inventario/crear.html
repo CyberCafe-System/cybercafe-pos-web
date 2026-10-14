@@ -2,7 +2,7 @@
 <div class="modal fade" id="modalCrearProducto" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{% url 'crear_producto' %}" enctype="multipart/form-data">
+            <form method="POST" action="{% url 'crear_producto' %}">
                 {% csrf_token %}
                 <div class="modal-header">
                     <h5 class="modal-title">Registrar Producto</h5>
@@ -15,8 +15,11 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold required-field">Categoría</label>
-                        <select name="categoria_id" class="form-select" required>
-                            <!-- Backend: Iterar categorias -->
+                        <select name="categoria" class="form-select" required>
+                            <option value="">Seleccione una categoría</option>
+                            {% for categoria in categorias %}
+                            <option value="{{ categoria.categoria_id }}">{{ categoria.nombre }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                     <div class="row">
@@ -31,7 +34,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold required-field">Cantidad Inicial</label>
-                        <input type="number" name="cantidad" class="form-control" required>
+                        <input type="number" name="cantidad" class="form-control" min="0" required>
                     </div>
                 </div>
                 <div class="modal-footer">

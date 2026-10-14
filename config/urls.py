@@ -4,6 +4,7 @@ from django.urls import path
 
 from categorias import views as categorias_views
 from config.views import ProtectedTemplateView
+from inventario import views as inventario_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -23,7 +24,7 @@ urlpatterns = [
     path('rentas/', ProtectedTemplateView.as_view(template_name='rentas/rentas.html'), name='rentas'),
     path('pos/', ProtectedTemplateView.as_view(template_name='pos/pos.html'), name='pos'),
     path('clientes/', ProtectedTemplateView.as_view(template_name='clientes/clientes.html'), name='clientes'),
-    path('inventario/', ProtectedTemplateView.as_view(template_name='inventario/inventario.html'), name='inventario'),
+    path('inventario/', inventario_views.producto_list, name='inventario'),
     path('categorias/', categorias_views.categoria_list, name='categorias'),
     path('equipos/', ProtectedTemplateView.as_view(template_name='equipos/equipos.html'), name='equipos'),
     path('componentes/', ProtectedTemplateView.as_view(
@@ -54,12 +55,9 @@ urlpatterns = [
         template_name='clientes/clientes.html'), name='eliminar_cliente'),
 
     # Inventario
-    path('crear_producto/', ProtectedTemplateView.as_view(
-        template_name='inventario/inventario.html'), name='crear_producto'),
-    path('modificar_producto/', ProtectedTemplateView.as_view(
-        template_name='inventario/inventario.html'), name='modificar_producto'),
-    path('eliminar_producto/', ProtectedTemplateView.as_view(
-        template_name='inventario/inventario.html'), name='eliminar_producto'),
+    path('crear_producto/', inventario_views.producto_create, name='crear_producto'),
+    path('modificar_producto/', inventario_views.producto_edit, name='modificar_producto'),
+    path('desactivar_producto/', inventario_views.producto_toggle, name='desactivar_producto'),
 
     # Categorías
     path('crear_categoria/', categorias_views.categoria_create, name='crear_categoria'),
