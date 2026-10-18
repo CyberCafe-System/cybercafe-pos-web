@@ -7,6 +7,7 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from equipos.models import Equipo
+from usuarios.decorators import cajero_o_admin_required
 
 from .models import DetalleRenta, Renta
 
@@ -34,6 +35,7 @@ def renta_list(request):
 
 
 @login_required
+@cajero_o_admin_required
 def renta_create(request):
     if request.method == 'POST':
         equipo_id = request.POST.get('equipo_id')
@@ -80,6 +82,7 @@ def renta_create(request):
 
 
 @login_required
+@cajero_o_admin_required
 def renta_finalizar(request):
     if request.method == 'POST':
         detalle_id = request.POST.get('detalle_renta_id')

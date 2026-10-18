@@ -3,17 +3,20 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 
+from usuarios.decorators import admin_required, asistente_o_admin_required
 from .forms import EquipoForm
 from .models import Equipo
 
 
 @login_required
+@asistente_o_admin_required
 def equipo_list(request):
     equipos = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
     return render(request, 'equipos/equipos.html', {'equipos': equipos})
 
 
 @login_required
+@asistente_o_admin_required
 def equipo_create(request):
     if request.method == 'POST':
         form = EquipoForm(request.POST)
@@ -30,6 +33,7 @@ def equipo_create(request):
 
 
 @login_required
+@asistente_o_admin_required
 def equipo_edit(request):
     if request.method == 'POST':
         equipo = get_object_or_404(Equipo, pk=request.POST.get('equipo_id'))
@@ -47,6 +51,7 @@ def equipo_edit(request):
 
 
 @login_required
+@admin_required
 def equipo_delete(request):
     if request.method == 'POST':
         equipo = get_object_or_404(Equipo, pk=request.POST.get('equipo_id'))
@@ -60,3 +65,4 @@ def equipo_delete(request):
         except Exception as e:
             messages.error(request, f'Error al eliminar el equipo: {e}')
     return redirect('equipos')
+

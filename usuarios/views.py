@@ -2,11 +2,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from .decorators import admin_required
 from .forms import UsuarioCreateForm, UsuarioEditForm
 from .models import Rol, Usuario
 
 
 @login_required
+@admin_required
 def usuario_list(request):
     usuarios = Usuario.objects.select_related('rol').all().order_by('usuario_id')
     roles = Rol.objects.all().order_by('nombre')
@@ -14,6 +16,7 @@ def usuario_list(request):
 
 
 @login_required
+@admin_required
 def usuario_create(request):
     if request.method == 'POST':
         form = UsuarioCreateForm(request.POST)
@@ -30,6 +33,7 @@ def usuario_create(request):
 
 
 @login_required
+@admin_required
 def usuario_edit(request):
     if request.method == 'POST':
         usuario = get_object_or_404(Usuario, pk=request.POST.get('usuario_id'))
@@ -52,6 +56,7 @@ def usuario_edit(request):
 
 
 @login_required
+@admin_required
 def usuario_toggle(request):
     if request.method == 'POST':
         usuario = get_object_or_404(Usuario, pk=request.POST.get('usuario_id'))

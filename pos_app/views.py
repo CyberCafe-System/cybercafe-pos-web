@@ -12,6 +12,7 @@ from clientes.models import Cliente
 from equipos.models import Equipo
 from inventario.models import Producto
 from rentas.models import DetalleRenta, Renta
+from usuarios.decorators import cajero_o_admin_required
 
 from .models import DetalleVenta, Venta
 from .ticket import generar_factura_pdf
@@ -134,6 +135,7 @@ def _respuesta_pdf(venta):
 
 
 @login_required
+@cajero_o_admin_required
 def pos(request):
     productos = (
         Producto.objects.filter(activo=True)
@@ -165,6 +167,7 @@ def pos(request):
 
 
 @login_required
+@cajero_o_admin_required
 def agregar_carrito(request):
     if request.method == 'POST':
         producto = get_object_or_404(Producto, pk=request.POST.get('producto_id'), activo=True)
@@ -191,6 +194,7 @@ def agregar_carrito(request):
 
 
 @login_required
+@cajero_o_admin_required
 def quitar_carrito(request):
     if request.method == 'POST':
         carrito = _obtener_carrito(request)
@@ -200,6 +204,7 @@ def quitar_carrito(request):
 
 
 @login_required
+@cajero_o_admin_required
 def procesar_venta(request):
     if request.method != 'POST':
         return redirect('pos')
@@ -239,6 +244,7 @@ def procesar_venta(request):
 
 
 @login_required
+@cajero_o_admin_required
 def ticket_pdf(request, venta_id=None):
     venta = None
     if venta_id is not None:
@@ -256,6 +262,7 @@ def ticket_pdf(request, venta_id=None):
 
 
 @login_required
+@cajero_o_admin_required
 def reportes(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')

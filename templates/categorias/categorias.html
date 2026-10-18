@@ -7,9 +7,11 @@
         <h3 class="mb-0"><i class="bi bi-tags me-2"></i>Administración de Categorías</h3>
         <p class="text-muted small mb-0">Agrupación lógica de productos para el catálogo del punto de venta.</p>
     </div>
+    {% if request.user.es_admin %}
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearCategoria">
         <i class="bi bi-plus-circle me-1"></i> Nueva Categoría
     </button>
+    {% endif %}
 </div>
 
 <div class="card shadow-sm border-0 rounded-4 mb-4">
@@ -39,7 +41,9 @@
                         <th>Nombre de la Categoría</th>
                         <th>Descripción</th>
                         <th>Estado</th>
+                        {% if request.user.es_admin %}
                         <th class="text-end">Acciones</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
@@ -54,6 +58,7 @@
                                 <span class="badge bg-secondary">Inactiva</span>
                             {% endif %}
                         </td>
+                        {% if request.user.es_admin %}
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria"
                                 data-id="{{ categoria.categoria_id }}" data-nombre="{{ categoria.nombre }}" data-descripcion="{{ categoria.descripcion|default:'' }}" title="Editar">
@@ -73,10 +78,11 @@
                                 {% endif %}
                             </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="4" class="text-center text-muted py-5">
+                        <td colspan="{% if request.user.es_admin %}4{% else %}3{% endif %}" class="text-center text-muted py-5">
                             <i class="bi bi-tags fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay categorías registradas aún.
                         </td>

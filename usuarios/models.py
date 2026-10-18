@@ -75,6 +75,16 @@ class Usuario(AbstractBaseUser):
         verbose_name = 'usuario'
         verbose_name_plural = 'usuarios'
 
+    def save(self, *args, **kwargs):
+        # Sincronizar is_superuser con el rol
+        es_admin_rol = (self.rol_id == 1)
+        if not es_admin_rol and hasattr(self, '_state'):
+            cached_rol = self._state.fields_cache.get('rol')
+            if cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'admin':
+                es_admin_rol = True
+        self.is_superuser = bool(es_admin_rol)
+        super().save(*args, **kwargs)
+
     @property
     def is_active(self):
         return self.activo
@@ -85,19 +95,28 @@ class Usuario(AbstractBaseUser):
 
     @property
     def is_staff(self):
-        return self.is_active and self.is_superuser
+        return self.is_active and self.es_admin
 
     @property
     def es_admin(self):
-        return self.is_superuser or (self.rol_id == 1) or (self.rol and self.rol.nombre.lower() == 'admin')
+        if self.rol_id == 1:
+            return True
+        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
+        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'admin')
 
     @property
     def es_cajero(self):
-        return (self.rol_id == 2) or (self.rol and self.rol.nombre.lower() == 'cajero')
+        if self.rol_id == 2:
+            return True
+        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
+        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'cajero')
 
     @property
     def es_asistente(self):
-        return (self.rol_id == 3) or (self.rol and self.rol.nombre.lower() == 'asistente')
+        if self.rol_id == 3:
+            return True
+        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
+        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'asistente')
 
     def get_full_name(self):
         return self.nombre
@@ -115,10 +134,10 @@ class Usuario(AbstractBaseUser):
         return set()
 
     def has_perm(self, perm, obj=None):
-        return self.is_active and self.is_superuser
+        return self.is_active and self.es_admin
 
     def has_module_perms(self, app_label):
-        return self.is_active and self.is_superuser
+        return self.is_active and self.es_admin
 
     def __str__(self):
         return self.username

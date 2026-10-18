@@ -7,9 +7,11 @@
         <h3 class="mb-0"><i class="bi bi-pc-display me-2"></i>Control de Rentas y Equipos</h3>
         <p class="text-muted small mb-0">Supervisión en tiempo real del uso de computadoras, consolas y estaciones de juego.</p>
     </div>
+    {% if request.user.es_admin or request.user.es_cajero %}
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta">
         <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
     </button>
+    {% endif %}
 </div>
 
 <!-- Buscador Unificado con Indicador -->
@@ -72,7 +74,7 @@
                 </div>
 
                 <div class="mt-auto d-flex gap-2">
-                    <button class="btn btn-outline-secondary flex-grow-1 rounded-pill btn-info-equipo"
+                    <button class="btn btn-outline-secondary {% if not request.user.es_admin and not request.user.es_cajero %}w-100{% else %}flex-grow-1{% endif %} rounded-pill btn-info-equipo"
                             data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
                             data-nombre="{{ equipo.nombre }}"
                             data-tipo="{{ equipo.tipo }}"
@@ -84,8 +86,9 @@
                             data-total="${{ equipo.renta_activa.subtotal }}"
                             data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
                             title="Ver Información y Hardware">
-                        <i class="bi bi-info-circle"></i> Info
+                        <i class="bi bi-info-circle me-1"></i> {% if not request.user.es_admin and not request.user.es_cajero %}Ver Detalles y Hardware{% else %}Info{% endif %}
                     </button>
+                    {% if request.user.es_admin or request.user.es_cajero %}
                     <form method="POST" action="{% url 'finalizar_renta' %}" class="flex-grow-1">
                         {% csrf_token %}
                         <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
@@ -93,6 +96,7 @@
                             <i class="bi bi-stop-circle me-1"></i> Cobrar
                         </button>
                     </form>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -152,7 +156,7 @@
                 <p class="text-success fw-bold fs-6 mb-3">Tarifa: ${{ equipo.tarifa_por_hora|floatformat:2 }}/hr</p>
 
                 <div class="mt-auto d-flex gap-2">
-                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
+                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3 {% if not request.user.es_admin and not request.user.es_cajero %}w-100{% endif %}"
                             data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
                             data-nombre="{{ equipo.nombre }}"
                             data-tipo="{{ equipo.tipo }}"
@@ -164,13 +168,15 @@
                             data-total="--"
                             data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
                             title="Ver Hardware y Periféricos">
-                        <i class="bi bi-info-circle"></i>
+                        <i class="bi bi-info-circle me-1"></i> {% if not request.user.es_admin and not request.user.es_cajero %}Ver Periféricos{% endif %}
                     </button>
+                    {% if request.user.es_admin or request.user.es_cajero %}
                     <button class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm btn-asignar-equipo"
                             data-bs-toggle="modal" data-bs-target="#modalNuevaRenta"
                             data-equipo-id="{{ equipo.equipo_id }}">
                         <i class="bi bi-play-circle me-1"></i> Asignar Tiempo
                     </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -246,7 +252,9 @@
     </div>
 </div>
 
+{% if request.user.es_admin or request.user.es_cajero %}
 {% include 'rentas/crear.html' %}
+{% endif %}
 
 <script>
     // Buscador interactivo

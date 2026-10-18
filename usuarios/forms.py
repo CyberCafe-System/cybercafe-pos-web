@@ -69,6 +69,10 @@ class UsuarioCreateForm(forms.ModelForm):
     def save(self, commit=True):
         user = super().save(commit=False)
         user.set_password(self.cleaned_data['password'])
+        es_admin_rol = (user.rol_id == 1) or (
+            getattr(user, 'rol', None) and getattr(user.rol, 'nombre', '').lower() == 'admin'
+        )
+        user.is_superuser = bool(es_admin_rol)
         if commit:
             user.save()
         return user
@@ -90,6 +94,16 @@ class UsuarioEditForm(forms.ModelForm):
             'correo': forms.EmailInput(attrs={'class': 'form-control'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        es_admin_rol = (user.rol_id == 1) or (
+            getattr(user, 'rol', None) and getattr(user.rol, 'nombre', '').lower() == 'admin'
+        )
+        user.is_superuser = bool(es_admin_rol)
+        if commit:
+            user.save()
+        return user
 
     def clean_username(self):
         username = self.cleaned_data.get('username')
