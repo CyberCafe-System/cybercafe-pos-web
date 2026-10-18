@@ -3,7 +3,10 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Inventario de Productos</h3>
+    <div>
+        <h3 class="mb-0"><i class="bi bi-box-seam me-2"></i>Inventario de Productos</h3>
+        <p class="text-muted small mb-0">Gestión de existencias, precios y catálogo de venta.</p>
+    </div>
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearProducto">
         <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
     </button>
@@ -15,7 +18,11 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto por nombre...">
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong class="text-dark">Categoría</strong></span>
                 </div>
             </div>
         </div>
@@ -28,8 +35,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>Imagen</th>
-                        <th>ID</th>
+                        <th style="width: 70px;">Imagen</th>
                         <th>Producto</th>
                         <th>Categoría</th>
                         <th>Stock</th>
@@ -41,18 +47,25 @@
                 </thead>
                 <tbody>
                     {% for producto in productos %}
-                    <tr class="fila-producto" data-busqueda="{{ producto.nombre|lower }}">
+                    <tr class="fila-producto" data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
                         <td>
-                            <span class="d-inline-flex align-items-center justify-content-center bg-light rounded shadow-sm" style="width: 50px; height: 50px;">
+                            {% if producto.imagen %}
+                            <img src="/media/{{ producto.imagen }}" class="rounded-3 object-fit-cover shadow-sm border" style="width: 50px; height: 50px;" alt="{{ producto.nombre }}">
+                            {% else %}
+                            <span class="d-inline-flex align-items-center justify-content-center bg-light rounded-3 border shadow-sm" style="width: 50px; height: 50px;">
                                 <i class="bi bi-image text-muted"></i>
                             </span>
+                            {% endif %}
                         </td>
-                        <td class="fw-bold">#{{ producto.producto_id }}</td>
-                        <td class="fw-semibold">{{ producto.nombre }}</td>
-                        <td>{{ producto.categoria.nombre }}</td>
+                        <td class="fw-semibold text-dark">{{ producto.nombre }}</td>
                         <td>
-                            {% if producto.cantidad > 0 %}
+                            <span class="badge bg-light text-dark border">{{ producto.categoria.nombre }}</span>
+                        </td>
+                        <td>
+                            {% if producto.cantidad > 5 %}
                                 <span class="badge bg-success">{{ producto.cantidad }}</span>
+                            {% elif producto.cantidad > 0 %}
+                                <span class="badge bg-warning text-dark">{{ producto.cantidad }}</span>
                             {% else %}
                                 <span class="badge bg-danger">{{ producto.cantidad }}</span>
                             {% endif %}
@@ -91,16 +104,16 @@
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="9" class="text-center text-muted py-4">
-                            <i class="bi bi-box-seam fs-2 d-block mb-2"></i>
-                            No hay productos registrados aún.
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-box-seam fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay productos registrados aún en el inventario.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosProductos" class="d-none">
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
-                            No se encontraron productos.
+                            No se encontraron productos que coincidan con la búsqueda.
                         </td>
                     </tr>
                 </tbody>

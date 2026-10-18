@@ -1,34 +1,54 @@
 <!-- Modal Modificar Equipo -->
-<div class="modal fade" id="modalModificarEquipo" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="modalModificarEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Modificar Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
             <form method="POST" action="{% url 'modificar_equipo' %}">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Modificar Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" name="equipo_id" value="{{ equipo.equipo_id }}">
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+                    <input type="hidden" name="equipo_id" id="editEquipoId">
+
                     <div class="mb-3">
-                        <label class="form-label">Nombre/Identificador</label>
-                        <input type="text" name="nombre" class="form-control" value="{{ equipo.nombre }}" required>
+                        <label class="form-label fw-semibold">Nombre / Identificador <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" id="editEquipoNombre" class="form-control" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tarifa por Hora</label>
-                        <input type="number" step="0.01" name="tarifa_por_hora" class="form-control" value="{{ equipo.tarifa_por_hora }}" required>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo <span class="text-danger fw-bold">*</span></label>
+                            <select name="tipo" id="editEquipoTipo" class="form-select" required>
+                                <option value="PC">PC</option>
+                                <option value="CONSOLA">Consola</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tarifa por Hora ($) <span class="text-danger fw-bold">*</span></label>
+                            <input type="number" step="0.01" name="tarifa_por_hora" id="editEquipoTarifa" class="form-control" required>
+                        </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Estado Físico</label>
-                        <select name="estado" class="form-select">
+                        <label class="form-label fw-semibold">Estado Físico <span class="text-danger fw-bold">*</span></label>
+                        <select name="estado" id="editEquipoEstado" class="form-select" required>
                             <option value="DISPONIBLE">Disponible</option>
+                            <option value="DANIOS_MENORES">Daños Menores</option>
+                            <option value="DEFECTUOSO">Defectuoso</option>
                             <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción o Ubicación</label>
+                        <textarea name="descripcion" id="editEquipoDescripcion" class="form-control" rows="2"></textarea>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Actualizar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee"><i class="bi bi-arrow-repeat me-1"></i> Actualizar Equipo</button>
                 </div>
             </form>
         </div>

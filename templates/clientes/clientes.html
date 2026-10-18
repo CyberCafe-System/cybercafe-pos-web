@@ -3,7 +3,10 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Gestión de Clientes</h3>
+    <div>
+        <h3 class="mb-0"><i class="bi bi-people me-2"></i>Gestión de Clientes</h3>
+        <p class="text-muted small mb-0">Directorio de clientes registrados para ventas y rentas de equipos.</p>
+    </div>
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearCliente">
         <i class="bi bi-plus-circle me-1"></i> Nuevo Cliente
     </button>
@@ -15,7 +18,11 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorClientes" class="form-control border-start-0" placeholder="Buscar cliente por nombre, apellido o DUI...">
+                    <input type="text" id="buscadorClientes" class="form-control border-start-0" placeholder="Buscar cliente...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre</strong>, <strong class="text-dark">Apellido</strong>, <strong class="text-dark">DUI</strong>, <strong class="text-dark">Teléfono</strong> y <strong class="text-dark">Correo</strong></span>
                 </div>
             </div>
         </div>
@@ -28,9 +35,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
-                        <th>Apellido</th>
+                        <th>Nombre y Apellido</th>
                         <th>DUI</th>
                         <th>Teléfono</th>
                         <th>Correo</th>
@@ -40,11 +45,9 @@
                 </thead>
                 <tbody>
                     {% for cliente in clientes %}
-                    <tr class="fila-cliente" data-busqueda="{{ cliente.nombre|lower }} {{ cliente.apellido|lower }} {{ cliente.dui|lower }}">
-                        <td class="fw-bold">#{{ cliente.cliente_id }}</td>
-                        <td class="fw-semibold">{{ cliente.nombre }}</td>
-                        <td>{{ cliente.apellido }}</td>
-                        <td>{{ cliente.dui }}</td>
+                    <tr class="fila-cliente" data-busqueda="{{ cliente.nombre|lower }} {{ cliente.apellido|lower }} {{ cliente.dui|lower }} {{ cliente.telefono }} {{ cliente.correo|default:''|lower }}">
+                        <td class="fw-semibold text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">{{ cliente.dui }}</span></td>
                         <td>{{ cliente.telefono }}</td>
                         <td class="text-muted">{{ cliente.correo|default:"-" }}</td>
                         <td class="text-muted">{{ cliente.direccion }}</td>
@@ -59,16 +62,16 @@
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="8" class="text-center text-muted py-4">
-                            <i class="bi bi-people fs-2 d-block mb-2"></i>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-people fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay clientes registrados aún.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosClientes" class="d-none">
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
-                            No se encontraron clientes.
+                            No se encontraron clientes que coincidan con la búsqueda.
                         </td>
                     </tr>
                 </tbody>
@@ -81,6 +84,7 @@
 {% include 'clientes/modificar.html' %}
 
 <script>
+    // Configuración de edición
     document.querySelectorAll('.btn-editar-cliente').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('editarClienteId').value = btn.dataset.id;
@@ -93,6 +97,7 @@
         });
     });
 
+    // Buscador interactivo
     const buscadorClientes = document.getElementById('buscadorClientes');
     if (buscadorClientes) {
         const filas = document.querySelectorAll('.fila-cliente');
@@ -111,6 +116,28 @@
             if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
         });
     }
+
+    // Máscara automática de DUI y Teléfono
+    function aplicarMascaraDUI(input) {
+        let valor = input.value.replace(/\D/g, '').substring(0, 9);
+        if (valor.length > 8) {
+            input.value = valor.substring(0, 8) + '-' + valor.substring(8);
+        } else {
+            input.value = valor;
+        }
+    }
+
+    function aplicarMascaraTelefono(input) {
+        input.value = input.value.replace(/\D/g, '').substring(0, 8);
+    }
+
+    document.querySelectorAll('input[name="dui"]').forEach(function (input) {
+        input.addEventListener('input', function () { aplicarMascaraDUI(input); });
+    });
+
+    document.querySelectorAll('input[name="telefono"]').forEach(function (input) {
+        input.addEventListener('input', function () { aplicarMascaraTelefono(input); });
+    });
 </script>
 
 {% endblock %}

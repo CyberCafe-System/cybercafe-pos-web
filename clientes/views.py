@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -16,7 +17,11 @@ def cliente_create(request):
     if request.method == 'POST':
         form = ClienteForm(request.POST)
         if form.is_valid():
-            form.save()
+            cliente = form.save()
+            messages.success(request, f'Cliente {cliente.nombre} {cliente.apellido} registrado exitosamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error.as_text().lstrip('* '))
     return redirect('clientes')
 
 
@@ -27,4 +32,8 @@ def cliente_edit(request):
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             form.save()
+            messages.success(request, f'Cliente {cliente.nombre} {cliente.apellido} actualizado correctamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error.as_text().lstrip('* '))
     return redirect('clientes')

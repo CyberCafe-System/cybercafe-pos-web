@@ -3,31 +3,61 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Historial de Ventas y Tickets</h3>
-    <button class="btn btn-outline-dark">
-        <i class="bi bi-printer"></i> Imprimir Reporte
+    <div>
+        <h3 class="mb-0"><i class="bi bi-graph-up me-2"></i>Historial de Ventas y Tickets</h3>
+        <p class="text-muted small mb-0">Consolidado general de ingresos por punto de venta y rentas de equipo.</p>
+    </div>
+    <button class="btn btn-outline-dark rounded-pill px-3 shadow-sm" onclick="window.print()">
+        <i class="bi bi-printer me-1"></i> Imprimir Reporte
     </button>
 </div>
 
-<!-- Filtros de búsqueda -->
+<!-- Filtros de búsqueda por Rango de Fechas -->
 <div class="card shadow-sm border-0 rounded-4 mb-4">
-    <div class="card-body">
-        <div class="row g-3">
+    <div class="card-body p-4">
+        <form method="GET" action="{% url 'reportes' %}" class="row g-3 align-items-end">
             <div class="col-md-4">
                 <label class="form-label fw-semibold">Fecha de Inicio</label>
-                <input type="date" class="form-control">
+                <input type="date" name="fecha_inicio" class="form-control rounded-3" value="{{ fecha_inicio }}">
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-semibold">Fecha Fin</label>
-                <input type="date" class="form-control">
+                <input type="date" name="fecha_fin" class="form-control rounded-3" value="{{ fecha_fin }}">
             </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button class="btn btn-coffee w-100"><i class="bi bi-search me-2"></i>Buscar Ventas</button>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm">
+                    <i class="bi bi-filter me-1"></i> Filtrar
+                </button>
+                {% if fecha_inicio or fecha_fin %}
+                <a href="{% url 'reportes' %}" class="btn btn-light rounded-pill px-3 border" title="Limpiar filtro">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <hr class="my-3">
+
+        <div class="row g-2 align-items-center">
+            <div class="col-md-8">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorReportes" class="form-control border-start-0" placeholder="Buscar en resultados...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">N° Ticket/Correlativo</strong>, <strong class="text-dark">Cliente</strong> y <strong class="text-dark">Atendido Por</strong></span>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="text-muted small d-block">Total del Periodo:</span>
+                <span class="fw-bold fs-4 text-success">${{ total_recaudado|floatformat:2 }}</span>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Tabla de Reportes -->
 <div class="card shadow-sm border-0 rounded-4">
     <div class="card-body p-4">
         <div class="table-responsive">
@@ -35,25 +65,51 @@
                 <thead class="table-light">
                     <tr>
                         <th>N° Ticket</th>
+                        <th>Tipo</th>
                         <th>Fecha y Hora</th>
                         <th>Atendido por</th>
                         <th>Cliente</th>
-                        <th>Artículos / Concepto</th>
+                        <th>Detalle / Concepto</th>
                         <th>Total</th>
-                        <th class="text-end">Acción</th>
+                        <th class="text-end">Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Fila de ejemplo -->
-                    <tr>
-                        <td class="fw-bold">#TK-1050</td>
-                        <td>14 Oct 2026, 02:15 PM</td>
-                        <td>Edwin Cruz</td>
-                        <td>Cliente General</td>
-                        <td>2x Doritos, 1x Coca-Cola</td>
-                        <td class="fw-bold text-success">$2.50</td>
+                    {% for t in transacciones %}
+                    <tr class="fila-reporte" data-busqueda="{{ t.ticket|lower }} {{ t.cliente|lower }} {{ t.usuario|lower }} {{ t.tipo|lower }}">
+                        <td class="fw-bold font-monospace">#{{ t.ticket }}</td>
+                        <td>
+                            <span class="badge {% if t.es_venta %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill">
+                                {{ t.tipo }}
+                            </span>
+                        </td>
+                        <td>{{ t.fecha|date:"d/m/Y h:i A" }}</td>
+                        <td><i class="bi bi-person me-1 text-muted"></i>{{ t.usuario }}</td>
+                        <td class="fw-semibold text-dark">{{ t.cliente }}</td>
+                        <td class="text-muted small text-truncate" style="max-width: 250px;" title="{{ t.concepto }}">{{ t.concepto }}</td>
+                        <td class="fw-bold text-success">${{ t.total|floatformat:2 }}</td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary" title="Ver Detalle Ticket"><i class="bi bi-eye"></i></button>
+                            {% if t.es_venta and t.venta_id %}
+                            <a href="{% url 'ticket_pdf_venta' venta_id=t.venta_id %}" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Descargar Ticket PDF">
+                                <i class="bi bi-file-earmark-pdf"></i> Ticket
+                            </a>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">Renta</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="fila-vacia">
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-calendar-x fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No se encontraron transacciones registradas en el rango seleccionado.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="sinResultadosReportes" class="d-none">
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron registros que coincidan con la búsqueda.
                         </td>
                     </tr>
                 </tbody>
@@ -61,4 +117,25 @@
         </div>
     </div>
 </div>
+
+<script>
+    const buscadorReportes = document.getElementById('buscadorReportes');
+    if (buscadorReportes) {
+        const filas = document.querySelectorAll('.fila-reporte');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosReportes');
+
+        buscadorReportes.addEventListener('input', function () {
+            const termino = buscadorReportes.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+</script>
 {% endblock %}

@@ -2,112 +2,152 @@
 {% load static %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="mb-0">Punto de Venta</h3>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-cart4 me-2"></i>Punto de Venta</h3>
+        <p class="text-muted small mb-0">Seleccione productos organizados por categoría para añadirlos al carrito.</p>
+    </div>
     {% if ultima_venta_id %}
-    <a href="{% url 'ticket_pdf' %}" target="_blank" class="btn btn-danger">
-        <i class="bi bi-file-earmark-pdf-fill"></i> Generar Último Ticket PDF
+    <a href="{% url 'ticket_pdf' %}" target="_blank" class="btn btn-danger shadow-sm">
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Generar Último Ticket PDF
     </a>
     {% else %}
     <button class="btn btn-danger" disabled>
-        <i class="bi bi-file-earmark-pdf-fill"></i> Generar Último Ticket PDF
+        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Generar Último Ticket PDF
     </button>
     {% endif %}
 </div>
 
-<div class="row">
+<div class="row g-4">
+    <!-- Columna Izquierda: Buscador y Catálogo de Productos con Scroll Independiente -->
     <div class="col-lg-8">
-        <div class="mb-3">
-            <div class="input-group">
-                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto por nombre o categoría...">
+        <!-- Buscador Unificado con Indicador -->
+        <div class="card shadow-sm border-0 rounded-4 mb-3">
+            <div class="card-body p-3">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong class="text-dark">Categoría</strong></span>
+                </div>
             </div>
         </div>
 
-        <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
-            {% for producto in productos %}
-            <div class="col fila-producto-pos" data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
-                <div class="card shadow-sm border-0 h-100 rounded-3 overflow-hidden">
-                    <div class="d-flex align-items-center justify-content-center bg-light" style="height: 100px;">
-                        <i class="bi bi-cup-hot fs-1 text-muted"></i>
+        <!-- Contenedor con Scroll Vertical Independiente -->
+        <div class="pos-catalogo-scroll pe-2" style="max-height: calc(100vh - 230px); overflow-y: auto;">
+            {% if categorias_dict %}
+                {% for categoria_nombre, productos_lista in categorias_dict.items %}
+                <div class="seccion-categoria mb-4" data-categoria="{{ categoria_nombre|lower }}">
+                    <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
+                        <span class="badge bg-coffee rounded-pill px-3 py-2 fs-6">
+                            <i class="bi bi-tag-fill me-1"></i> {{ categoria_nombre }}
+                        </span>
+                        <span class="text-muted small">({{ productos_lista|length }} productos)</span>
                     </div>
-                    <div class="card-body text-center p-2 d-flex flex-column">
-                        <small class="text-muted d-block mb-1">{{ producto.categoria.nombre }}</small>
-                        <h6 class="card-title fw-bold mb-1">{{ producto.nombre }}</h6>
-                        <span class="badge {% if producto.cantidad > 0 %}bg-light text-dark{% else %}bg-danger{% endif %} mb-2">Stock: {{ producto.cantidad }}</span>
-                        <p class="text-success fw-bold mb-2">${{ producto.precio_venta|floatformat:2 }}</p>
-                        <form method="POST" action="{% url 'agregar_carrito' %}" class="mt-auto">
-                            {% csrf_token %}
-                            <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
-                            <input type="hidden" name="cantidad" value="1">
-                            <button type="submit" class="btn btn-coffee btn-sm w-100 rounded-pill" {% if producto.cantidad == 0 %}disabled{% endif %}>
-                                <i class="bi bi-cart-plus"></i> Añadir
-                            </button>
-                        </form>
+
+                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
+                        {% for producto in productos_lista %}
+                        <div class="col tarjeta-producto-pos" data-busqueda="{{ producto.nombre|lower }} {{ categoria_nombre|lower }}">
+                            <div class="card shadow-sm border-0 h-100 rounded-3 overflow-hidden product-card hover-shadow transition">
+                                <div class="d-flex align-items-center justify-content-center bg-light position-relative" style="height: 120px; overflow: hidden;">
+                                    {% if producto.imagen %}
+                                    <img src="/media/{{ producto.imagen }}" class="w-100 h-100 object-fit-cover" alt="{{ producto.nombre }}">
+                                    {% else %}
+                                    <i class="bi bi-cup-hot fs-1 text-muted"></i>
+                                    {% endif %}
+                                    <span class="position-absolute top-0 end-0 m-2 badge {% if producto.cantidad > 5 %}bg-success{% elif producto.cantidad > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill shadow-sm">
+                                        Stock: {{ producto.cantidad }}
+                                    </span>
+                                </div>
+                                <div class="card-body text-center p-3 d-flex flex-column">
+                                    <h6 class="card-title fw-bold mb-1 text-truncate" title="{{ producto.nombre }}">{{ producto.nombre }}</h6>
+                                    <p class="text-success fw-bold fs-5 mb-2">${{ producto.precio_venta|floatformat:2 }}</p>
+                                    <form method="POST" action="{% url 'agregar_carrito' %}" class="mt-auto">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                                        <input type="hidden" name="cantidad" value="1">
+                                        <button type="submit" class="btn btn-coffee btn-sm w-100 rounded-pill shadow-sm" {% if producto.cantidad == 0 %}disabled{% endif %}>
+                                            <i class="bi bi-cart-plus me-1"></i> Añadir
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
                 </div>
-            </div>
-            {% empty %}
-            <div class="col-12">
-                <div class="alert alert-light border text-center text-muted py-4">
-                    <i class="bi bi-box-seam fs-2 d-block mb-2"></i>
-                    No hay productos activos para vender.
+                {% endfor %}
+            {% else %}
+                <div class="alert alert-light border text-center text-muted py-5 rounded-4">
+                    <i class="bi bi-box-seam fs-1 d-block mb-2 text-coffee"></i>
+                    <h5>No hay productos disponibles</h5>
+                    <p class="small mb-0">Registra productos activos en el inventario para comenzar a vender.</p>
                 </div>
-            </div>
-            {% endfor %}
-            <div class="col-12 d-none" id="sinResultadosPos">
-                <div class="alert alert-light border text-center text-muted py-3">
-                    <i class="bi bi-search me-1"></i> No se encontraron productos.
-                </div>
+            {% endif %}
+
+            <div class="alert alert-light border text-center text-muted py-4 rounded-4 d-none" id="sinResultadosPos">
+                <i class="bi bi-search fs-2 d-block mb-2 text-muted"></i>
+                <h6 class="mb-0">No se encontraron productos que coincidan con la búsqueda.</h6>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-4 mt-4 mt-lg-0">
-        <div class="card shadow-sm border-0 rounded-4">
+    <!-- Columna Derecha: Resumen de Orden y Pago -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 20px;">
             <div class="card-header bg-white border-bottom-0 pt-4 pb-2 text-center">
-                <h5 class="fw-bold mb-0">Resumen de Orden</h5>
+                <h5 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-coffee"></i>Resumen de Orden</h5>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 {% if items %}
-                <ul class="list-group list-group-flush mb-3">
-                    {% for item in items %}
-                    <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                        <div>
-                            <div class="fw-semibold">{{ item.producto.nombre }}</div>
-                            <small class="text-muted">{{ item.cantidad }} x ${{ item.producto.precio_venta|floatformat:2 }}</small>
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <span class="fw-bold">${{ item.subtotal|floatformat:2 }}</span>
-                            <form method="POST" action="{% url 'quitar_carrito' %}">
-                                {% csrf_token %}
-                                <input type="hidden" name="producto_id" value="{{ item.producto.producto_id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Quitar">
-                                    <i class="bi bi-x-circle"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
+                <div class="order-items-scroll pe-1 mb-3" style="max-height: 280px; overflow-y: auto;">
+                    <ul class="list-group list-group-flush">
+                        {% for item in items %}
+                        <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="fw-semibold text-dark">{{ item.producto.nombre }}</div>
+                                <small class="text-muted">{{ item.cantidad }} x ${{ item.producto.precio_venta|floatformat:2 }}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-dark">${{ item.subtotal|floatformat:2 }}</span>
+                                <form method="POST" action="{% url 'quitar_carrito' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="producto_id" value="{{ item.producto.producto_id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle" title="Quitar">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
 
-                <div class="d-flex justify-content-between text-muted">
+                <div class="d-flex justify-content-between text-muted mb-1">
                     <span>Subtotal</span><span>${{ subtotal|floatformat:2 }}</span>
                 </div>
-                <div class="d-flex justify-content-between text-muted">
+                <div class="d-flex justify-content-between text-muted mb-2">
                     <span>IVA ({{ iva_porcentaje }}%)</span><span>${{ iva|floatformat:2 }}</span>
                 </div>
-                <div class="d-flex justify-content-between mb-4 mt-2 fs-5 fw-bold">
-                    <span>Total:</span>
+                <hr class="my-2">
+                <div class="d-flex justify-content-between mb-4 fs-4 fw-bold">
+                    <span>Total a Pagar:</span>
                     <span class="text-success">${{ total|floatformat:2 }}</span>
                 </div>
-                <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" data-bs-toggle="modal" data-bs-target="#modalProcesarVenta">Procesar Pago</button>
+                <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5 shadow" data-bs-toggle="modal" data-bs-target="#modalProcesarVenta">
+                    <i class="bi bi-credit-card me-2"></i> Procesar Pago
+                </button>
                 {% else %}
-                <div class="text-center text-muted py-4">
-                    <i class="bi bi-cart fs-1 d-block mb-2"></i>
-                    El carrito está vacío.
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-cart fs-1 d-block mb-3 text-muted opacity-50"></i>
+                    <h6 class="fw-bold">El carrito está vacío</h6>
+                    <p class="small text-muted mb-4">Haz clic en "Añadir" en los productos del catálogo.</p>
+                    <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" disabled>
+                        <i class="bi bi-credit-card me-2"></i> Procesar Pago
+                    </button>
                 </div>
-                <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" disabled>Procesar Pago</button>
                 {% endif %}
             </div>
         </div>
@@ -119,17 +159,34 @@
 <script>
     const buscadorPos = document.getElementById('buscadorProductos');
     if (buscadorPos) {
-        const tarjetas = document.querySelectorAll('.fila-producto-pos');
+        const tarjetas = document.querySelectorAll('.tarjeta-producto-pos');
+        const secciones = document.querySelectorAll('.seccion-categoria');
         const sinResultados = document.getElementById('sinResultadosPos');
+
         buscadorPos.addEventListener('input', function () {
             const termino = buscadorPos.value.trim().toLowerCase();
-            let visibles = 0;
-            tarjetas.forEach(function (tarjeta) {
-                const coincide = tarjeta.dataset.busqueda.includes(termino);
-                tarjeta.classList.toggle('d-none', !coincide);
-                if (coincide) visibles++;
+            let totalVisibles = 0;
+
+            secciones.forEach(function (seccion) {
+                let visiblesEnSeccion = 0;
+                const tarjetasSeccion = seccion.querySelectorAll('.tarjeta-producto-pos');
+
+                tarjetasSeccion.forEach(function (tarjeta) {
+                    const coincide = tarjeta.dataset.busqueda.includes(termino);
+                    tarjeta.classList.toggle('d-none', !coincide);
+                    if (coincide) {
+                        visiblesEnSeccion++;
+                        totalVisibles++;
+                    }
+                });
+
+                // Ocultar sección completa si no tiene productos visibles
+                seccion.classList.toggle('d-none', visiblesEnSeccion === 0);
             });
-            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || tarjetas.length === 0);
+
+            if (sinResultados) {
+                sinResultados.classList.toggle('d-none', totalVisibles > 0 || tarjetas.length === 0);
+            }
         });
     }
 </script>

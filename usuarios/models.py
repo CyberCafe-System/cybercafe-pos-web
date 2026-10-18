@@ -87,6 +87,18 @@ class Usuario(AbstractBaseUser):
     def is_staff(self):
         return self.is_active and self.is_superuser
 
+    @property
+    def es_admin(self):
+        return self.is_superuser or (self.rol_id == 1) or (self.rol and self.rol.nombre.lower() == 'admin')
+
+    @property
+    def es_cajero(self):
+        return (self.rol_id == 2) or (self.rol and self.rol.nombre.lower() == 'cajero')
+
+    @property
+    def es_asistente(self):
+        return (self.rol_id == 3) or (self.rol and self.rol.nombre.lower() == 'asistente')
+
     def get_full_name(self):
         return self.nombre
 

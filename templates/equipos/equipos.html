@@ -2,81 +2,135 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Catalogo de Equipos</h3>
-    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearEquipo">Agregar Equipo</button>
+    <h3><i class="bi bi-cpu me-2"></i>Catálogo de Equipos</h3>
+    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearEquipo">
+        <i class="bi bi-plus-circle me-1"></i> Agregar Equipo
+    </button>
+</div>
+
+<!-- Buscador -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="buscadorEquipos" class="form-control border-start-0" placeholder="Buscar equipo...">
+        </div>
+        <small class="text-muted mt-1 d-block">
+            <i class="bi bi-info-circle me-1"></i>Buscando en: <strong>Identificador, Tipo y Estado</strong>
+        </small>
+    </div>
 </div>
 
 <!-- Tabla de equipos -->
-<div class="card shadow-sm border-0">
-    <div class="card-body">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Identificador</th>
-                    <th>Tipo</th>
-                    <th>Tarifa (hr)</th>
-                    <th>Estado Físico</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Iteracion de backend -->
-                <tr>
-                    <td>PC-01</td>
-                    <td>PC</td>
-                    <td>$2.00</td>
-                    <td>DISPONIBLE</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary">Editar</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Modal Crear Equipo -->
-<div class="modal fade" id="modalCrearEquipo" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="POST" action="{% url 'crear_equipo' %}">
-                {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Registrar Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Nombre/Identificador</label>
-                        <input type="text" name="nombre" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tipo</label>
-                        <select name="tipo" class="form-select">
-                            <option value="PC">PC</option>
-                            <option value="CONSOLA">Consola</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Tarifa por Hora</label>
-                        <input type="number" step="0.01" name="tarifa_por_hora" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Estado Fisico</label>
-                        <select name="estado" class="form-select">
-                            <option value="DISPONIBLE">Disponible</option>
-                            <option value="DANIOS_MENORES">Daños Menores</option>
-                            <option value="DEFECTUOSO">Defectuoso</option>
-                            <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
-                </div>
-            </form>
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Identificador</th>
+                        <th>Tipo</th>
+                        <th>Tarifa (hr)</th>
+                        <th>Componentes</th>
+                        <th>Estado Físico</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for equipo in equipos %}
+                    <tr class="fila-equipo" data-busqueda="{{ equipo.nombre|lower }} {{ equipo.get_tipo_display|lower }} {{ equipo.get_estado_display|lower }}">
+                        <td class="fw-semibold">{{ equipo.nombre }}</td>
+                        <td>
+                            <span class="badge {% if equipo.tipo == 'PC' %}bg-primary{% else %}bg-success{% endif %}">
+                                {{ equipo.get_tipo_display }}
+                            </span>
+                        </td>
+                        <td class="fw-bold">${{ equipo.tarifa_por_hora }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">
+                                {{ equipo.componentes.count }} periférico{% if equipo.componentes.count != 1 %}s{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            {% if equipo.estado == 'DISPONIBLE' %}
+                                <span class="badge bg-success">Disponible</span>
+                            {% elif equipo.estado == 'DANIOS_MENORES' %}
+                                <span class="badge bg-warning text-dark">Daños Menores</span>
+                            {% elif equipo.estado == 'DEFECTUOSO' %}
+                                <span class="badge bg-danger">Defectuoso</span>
+                            {% else %}
+                                <span class="badge bg-secondary">En Mantenimiento</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-equipo"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarEquipo"
+                                data-id="{{ equipo.equipo_id }}"
+                                data-nombre="{{ equipo.nombre }}"
+                                data-tipo="{{ equipo.tipo }}"
+                                data-tarifa="{{ equipo.tarifa_por_hora }}"
+                                data-estado="{{ equipo.estado }}"
+                                data-descripcion="{{ equipo.descripcion|default:'' }}"
+                                title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger btn-eliminar-equipo"
+                                data-bs-toggle="modal" data-bs-target="#modalEliminarEquipo"
+                                data-id="{{ equipo.equipo_id }}"
+                                data-nombre="{{ equipo.nombre }}"
+                                title="Eliminar">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-cpu fs-2 d-block mb-2"></i>
+                            No hay equipos registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+
+{% include 'equipos/crear.html' %}
+{% include 'equipos/modificar.html' %}
+{% include 'equipos/eliminar.html' %}
+
+<script>
+// Buscador
+const buscadorEq = document.getElementById('buscadorEquipos');
+if (buscadorEq) {
+    buscadorEq.addEventListener('input', function () {
+        const t = this.value.trim().toLowerCase();
+        document.querySelectorAll('.fila-equipo').forEach(f => {
+            f.classList.toggle('d-none', !f.dataset.busqueda.includes(t));
+        });
+    });
+}
+
+// Pre-rellenar modal de edición
+document.querySelectorAll('.btn-editar-equipo').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.getElementById('editEquipoId').value = this.dataset.id;
+        document.getElementById('editEquipoNombre').value = this.dataset.nombre;
+        document.getElementById('editEquipoTipo').value = this.dataset.tipo;
+        document.getElementById('editEquipoTarifa').value = this.dataset.tarifa;
+        document.getElementById('editEquipoEstado').value = this.dataset.estado;
+        document.getElementById('editEquipoDescripcion').value = this.dataset.descripcion;
+    });
+});
+
+// Pre-rellenar modal de eliminación
+document.querySelectorAll('.btn-eliminar-equipo').forEach(btn => {
+    btn.addEventListener('click', function () {
+        document.getElementById('eliminarEquipoId').value = this.dataset.id;
+        document.getElementById('eliminarEquipoNombre').textContent = this.dataset.nombre;
+    });
+});
+</script>
 {% endblock %}
