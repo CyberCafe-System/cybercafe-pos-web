@@ -151,10 +151,16 @@ def pos(request):
             categorias_dict[cat_nom] = []
         categorias_dict[cat_nom].append(p)
 
+    categorias_resumen = [
+        {'nombre': cat_nom, 'cantidad': len(prods)}
+        for cat_nom, prods in categorias_dict.items()
+    ]
+
     items, subtotal, iva, total = _resumen_carrito(_obtener_carrito(request))
     contexto = {
         'productos': productos,
         'categorias_dict': categorias_dict,
+        'categorias_resumen': categorias_resumen,
         'items': items,
         'subtotal': subtotal,
         'iva': iva,

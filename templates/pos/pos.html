@@ -2,120 +2,152 @@
 {% load static %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-3">
+<div class="d-flex justify-content-between align-items-center mb-2 flex-shrink-0">
     <div>
-        <h3 class="mb-0"><i class="bi bi-cart4 me-2"></i>Punto de Venta</h3>
+        <h3 class="mb-0 fs-4"><i class="bi bi-cart4 me-2"></i>Punto de Venta</h3>
         <p class="text-muted small mb-0">Seleccione productos organizados por categoría para añadirlos al carrito.</p>
     </div>
     {% if ultima_venta_id %}
-    <a href="{% url 'ticket_pdf' %}" target="_blank" class="btn btn-danger shadow-sm">
+    <a href="{% url 'ticket_pdf' %}" target="_blank" class="btn btn-danger btn-sm shadow-sm">
         <i class="bi bi-file-earmark-pdf-fill me-1"></i> Generar Último Ticket PDF
     </a>
     {% else %}
-    <button class="btn btn-danger" disabled>
+    <button class="btn btn-danger btn-sm" disabled>
         <i class="bi bi-file-earmark-pdf-fill me-1"></i> Generar Último Ticket PDF
     </button>
     {% endif %}
 </div>
 
-<div class="row g-4">
+<div class="row g-3 pos-main-container">
     <!-- Columna Izquierda: Buscador y Catálogo de Productos con Scroll Independiente -->
-    <div class="col-lg-8">
+    <div class="col-lg-8 d-flex flex-column h-100 overflow-hidden">
         <!-- Buscador Unificado con Indicador -->
-        <div class="card shadow-sm border-0 rounded-4 mb-3">
-            <div class="card-body p-3">
+        <div class="card shadow-sm border-0 rounded-4 mb-2 flex-shrink-0">
+            <div class="card-body p-2 px-3">
                 <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto...">
+                    <span class="input-group-text bg-white border-end-0 py-1"><i
+                            class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0 py-1"
+                        placeholder="Buscar producto...">
                 </div>
-                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                <div class="mt-1 d-flex align-items-center gap-1 text-muted small" style="font-size: 0.78rem;">
                     <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong class="text-dark">Categoría</strong></span>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong
+                            class="text-dark">Categoría</strong></span>
                 </div>
+            </div>
+        </div>
+
+        <!-- Barra Horizontal con Filtro de Categorías -->
+        <div class="pos-categorias-container mb-2 flex-shrink-0">
+            <div class="d-flex align-items-center gap-2 overflow-x-auto pb-1 custom-scrollbar"
+                id="contenedorCategoriasPos">
+                <!-- Botón 'Todos los Productos' (Primero y activo por defecto) -->
+                <button type="button"
+                    class="btn btn-categoria-tab active flex-shrink-0 d-flex align-items-center gap-2 px-3 py-1 rounded-pill shadow-sm"
+                    data-categoria="todas">
+                    <i class="bi bi-grid-fill"></i>
+                    <span class="fw-semibold">Todos los Productos</span>
+                    <span class="badge rounded-pill bg-white text-dark">{{ productos|length }}</span>
+                </button>
+
+                <!-- Botones por cada Categoría -->
+                {% for cat in categorias_resumen %}
+                <button type="button"
+                    class="btn btn-categoria-tab flex-shrink-0 d-flex align-items-center gap-2 px-3 py-1 rounded-pill shadow-sm"
+                    data-categoria="{{ cat.nombre|lower }}">
+                    <i class="bi bi-tag-fill opacity-75"></i>
+                    <span class="fw-semibold">{{ cat.nombre }}</span>
+                    <span class="badge rounded-pill bg-light text-muted border">{{ cat.cantidad }}</span>
+                </button>
+                {% endfor %}
             </div>
         </div>
 
         <!-- Contenedor con Scroll Vertical Independiente -->
-        <div class="pos-catalogo-scroll pe-2" style="max-height: calc(100vh - 230px); overflow-y: auto;">
-            {% if categorias_dict %}
-                {% for categoria_nombre, productos_lista in categorias_dict.items %}
-                <div class="seccion-categoria mb-4" data-categoria="{{ categoria_nombre|lower }}">
-                    <div class="d-flex align-items-center gap-2 mb-3 pb-2 border-bottom">
-                        <span class="badge bg-coffee rounded-pill px-3 py-2 fs-6">
-                            <i class="bi bi-tag-fill me-1"></i> {{ categoria_nombre }}
-                        </span>
-                        <span class="text-muted small">({{ productos_lista|length }} productos)</span>
-                    </div>
-
-                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3">
-                        {% for producto in productos_lista %}
-                        <div class="col tarjeta-producto-pos" data-busqueda="{{ producto.nombre|lower }} {{ categoria_nombre|lower }}">
-                            <div class="card shadow-sm border-0 h-100 rounded-3 overflow-hidden product-card hover-shadow transition">
-                                <div class="d-flex align-items-center justify-content-center bg-light position-relative" style="height: 120px; overflow: hidden;">
-                                    {% if producto.imagen %}
-                                    <img src="/media/{{ producto.imagen }}" class="w-100 h-100 object-fit-cover" alt="{{ producto.nombre }}">
-                                    {% else %}
-                                    <i class="bi bi-cup-hot fs-1 text-muted"></i>
-                                    {% endif %}
-                                    <span class="position-absolute top-0 end-0 m-2 badge {% if producto.cantidad > 5 %}bg-success{% elif producto.cantidad > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill shadow-sm">
-                                        Stock: {{ producto.cantidad }}
-                                    </span>
-                                </div>
-                                <div class="card-body text-center p-3 d-flex flex-column">
-                                    <h6 class="card-title fw-bold mb-1 text-truncate" title="{{ producto.nombre }}">{{ producto.nombre }}</h6>
-                                    <p class="text-success fw-bold fs-5 mb-2">${{ producto.precio_venta|floatformat:2 }}</p>
-                                    <form method="POST" action="{% url 'agregar_carrito' %}" class="mt-auto">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
-                                        <input type="hidden" name="cantidad" value="1">
-                                        <button type="submit" class="btn btn-coffee btn-sm w-100 rounded-pill shadow-sm" {% if producto.cantidad == 0 %}disabled{% endif %}>
-                                            <i class="bi bi-cart-plus me-1"></i> Añadir
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
+        <div class="pos-catalogo-scroll pe-2">
+            {% if productos %}
+            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-4 g-3" id="grillaProductosPos">
+                {% for producto in productos %}
+                <div class="col tarjeta-producto-pos"
+                    data-categoria="{{ producto.categoria.nombre|lower|default:'general' }}"
+                    data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower|default:'general' }}">
+                    <div
+                        class="card shadow-sm border-0 h-100 rounded-4 overflow-hidden product-card hover-shadow transition">
+                        <div class="d-flex align-items-center justify-content-center bg-light position-relative"
+                            style="height: 120px; overflow: hidden;">
+                            {% if producto.imagen %}
+                            <img src="/media/{{ producto.imagen }}" class="w-100 h-100 object-fit-cover"
+                                alt="{{ producto.nombre }}">
+                            {% else %}
+                            <i class="bi bi-cup-hot fs-1 text-muted"></i>
+                            {% endif %}
+                            <span
+                                class="position-absolute top-0 end-0 m-2 badge {% if producto.cantidad > 5 %}bg-success{% elif producto.cantidad > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill shadow-sm">
+                                Stock: {{ producto.cantidad }}
+                            </span>
+                            {% if producto.categoria %}
+                            <span
+                                class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75 rounded-pill small">
+                                {{ producto.categoria.nombre }}
+                            </span>
+                            {% endif %}
                         </div>
-                        {% endfor %}
+                        <div class="card-body text-center p-3 d-flex flex-column">
+                            <h6 class="card-title fw-bold mb-1 text-truncate" title="{{ producto.nombre }}">{{ producto.nombre }}</h6>
+                            <p class="text-success fw-bold fs-5 mb-2">${{ producto.precio_venta|floatformat:2 }}</p>
+                            <form method="POST" action="{% url 'agregar_carrito' %}" class="mt-auto">
+                                {% csrf_token %}
+                                <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                                <input type="hidden" name="cantidad" value="1">
+                                <button type="submit" class="btn btn-coffee btn-sm w-100 rounded-pill shadow-sm" {% if producto.cantidad == 0 %}disabled{% endif %}>
+                                    <i class="bi bi-cart-plus me-1"></i> Añadir
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
                 {% endfor %}
+            </div>
             {% else %}
-                <div class="alert alert-light border text-center text-muted py-5 rounded-4">
-                    <i class="bi bi-box-seam fs-1 d-block mb-2 text-coffee"></i>
-                    <h5>No hay productos disponibles</h5>
-                    <p class="small mb-0">Registra productos activos en el inventario para comenzar a vender.</p>
-                </div>
+            <div class="alert alert-light border text-center text-muted py-5 rounded-4">
+                <i class="bi bi-box-seam fs-1 d-block mb-2 text-coffee"></i>
+                <h5>No hay productos disponibles</h5>
+                <p class="small mb-0">Registra productos activos en el inventario para comenzar a vender.</p>
+            </div>
             {% endif %}
 
             <div class="alert alert-light border text-center text-muted py-4 rounded-4 d-none" id="sinResultadosPos">
                 <i class="bi bi-search fs-2 d-block mb-2 text-muted"></i>
-                <h6 class="mb-0">No se encontraron productos que coincidan con la búsqueda.</h6>
+                <h6 class="mb-0">No se encontraron productos que coincidan con la búsqueda o categoría seleccionada.
+                </h6>
             </div>
         </div>
     </div>
 
-    <!-- Columna Derecha: Resumen de Orden y Pago -->
-    <div class="col-lg-4">
-        <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 20px;">
-            <div class="card-header bg-white border-bottom-0 pt-4 pb-2 text-center">
+    <!-- Columna Derecha: Resumen de Orden y Pago con Margen Estilizado -->
+    <div class="col-lg-4 d-flex flex-column h-100 overflow-hidden">
+        <div class="card shadow-sm border-0 rounded-4 pos-resumen-card d-flex flex-column w-100 overflow-hidden">
+            <div class="card-header bg-white border-bottom-0 pt-3 pb-2 text-center flex-shrink-0">
                 <h5 class="fw-bold mb-0"><i class="bi bi-receipt me-2 text-coffee"></i>Resumen de Orden</h5>
             </div>
-            <div class="card-body p-4">
+            <div class="card-body p-3 d-flex flex-column flex-grow-1 overflow-hidden">
                 {% if items %}
-                <div class="order-items-scroll pe-1 mb-3" style="max-height: 280px; overflow-y: auto;">
+                <div class="order-items-scroll pe-1 flex-grow-1 overflow-y-auto mb-2">
                     <ul class="list-group list-group-flush">
                         {% for item in items %}
                         <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-                            <div>
-                                <div class="fw-semibold text-dark">{{ item.producto.nombre }}</div>
+                            <div class="me-2 text-truncate">
+                                <div class="fw-semibold text-dark text-truncate">{{ item.producto.nombre }}</div>
                                 <small class="text-muted">{{ item.cantidad }} x ${{ item.producto.precio_venta|floatformat:2 }}</small>
                             </div>
-                            <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                 <span class="fw-bold text-dark">${{ item.subtotal|floatformat:2 }}</span>
                                 <form method="POST" action="{% url 'quitar_carrito' %}">
                                     {% csrf_token %}
                                     <input type="hidden" name="producto_id" value="{{ item.producto.producto_id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle" title="Quitar">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger border-0 rounded-circle"
+                                        title="Quitar">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </form>
@@ -125,26 +157,32 @@
                     </ul>
                 </div>
 
-                <div class="d-flex justify-content-between text-muted mb-1">
-                    <span>Subtotal</span><span>${{ subtotal|floatformat:2 }}</span>
+                <div class="pos-resumen-footer mt-auto pt-2 border-top flex-shrink-0">
+                    <div class="d-flex justify-content-between text-muted mb-1 small">
+                        <span>Subtotal</span><span>${{ subtotal|floatformat:2 }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between text-muted mb-1 small">
+                        <span>IVA ({{ iva_porcentaje }}%)</span><span>${{ iva|floatformat:2 }}</span>
+                    </div>
+                    <hr class="my-1">
+                    <div class="d-flex justify-content-between mb-3 fs-5 fw-bold">
+                        <span>Total a Pagar:</span>
+                        <span class="text-success">${{ total|floatformat:2 }}</span>
+                    </div>
+                    <button class="btn btn-success w-100 py-2 rounded-3 fw-bold fs-5 shadow" data-bs-toggle="modal"
+                        data-bs-target="#modalProcesarVenta">
+                        <i class="bi bi-credit-card me-2"></i> Procesar Pago
+                    </button>
                 </div>
-                <div class="d-flex justify-content-between text-muted mb-2">
-                    <span>IVA ({{ iva_porcentaje }}%)</span><span>${{ iva|floatformat:2 }}</span>
-                </div>
-                <hr class="my-2">
-                <div class="d-flex justify-content-between mb-4 fs-4 fw-bold">
-                    <span>Total a Pagar:</span>
-                    <span class="text-success">${{ total|floatformat:2 }}</span>
-                </div>
-                <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5 shadow" data-bs-toggle="modal" data-bs-target="#modalProcesarVenta">
-                    <i class="bi bi-credit-card me-2"></i> Procesar Pago
-                </button>
                 {% else %}
-                <div class="text-center text-muted py-5">
+                <div
+                    class="d-flex flex-column align-items-center justify-content-center flex-grow-1 text-center text-muted py-4">
                     <i class="bi bi-cart fs-1 d-block mb-3 text-muted opacity-50"></i>
                     <h6 class="fw-bold">El carrito está vacío</h6>
                     <p class="small text-muted mb-4">Haz clic en "Añadir" en los productos del catálogo.</p>
-                    <button class="btn btn-success w-100 py-3 rounded-3 fw-bold fs-5" disabled>
+                </div>
+                <div class="pos-resumen-footer mt-auto pt-2 border-top flex-shrink-0">
+                    <button class="btn btn-success w-100 py-2 rounded-3 fw-bold fs-5" disabled>
                         <i class="bi bi-credit-card me-2"></i> Procesar Pago
                     </button>
                 </div>
@@ -156,38 +194,181 @@
 
 {% include 'pos/venta.html' %}
 
+<style>
+    /* Bloquear scroll general de la ventana y fijar el POS al 100vh */
+    html,
+    body {
+        overflow: hidden !important;
+        height: 100% !important;
+    }
+
+    #wrapper {
+        height: 100vh !important;
+        overflow: hidden !important;
+    }
+
+    #page-content-wrapper {
+        overflow: hidden !important;
+        height: 100vh !important;
+    }
+
+    .main-content {
+        padding: 15px 25px !important;
+        height: calc(100vh - 65px) !important;
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .pos-main-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+
+    .pos-catalogo-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .order-items-scroll {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .pos-resumen-card {
+        height: calc(100% - 14px) !important;
+        max-height: calc(100% - 14px) !important;
+        margin-bottom: 14px !important;
+        margin-left: 6px !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+    }
+
+    /* Scrollbars delgados y modernos con colores temáticos */
+    .pos-catalogo-scroll,
+    .order-items-scroll,
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: #d0c8c0 transparent;
+    }
+
+    .pos-catalogo-scroll::-webkit-scrollbar,
+    .order-items-scroll::-webkit-scrollbar,
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .pos-catalogo-scroll::-webkit-scrollbar-track,
+    .order-items-scroll::-webkit-scrollbar-track,
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .pos-catalogo-scroll::-webkit-scrollbar-thumb,
+    .order-items-scroll::-webkit-scrollbar-thumb,
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #d0c8c0;
+        border-radius: 10px;
+    }
+
+    .pos-catalogo-scroll::-webkit-scrollbar-thumb:hover,
+    .order-items-scroll::-webkit-scrollbar-thumb:hover,
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: var(--clr-cobre, #855204);
+    }
+
+    .btn-categoria-tab {
+        background: #ffffff;
+        color: #495057;
+        border: 1px solid #dee2e6;
+        font-size: 0.9rem;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    .btn-categoria-tab:hover {
+        border-color: var(--clr-cobre, #855204);
+        color: var(--clr-espresso, #2c1e16);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .btn-categoria-tab.active {
+        background: linear-gradient(135deg, var(--clr-espresso, #2c1e16) 0%, #452f23 100%);
+        color: #ffffff !important;
+        border-color: var(--clr-espresso, #2c1e16);
+        box-shadow: 0 4px 12px rgba(44, 30, 22, 0.25);
+    }
+
+    .btn-categoria-tab.active .badge {
+        background-color: #ffffff !important;
+        color: var(--clr-espresso, #2c1e16) !important;
+    }
+</style>
+
 <script>
-    const buscadorPos = document.getElementById('buscadorProductos');
-    if (buscadorPos) {
+    document.addEventListener('DOMContentLoaded', function () {
+        const tabsCategorias = document.querySelectorAll('.btn-categoria-tab');
         const tarjetas = document.querySelectorAll('.tarjeta-producto-pos');
-        const secciones = document.querySelectorAll('.seccion-categoria');
+        const buscadorPos = document.getElementById('buscadorProductos');
         const sinResultados = document.getElementById('sinResultadosPos');
 
-        buscadorPos.addEventListener('input', function () {
-            const termino = buscadorPos.value.trim().toLowerCase();
+        let categoriaSeleccionada = 'todas';
+
+        function aplicarFiltros() {
+            const termino = buscadorPos ? buscadorPos.value.trim().toLowerCase() : '';
             let totalVisibles = 0;
 
-            secciones.forEach(function (seccion) {
-                let visiblesEnSeccion = 0;
-                const tarjetasSeccion = seccion.querySelectorAll('.tarjeta-producto-pos');
+            tarjetas.forEach(function (tarjeta) {
+                const catTarjeta = (tarjeta.dataset.categoria || '').trim().toLowerCase();
+                const coincideCategoria = (categoriaSeleccionada === 'todas' || catTarjeta === categoriaSeleccionada);
+                const coincideTexto = !termino || (tarjeta.dataset.busqueda || '').includes(termino);
 
-                tarjetasSeccion.forEach(function (tarjeta) {
-                    const coincide = tarjeta.dataset.busqueda.includes(termino);
-                    tarjeta.classList.toggle('d-none', !coincide);
-                    if (coincide) {
-                        visiblesEnSeccion++;
-                        totalVisibles++;
-                    }
-                });
-
-                // Ocultar sección completa si no tiene productos visibles
-                seccion.classList.toggle('d-none', visiblesEnSeccion === 0);
+                const visible = coincideCategoria && coincideTexto;
+                tarjeta.classList.toggle('d-none', !visible);
+                if (visible) {
+                    totalVisibles++;
+                }
             });
 
             if (sinResultados) {
                 sinResultados.classList.toggle('d-none', totalVisibles > 0 || tarjetas.length === 0);
             }
+        }
+
+        tabsCategorias.forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                tabsCategorias.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                categoriaSeleccionada = (this.dataset.categoria || 'todas').trim().toLowerCase();
+                aplicarFiltros();
+            });
         });
-    }
+
+        if (buscadorPos) {
+            buscadorPos.addEventListener('input', aplicarFiltros);
+        }
+
+        // Al enviar el formulario de venta: abre PDF en pestaña nueva y refresca el POS
+        const formVenta = document.getElementById('formProcesarVenta');
+        if (formVenta) {
+            formVenta.addEventListener('submit', function () {
+                const modalElement = document.getElementById('modalProcesarVenta');
+                if (modalElement && window.bootstrap) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }
+                setTimeout(function () {
+                    window.location.reload();
+                }, 800);
+            });
+        }
+    });
 </script>
 {% endblock %}
