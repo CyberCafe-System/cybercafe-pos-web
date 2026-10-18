@@ -52,7 +52,10 @@ INSTALLED_APPS = [
     'categorias',
     'inventario',
     'clientes',
-    'pos_app'
+    'pos_app',
+    'equipos',
+    'componentes',
+    'rentas',
 ]
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
@@ -174,6 +177,14 @@ EMAIL_USE_SSL = env('EMAIL_USE_SSL')
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher'
 ]
+
+# Configuración de sesión (Límite de 1 hora)
+SESSION_COOKIE_AGE = 3600
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Media files (imágenes de productos subidas)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 #configuracion de auth
 

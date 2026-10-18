@@ -1,43 +1,53 @@
-<div class="modal fade" id="modalCrearCliente" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<!-- Modal Crear Cliente -->
+<div class="modal fade" id="modalCrearCliente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
             <form method="POST" action="{% url 'crear_cliente' %}">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Registrar Cliente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2 text-coffee"></i>Registrar Cliente</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
-                    <div class="row">
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+
+                    <div class="row g-2">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold required-field">Nombre</label>
-                            <input type="text" name="nombre" class="form-control" required>
+                            <label class="form-label fw-semibold">Nombre <span class="text-danger fw-bold">*</span></label>
+                            <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej. Juan" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold required-field">Apellido</label>
-                            <input type="text" name="apellido" class="form-control" required>
+                            <label class="form-label fw-semibold">Apellido <span class="text-danger fw-bold">*</span></label>
+                            <input type="text" name="apellido" class="form-control rounded-3" placeholder="Ej. Pérez" required>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">DUI</label>
-                        <input type="text" name="dui" class="form-control" required>
+
+                    <div class="row g-2">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">DUI <span class="text-danger fw-bold">*</span></label>
+                            <input type="text" name="dui" class="form-control rounded-3" maxlength="10" placeholder="00000000-0" required>
+                            <small class="text-muted">Formato: 8 dígitos + guion + 1 dígito.</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Teléfono <span class="text-danger fw-bold">*</span></label>
+                            <input type="text" name="telefono" class="form-control rounded-3" maxlength="8" placeholder="70000000" required>
+                            <small class="text-muted">8 dígitos numéricos.</small>
+                        </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Teléfono</label>
-                        <input type="number" name="telefono" class="form-control" required>
+                        <label class="form-label fw-semibold">Dirección <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="direccion" class="form-control rounded-3" placeholder="Colonia, calle o referencia" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Dirección</label>
-                        <input type="text" name="direccion" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Correo (Opcional)</label>
-                        <input type="email" name="correo" class="form-control">
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Correo Electrónico</label>
+                        <input type="email" name="correo" class="form-control rounded-3" placeholder="cliente@correo.com">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">Guardar Cliente</button>
                 </div>
             </form>
         </div>

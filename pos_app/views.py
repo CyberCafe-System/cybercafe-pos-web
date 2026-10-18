@@ -1,19 +1,105 @@
 from decimal import ROUND_HALF_UP, Decimal
+from itertools import groupby
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from clientes.models import Cliente
+from equipos.models import Equipo
 from inventario.models import Producto
+from rentas.models import DetalleRenta, Renta
 
 from .models import DetalleVenta, Venta
 from .ticket import generar_factura_pdf
 
 IVA = Decimal('0.13')
 CENTAVOS = Decimal('0.01')
+
+
+@login_required
+def inicio(request):
+    hoy = timezone.localdate()
+
+    ventas_hoy_qs = Venta.objects.filter(fecha__date=hoy)
+    rentas_hoy_qs = Renta.objects.filter(fecha__date=hoy)
+
+    # Ingresos totales de hoy (POS + Rentas)
+    subtotal_ventas = sum((v.subtotal + v.iva) for v in ventas_hoy_qs) or Decimal('0.00')
+    subtotal_rentas = sum(r.total for r in rentas_hoy_qs) or Decimal('0.00')
+    ingresos_hoy = (subtotal_ventas + subtotal_rentas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+    # Equipos en uso
+    equipos_ocupados = DetalleRenta.objects.filter(estado='ACTIVA').count()
+    total_equipos = Equipo.objects.count()
+    equipos_activos_str = f"{equipos_ocupados} / {total_equipos}" if total_equipos else "0 / 0"
+
+    # Total de ventas POS hoy
+    ventas_hoy_count = ventas_hoy_qs.count()
+
+    # Clientes activos únicos hoy (set union para deduplicación estricta)
+    clientes_ventas = set(ventas_hoy_qs.exclude(cliente_id__isnull=True).values_list('cliente_id', flat=True))
+    clientes_rentas = set(rentas_hoy_qs.exclude(cliente_id__isnull=True).values_list('cliente_id', flat=True))
+    total_clientes_activos = len(clientes_ventas | clientes_rentas)
+
+    # Últimas transacciones (Ventas y Rentas)
+    ultimas_ventas_raw = list(
+        Venta.objects.select_related('cliente', 'usuario')
+        .prefetch_related('detalles__producto')
+        .order_by('-fecha')[:6]
+    )
+    ultimas_rentas_raw = list(
+        Renta.objects.select_related('cliente', 'usuario')
+        .prefetch_related('detalles__equipo')
+        .order_by('-fecha')[:6]
+    )
+
+    transacciones = []
+    for v in ultimas_ventas_raw:
+        items_nombres = [d.producto.nombre for d in v.detalles.all()[:2]]
+        concepto = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
+        if v.detalles.count() > 2:
+            concepto += f" (+{v.detalles.count() - 2} más)"
+        transacciones.append({
+            'id': f"TK-{v.venta_id}",
+            'cliente': v.cliente,
+            'concepto': concepto,
+            'usuario': v.usuario,
+            'fecha_hora': v.fecha,
+            'total': (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+            'estado': 'Pagado',
+            'es_venta': True,
+        })
+
+    for r in ultimas_rentas_raw:
+        det = r.detalles.first()
+        equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
+        minutos = det.tiempo_de_renta if det else 60
+        transacciones.append({
+            'id': f"RN-{r.renta_id}",
+            'cliente': r.cliente,
+            'concepto': f"Renta {equipo_nom} ({minutos} min)",
+            'usuario': r.usuario,
+            'fecha_hora': r.fecha,
+            'total': r.total,
+            'estado': r.estado_de_pago.title(),
+            'es_venta': False,
+        })
+
+    # Ordenar por fecha descendente y tomar las 8 más recientes
+    transacciones.sort(key=lambda x: x['fecha_hora'], reverse=True)
+    ultimas_transacciones = transacciones[:8]
+
+    return render(request, 'inicio.html', {
+        'ingresos_hoy': ingresos_hoy,
+        'equipos_activos': equipos_activos_str,
+        'ventas_hoy': ventas_hoy_count,
+        'total_clientes': total_clientes_activos,
+        'ultimas_ventas': ultimas_transacciones,
+    })
 
 
 def _obtener_carrito(request):
@@ -54,9 +140,19 @@ def pos(request):
         .select_related('categoria')
         .order_by('categoria__nombre', 'nombre')
     )
+
+    # Organizar por categorías
+    categorias_dict = {}
+    for p in productos:
+        cat_nom = p.categoria.nombre if p.categoria else 'General'
+        if cat_nom not in categorias_dict:
+            categorias_dict[cat_nom] = []
+        categorias_dict[cat_nom].append(p)
+
     items, subtotal, iva, total = _resumen_carrito(_obtener_carrito(request))
     contexto = {
         'productos': productos,
+        'categorias_dict': categorias_dict,
         'items': items,
         'subtotal': subtotal,
         'iva': iva,
@@ -157,3 +253,62 @@ def ticket_pdf(request, venta_id=None):
         return redirect('pos')
 
     return _respuesta_pdf(venta)
+
+
+@login_required
+def reportes(request):
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+
+    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
+    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
+
+    if fecha_inicio_str:
+        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
+        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
+    if fecha_fin_str:
+        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
+        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+
+    transacciones = []
+    for v in ventas_qs[:100]:
+        items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+        articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
+        transacciones.append({
+            'ticket': f"V-{v.venta_id}",
+            'fecha': v.fecha,
+            'usuario': v.usuario.username if v.usuario else "Sistema",
+            'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
+            'concepto': articulos,
+            'total': (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
+            'tipo': 'Venta POS',
+            'es_venta': True,
+            'venta_id': v.venta_id,
+        })
+
+    for r in rentas_qs[:100]:
+        det = r.detalles.first()
+        equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
+        minutos = det.tiempo_de_renta if det else 60
+        transacciones.append({
+            'ticket': f"R-{r.renta_id}",
+            'fecha': r.fecha,
+            'usuario': r.usuario.username if r.usuario else "Sistema",
+            'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
+            'concepto': f"Renta {equipo_nom} ({minutos} min)",
+            'total': r.total,
+            'tipo': 'Renta de Equipo',
+            'es_venta': False,
+            'venta_id': None,
+        })
+
+    transacciones.sort(key=lambda x: x['fecha'], reverse=True)
+    total_recaudado = sum((t['total'] for t in transacciones), Decimal('0.00'))
+
+    return render(request, 'reportes.html', {
+        'transacciones': transacciones,
+        'total_recaudado': total_recaudado,
+        'fecha_inicio': fecha_inicio_str or '',
+        'fecha_fin': fecha_fin_str or '',
+    })
+

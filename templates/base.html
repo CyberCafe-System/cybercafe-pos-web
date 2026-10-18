@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema POS - The COFFEE LAN</title>
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -29,30 +30,44 @@
                 <li>
                     <a href="{% url 'rentas' %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
                 </li>
+                {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     <a href="{% url 'pos' %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_cajero or request.user.es_asistente %}
                 <li>
                     <a href="{% url 'inventario' %}"><i class="bi bi-box-seam"></i> Inventario</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'categorias' %}"><i class="bi bi-tags"></i> Categorías</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_asistente %}
                 <li>
                     <a href="{% url 'equipos' %}"><i class="bi bi-cpu"></i> Equipos</a>
                 </li>
                 <li>
                     <a href="{% url 'componentes' %}"><i class="bi bi-mouse2"></i> Componentes</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     <a href="{% url 'clientes' %}"><i class="bi bi-people"></i> Clientes</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'usuarios' %}"><i class="bi bi-person-badge"></i> Usuarios</a>
                 </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     <a href="{% url 'reportes' %}"><i class="bi bi-graph-up"></i> Reportes</a>
                 </li>
+                {% endif %}
             </ul>
         </div>
 

@@ -3,7 +3,10 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Gestión de Usuarios</h3>
+    <div>
+        <h3 class="mb-0"><i class="bi bi-person-badge me-2"></i>Gestión de Usuarios</h3>
+        <p class="text-muted small mb-0">Control de cuentas de acceso, roles y contraseñas del personal.</p>
+    </div>
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearUsuario">
         <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
     </button>
@@ -15,7 +18,11 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0" placeholder="Buscar por username, nombre o correo...">
+                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0" placeholder="Buscar usuario...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Username</strong>, <strong class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
                 </div>
             </div>
         </div>
@@ -28,8 +35,7 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
-                        <th>Nombre</th>
+                        <th>Nombre Completo</th>
                         <th>Username</th>
                         <th>Correo</th>
                         <th>Rol</th>
@@ -40,11 +46,14 @@
                 <tbody>
                     {% for usuario in usuarios %}
                     <tr class="fila-usuario" data-busqueda="{{ usuario.username|lower }} {{ usuario.nombre|lower }} {{ usuario.correo|lower }}">
-                        <td class="fw-bold">#{{ usuario.usuario_id }}</td>
-                        <td class="fw-semibold">{{ usuario.nombre }}</td>
-                        <td>{{ usuario.username }}</td>
+                        <td class="fw-semibold text-dark">{{ usuario.nombre }}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span></td>
                         <td class="text-muted">{{ usuario.correo }}</td>
-                        <td>{{ usuario.rol.nombre }}</td>
+                        <td>
+                            <span class="badge {% if usuario.rol.nombre == 'ADMINISTRADOR' %}bg-dark{% elif usuario.rol.nombre == 'CAJERO' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                {{ usuario.rol.nombre }}
+                            </span>
+                        </td>
                         <td>
                             {% if usuario.activo %}
                                 <span class="badge bg-success">Activo</span>
@@ -62,7 +71,7 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="usuario_id" value="{{ usuario.usuario_id }}">
                                 {% if usuario.activo %}
-                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar">
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar" {% if usuario.usuario_id == request.user.usuario_id %}disabled title="No puedes desactivar tu propia cuenta en sesión"{% endif %}>
                                     <i class="bi bi-toggle-on"></i>
                                 </button>
                                 {% else %}
@@ -75,16 +84,16 @@
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="7" class="text-center text-muted py-4">
-                            <i class="bi bi-person-badge fs-2 d-block mb-2"></i>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-person-badge fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay usuarios registrados aún.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosUsuarios" class="d-none">
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
-                            No se encontraron usuarios.
+                            No se encontraron usuarios que coincidan con la búsqueda.
                         </td>
                     </tr>
                 </tbody>
@@ -104,6 +113,9 @@
             document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
             document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
             document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
+            // Limpiar campo de nueva contraseña
+            const passInput = document.getElementById('editarUsuarioPassword');
+            if (passInput) passInput.value = '';
         });
     });
 

@@ -1,43 +1,49 @@
 <!-- Modal Crear Usuario -->
-<div class="modal fade" id="modalCrearUsuario" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="modalCrearUsuario" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
             <form method="POST" action="{% url 'crear_usuario' %}">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Crear Usuario</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2 text-coffee"></i>Crear Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Rol</label>
-                        <select name="rol" class="form-select" required>
+                        <label class="form-label fw-semibold">Rol del Sistema <span class="text-danger fw-bold">*</span></label>
+                        <select name="rol" class="form-select rounded-3" required>
                             <option value="">Seleccione un rol</option>
                             {% for rol in roles %}
                             <option value="{{ rol.rol_id }}">{{ rol.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Nombre Completo</label>
-                        <input type="text" name="nombre" class="form-control" required>
+                        <label class="form-label fw-semibold">Nombre Completo <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej. Roberto Morales" required>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Nombre de Usuario (Username)</label>
-                        <input type="text" name="username" class="form-control" required>
+                        <label class="form-label fw-semibold">Nombre de Usuario (Username) <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="username" class="form-control rounded-3" placeholder="Ej. rmorales" required>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Correo</label>
-                        <input type="email" name="correo" class="form-control" required>
+                        <label class="form-label fw-semibold">Correo Electrónico <span class="text-danger fw-bold">*</span></label>
+                        <input type="email" name="correo" class="form-control rounded-3" placeholder="usuario@cybercafe.com" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Contraseña</label>
-                        <input type="password" name="password" class="form-control" required>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger fw-bold">*</span></label>
+                        <input type="password" name="password" class="form-control rounded-3" placeholder="Mínimo 8 caracteres" required>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">Guardar Usuario</button>
                 </div>
             </form>
         </div>

@@ -3,58 +3,313 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Control de Rentas y Equipos</h3>
-    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">
-        <i class="bi bi-plus-circle"></i> Nueva Renta
+    <div>
+        <h3 class="mb-0"><i class="bi bi-pc-display me-2"></i>Control de Rentas y Equipos</h3>
+        <p class="text-muted small mb-0">Supervisión en tiempo real del uso de computadoras, consolas y estaciones de juego.</p>
+    </div>
+    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta">
+        <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
     </button>
 </div>
 
-
-<div class="row g-4">
-    
-    
-    <div class="col-md-3 col-sm-6">
-        <div class="card shadow-sm border-0 border-top border-4 h-100 border-success">
-            <div class="card-body text-center d-flex flex-column">
-                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
-                <h5 class="card-title fw-bold">PC-01 VIP</h5>
-                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
-                <p class="text-muted small mt-auto mb-3">Tarifa: $1.50/hr</p>
-                <button class="btn btn-success w-100" data-bs-toggle="modal" data-bs-target="#modalCrearRenta">Asignar tiempo</button>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="col-md-3 col-sm-6">
-        <div class="card shadow-sm border-0 border-top border-4 h-100 border-secondary">
-            <div class="card-body text-center d-flex flex-column">
-                <i class="bi bi-controller text-dark mb-2" style="font-size: 3rem;"></i>
-                <h5 class="card-title fw-bold">Consola PS5</h5>
-                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: Carlos Mendoza</p>
-                <p class="text-muted small mt-auto mb-3">Tarifa: $2.50/hr</p>
-                <div class="d-flex gap-2">
-                    <button class="btn btn-outline-secondary w-50" title="Detalles"><i class="bi bi-info-circle"></i></button>
-                    <button class="btn btn-danger w-50" title="Finalizar/Cobrar"><i class="bi bi-stop-circle"></i></button>
+<!-- Buscador Unificado con Indicador -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorRentas" class="form-control border-start-0" placeholder="Buscar equipo o cliente...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Equipo</strong>, <strong class="text-dark">Tipo</strong>, <strong class="text-dark">Cliente</strong> y <strong class="text-dark">Estado</strong></span>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    
-    <div class="col-md-3 col-sm-6">
-        <div class="card shadow-sm border-0 border-top border-4 h-100 border-warning">
-            <div class="card-body text-center d-flex flex-column">
-                <i class="bi bi-pc-display text-dark mb-2" style="font-size: 3rem;"></i>
-                <h5 class="card-title fw-bold">PC-04 Básica</h5>
-                <p class="text-dark small mb-1 fw-bold"><i class="bi bi-person-fill text-primary"></i> Cliente: --</p>
-                <p class="text-muted small mt-auto mb-3">Tarifa: $1.00/hr</p>
-                <button class="btn btn-warning w-100 text-dark fw-bold" disabled><i class="bi bi-tools me-2"></i>Mantenimiento</button>
+<!-- Cuadrícula de Equipos -->
+<div class="row g-4">
+    {% for equipo in equipos %}
+    <div class="col-xl-3 col-lg-4 col-md-6 tarjeta-equipo"
+         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% else %}disponible{% endif %}">
+
+        {% if equipo.renta_activa %}
+        <!-- Equipo EN USO -->
+        <div class="card shadow-sm border-0 border-top border-4 border-warning h-100 rounded-4">
+            <div class="card-body p-4 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill">
+                        <i class="bi bi-hourglass-split me-1"></i> En Uso
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                {% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}
+                <i class="bi bi-controller text-warning mb-2" style="font-size: 3rem;"></i>
+                {% else %}
+                <i class="bi bi-pc-display text-warning mb-2" style="font-size: 3rem;"></i>
+                {% endif %}
+
+                <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}</p>
+
+                <div class="bg-light p-2 rounded-3 mb-3 text-start small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Inicio:</span>
+                        <span class="fw-bold">{{ equipo.renta_activa.hora_inicio|date:"h:i A" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Tiempo:</span>
+                        <span class="fw-bold">{{ equipo.renta_activa.tiempo_de_renta }} min</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Total:</span>
+                        <span class="fw-bold text-success">${{ equipo.renta_activa.subtotal }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-auto d-flex gap-2">
+                    <button class="btn btn-outline-secondary flex-grow-1 rounded-pill btn-info-equipo"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
+                            data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}"
+                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="En Uso"
+                            data-cliente="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
+                            data-inicio="{{ equipo.renta_activa.hora_inicio|date:'d/m/Y h:i A' }}"
+                            data-tiempo="{{ equipo.renta_activa.tiempo_de_renta }} minutos"
+                            data-total="${{ equipo.renta_activa.subtotal }}"
+                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                            title="Ver Información y Hardware">
+                        <i class="bi bi-info-circle"></i> Info
+                    </button>
+                    <form method="POST" action="{% url 'finalizar_renta' %}" class="flex-grow-1">
+                        {% csrf_token %}
+                        <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
+                        <button type="submit" class="btn btn-danger w-100 rounded-pill shadow-sm" title="Finalizar y Cobrar">
+                            <i class="bi bi-stop-circle me-1"></i> Cobrar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        {% elif equipo.estado == 'MANTENIMIENTO' %}
+        <!-- Equipo EN MANTENIMIENTO -->
+        <div class="card shadow-sm border-0 border-top border-4 border-secondary h-100 rounded-4">
+            <div class="card-body p-4 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-secondary px-3 py-1 rounded-pill">
+                        <i class="bi bi-tools me-1"></i> Mantenimiento
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                <i class="bi bi-tools text-muted mb-2" style="font-size: 3rem;"></i>
+                <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-3">Equipo en revisión técnica</p>
+
+                <div class="mt-auto d-flex gap-2">
+                    <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
+                            data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}"
+                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="Mantenimiento"
+                            data-cliente="--"
+                            data-inicio="--"
+                            data-tiempo="--"
+                            data-total="--"
+                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                            title="Ver Periféricos">
+                        <i class="bi bi-info-circle me-1"></i> Componentes
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Equipo DISPONIBLE -->
+        <div class="card shadow-sm border-0 border-top border-4 border-success h-100 rounded-4">
+            <div class="card-body p-4 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-success px-3 py-1 rounded-pill">
+                        <i class="bi bi-check-circle me-1"></i> Disponible
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                {% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}
+                <i class="bi bi-controller text-success mb-2" style="font-size: 3rem;"></i>
+                {% else %}
+                <i class="bi bi-pc-display text-success mb-2" style="font-size: 3rem;"></i>
+                {% endif %}
+
+                <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
+                <p class="text-success fw-bold fs-6 mb-3">Tarifa: ${{ equipo.tarifa_por_hora|floatformat:2 }}/hr</p>
+
+                <div class="mt-auto d-flex gap-2">
+                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
+                            data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}"
+                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="Disponible"
+                            data-cliente="--"
+                            data-inicio="--"
+                            data-tiempo="--"
+                            data-total="--"
+                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                            title="Ver Hardware y Periféricos">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+                    <button class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm btn-asignar-equipo"
+                            data-bs-toggle="modal" data-bs-target="#modalNuevaRenta"
+                            data-equipo-id="{{ equipo.equipo_id }}">
+                        <i class="bi bi-play-circle me-1"></i> Asignar Tiempo
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+    {% empty %}
+    <div class="col-12 text-center text-muted py-5">
+        <i class="bi bi-pc-display fs-1 d-block mb-2 text-muted opacity-50"></i>
+        <h5>No hay equipos registrados en el sistema</h5>
+        <p class="small">Agrega computadoras y consolas en el apartado de Equipos para poder rentarlas.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Modal Detalle e Información del Equipo -->
+<div class="modal fade" id="modalInfoEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold" id="infoEquipoTitulo">
+                    <i class="bi bi-info-circle me-2 text-primary"></i>Información del Equipo
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body px-4 pt-3 pb-4">
+                <div class="bg-light p-3 rounded-3 mb-3">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Tipo de Equipo:</span>
+                        <strong id="infoEquipoTipo">--</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Tarifa por Hora:</span>
+                        <strong id="infoEquipoTarifa">--</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Estado Actual:</span>
+                        <span class="badge bg-dark" id="infoEquipoEstado">--</span>
+                    </div>
+                </div>
+
+                <div id="seccionInfoRenta" class="d-none mb-3">
+                    <h6 class="fw-bold mb-2 text-warning"><i class="bi bi-hourglass-split me-1"></i>Sesión en Curso</h6>
+                    <div class="bg-light p-3 rounded-3 border border-warning">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Cliente:</span>
+                            <strong id="infoEquipoCliente">--</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Hora de Inicio:</span>
+                            <span id="infoEquipoInicio">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Tiempo Contratado:</span>
+                            <span id="infoEquipoTiempo">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Importe Total:</span>
+                            <strong class="text-success" id="infoEquipoTotal">--</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-cpu me-1 text-coffee"></i>Hardware y Periféricos Asignados</h6>
+                <div class="list-group rounded-3 shadow-sm border-0" id="listaComponentesEquipo">
+                    <!-- Inyectado por JS -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-coffee rounded-pill px-4 w-100" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
-
 </div>
 
 {% include 'rentas/crear.html' %}
+
+<script>
+    // Buscador interactivo
+    const buscadorRentas = document.getElementById('buscadorRentas');
+    if (buscadorRentas) {
+        const tarjetas = document.querySelectorAll('.tarjeta-equipo');
+        buscadorRentas.addEventListener('input', function () {
+            const termino = buscadorRentas.value.trim().toLowerCase();
+            tarjetas.forEach(function (t) {
+                const coincide = t.dataset.busqueda.includes(termino);
+                t.classList.toggle('d-none', !coincide);
+            });
+        });
+    }
+
+    // Modal Info Equipo
+    document.querySelectorAll('.btn-info-equipo').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('infoEquipoTitulo').innerHTML = '<i class="bi bi-pc-display me-2 text-coffee"></i>' + btn.dataset.nombre;
+            document.getElementById('infoEquipoTipo').textContent = btn.dataset.tipo;
+            document.getElementById('infoEquipoTarifa').textContent = btn.dataset.tarifa;
+            document.getElementById('infoEquipoEstado').textContent = btn.dataset.estado;
+
+            const seccionRenta = document.getElementById('seccionInfoRenta');
+            if (btn.dataset.estado === 'En Uso') {
+                seccionRenta.classList.remove('d-none');
+                document.getElementById('infoEquipoCliente').textContent = btn.dataset.cliente;
+                document.getElementById('infoEquipoInicio').textContent = btn.dataset.inicio;
+                document.getElementById('infoEquipoTiempo').textContent = btn.dataset.tiempo;
+                document.getElementById('infoEquipoTotal').textContent = btn.dataset.total;
+            } else {
+                seccionRenta.classList.add('d-none');
+            }
+
+            // Lista de Componentes
+            const lista = document.getElementById('listaComponentesEquipo');
+            lista.innerHTML = '';
+            const componentesRaw = btn.dataset.componentes;
+            if (componentesRaw && componentesRaw !== 'Sin periféricos asignados') {
+                const items = componentesRaw.split(';;');
+                items.forEach(function (item) {
+                    if (item.trim()) {
+                        const li = document.createElement('div');
+                        li.className = 'list-group-item d-flex align-items-center gap-2 border-0 bg-light mb-1 rounded-3';
+                        li.innerHTML = '<i class="bi bi-check2-circle text-success"></i><span>' + item + '</span>';
+                        lista.appendChild(li);
+                    }
+                });
+            } else {
+                lista.innerHTML = '<div class="text-muted small p-2 text-center">No tiene componentes o periféricos asociados en bodega.</div>';
+            }
+        });
+    });
+
+    // Preseleccionar equipo al hacer clic en "Asignar Tiempo"
+    document.querySelectorAll('.btn-asignar-equipo').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const selectEquipo = document.getElementById('selectEquipoRenta');
+            if (selectEquipo && btn.dataset.equipoId) {
+                selectEquipo.value = btn.dataset.equipoId;
+            }
+        });
+    });
+</script>
+
 {% endblock %}

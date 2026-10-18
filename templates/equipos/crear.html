@@ -1,42 +1,53 @@
 <!-- Modal Crear Equipo -->
-<div class="modal fade" id="modalCrearEquipo" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="modalCrearEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-cpu me-2"></i>Registrar Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
             <form method="POST" action="{% url 'crear_equipo' %}">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title">Registrar Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Nombre/Identificador</label>
-                        <input type="text" name="nombre" class="form-control" required>
+                        <label class="form-label fw-semibold">Nombre / Identificador <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej. PC-01, Consola PS5-02" required>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Tipo</label>
-                        <select name="tipo" class="form-select">
-                            <option value="PC">PC</option>
-                            <option value="CONSOLA">Consola</option>
-                        </select>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo <span class="text-danger fw-bold">*</span></label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="PC">PC</option>
+                                <option value="CONSOLA">Consola</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tarifa por Hora ($) <span class="text-danger fw-bold">*</span></label>
+                            <input type="number" step="0.01" name="tarifa_por_hora" class="form-control" placeholder="Ej. 1.50" required>
+                        </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Tarifa por Hora</label>
-                        <input type="number" step="0.01" name="tarifa_por_hora" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Estado Físico</label>
-                        <select name="estado" class="form-select">
+                        <label class="form-label fw-semibold">Estado Inicial <span class="text-danger fw-bold">*</span></label>
+                        <select name="estado" class="form-select" required>
                             <option value="DISPONIBLE">Disponible</option>
                             <option value="DANIOS_MENORES">Daños Menores</option>
                             <option value="DEFECTUOSO">Defectuoso</option>
                             <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
                         </select>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Descripción o Ubicación</label>
+                        <textarea name="descripcion" class="form-control" rows="2" placeholder="Ej. Estación Gamer Zona A"></textarea>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee"><i class="bi bi-save me-1"></i> Guardar Equipo</button>
                 </div>
             </form>
         </div>
