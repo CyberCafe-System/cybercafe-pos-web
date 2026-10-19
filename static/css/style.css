@@ -309,3 +309,118 @@ body {
     background-color: var(--clr-cobre);
     color: #ffffff;
 }
+
+.text-coffee {
+    color: var(--clr-cobre) !important;
+}
+
+.bg-coffee-light {
+    background-color: rgba(176, 107, 5, 0.12) !important;
+}
+
+.stat-card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.stat-card-hover:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.18) !important;
+}
+
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+/* Modern Dashboard KPI Cards */
+.stat-kpi-card {
+    background-color: #ffffff;
+    border: 1px solid #eaedf1 !important;
+    border-radius: 16px;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.stat-kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(44, 30, 22, 0.08) !important;
+    border-color: #d8dee6 !important;
+}
+
+.stat-kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    opacity: 0.8;
+}
+
+.stat-kpi-card.kpi-accent-coffee::before { background: #855204; }
+.stat-kpi-card.kpi-accent-amber::before { background: #d97706; }
+.stat-kpi-card.kpi-accent-emerald::before { background: #059669; }
+.stat-kpi-card.kpi-accent-blue::before { background: #2563eb; }
+
+.kpi-icon-box {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.kpi-icon-coffee {
+    background-color: #fdf6ec;
+    color: #855204;
+    border: 1px solid rgba(133, 82, 4, 0.15);
+}
+
+.kpi-icon-amber {
+    background-color: #fffbeb;
+    color: #d97706;
+    border: 1px solid rgba(217, 119, 6, 0.15);
+}
+
+.kpi-icon-emerald {
+    background-color: #ecfdf5;
+    color: #059669;
+    border: 1px solid rgba(5, 150, 105, 0.15);
+}
+
+.kpi-icon-blue {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+.kpi-pill {
+    font-size: 0.78rem;
+    font-weight: 600;
+    padding: 0.35rem 0.65rem;
+    border-radius: 50rem;
+    display: inline-flex;
+    align-items: center;
+}
+
+.kpi-pill-coffee {
+    background-color: #f7ede2;
+    color: #855204;
+}
+
+.kpi-pill-amber {
+    background-color: #fffbeb;
+    color: #b45309;
+}
+
+.kpi-pill-emerald {
+    background-color: #ecfdf5;
+    color: #047857;
+}
+
+.kpi-pill-blue {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+}

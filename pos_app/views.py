@@ -94,12 +94,71 @@ def inicio(request):
     transacciones.sort(key=lambda x: x['fecha_hora'], reverse=True)
     ultimas_transacciones = transacciones[:8]
 
+    # Gráfica 1: Últimos 7 días con desglose real de Ventas vs Rentas
+    dias_semana_es = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    chart_dias_labels = []
+    chart_ventas_data = []
+    chart_rentas_data = []
+
+    for i in range(6, -1, -1):
+        dia = hoy - timezone.timedelta(days=i)
+        etiqueta = "Hoy" if i == 0 else f"{dias_semana_es[dia.weekday()]} {dia.day}"
+        chart_dias_labels.append(etiqueta)
+
+        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__date=dia)) or Decimal('0.00')
+        r_sub = sum(r.total for r in Renta.objects.filter(fecha__date=dia)) or Decimal('0.00')
+
+        chart_ventas_data.append(float(v_sub))
+        chart_rentas_data.append(float(r_sub))
+
+    # Gráfica 2: Top 5 Productos Más Vendidos
+    top_vendidos_qs = list(
+        DetalleVenta.objects.values('producto__nombre')
+        .annotate(total_unidades=Sum('cantidad'))
+        .order_by('-total_unidades')[:5]
+    )
+    chart_top_labels = []
+    chart_top_data = []
+    for item in top_vendidos_qs:
+        if item['producto__nombre']:
+            chart_top_labels.append(item['producto__nombre'])
+            chart_top_data.append(int(item['total_unidades']))
+
+    tiene_datos_top = bool(chart_top_labels)
+    if not tiene_datos_top:
+        chart_top_labels = ['Sin ventas aún']
+        chart_top_data = [1]
+
+    # Resumen semanal acumulado
+    total_semana_ventas = sum(chart_ventas_data)
+    total_semana_rentas = sum(chart_rentas_data)
+    total_semana = total_semana_ventas + total_semana_rentas
+
+    # Ocupación de equipos
+    equipos_libres = max(0, total_equipos - equipos_ocupados)
+    porcentaje_ocupacion = round((equipos_ocupados / total_equipos * 100), 1) if total_equipos else 0
+
+    import json
+
     return render(request, 'inicio.html', {
         'ingresos_hoy': ingresos_hoy,
         'equipos_activos': equipos_activos_str,
+        'equipos_ocupados': equipos_ocupados,
+        'equipos_libres': equipos_libres,
+        'total_equipos': total_equipos,
+        'porcentaje_ocupacion': porcentaje_ocupacion,
         'ventas_hoy': ventas_hoy_count,
         'total_clientes': total_clientes_activos,
         'ultimas_ventas': ultimas_transacciones,
+        'chart_dias_labels': json.dumps(chart_dias_labels),
+        'chart_ventas_data': json.dumps(chart_ventas_data),
+        'chart_rentas_data': json.dumps(chart_rentas_data),
+        'chart_top_labels': json.dumps(chart_top_labels),
+        'chart_top_data': json.dumps(chart_top_data),
+        'tiene_datos_top': tiene_datos_top,
+        'total_semana': total_semana,
+        'total_semana_ventas': total_semana_ventas,
+        'total_semana_rentas': total_semana_rentas,
     })
 
 
