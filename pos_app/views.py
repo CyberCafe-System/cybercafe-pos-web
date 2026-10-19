@@ -17,7 +17,7 @@ from clientes.models import Cliente
 from equipos.models import Equipo
 from inventario.models import Producto
 from rentas.models import DetalleRenta, Renta
-from usuarios.decorators import cajero_o_admin_required
+from usuarios.decorators import admin_required, cajero_o_admin_required
 from usuarios.models import Usuario
 
 from .models import DetalleVenta, Venta
@@ -380,7 +380,7 @@ def ticket_pdf(request, venta_id=None):
 
 
 @login_required
-@cajero_o_admin_required
+@admin_required
 def reportes(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
@@ -472,7 +472,7 @@ def reportes(request):
 
 
 @login_required
-@cajero_o_admin_required
+@admin_required
 def reportes_exportar_csv(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
@@ -541,7 +541,7 @@ def reportes_exportar_csv(request):
 
 
 @login_required
-@cajero_o_admin_required
+@admin_required
 def reportes_exportar_excel(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
