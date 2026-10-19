@@ -87,6 +87,7 @@
     // Configuración de edición
     document.querySelectorAll('.btn-editar-cliente').forEach(function (btn) {
         btn.addEventListener('click', function () {
+            limpiarErroresModal(document.getElementById('formModificarCliente'), document.getElementById('errorModificarCliente'));
             document.getElementById('editarClienteId').value = btn.dataset.id;
             document.getElementById('editarClienteNombre').value = btn.dataset.nombre;
             document.getElementById('editarClienteApellido').value = btn.dataset.apellido;
@@ -96,6 +97,18 @@
             document.getElementById('editarClienteCorreo').value = btn.dataset.correo;
         });
     });
+
+    // Limpiar errores y formulario al cerrar o abrir modal crear
+    const modalCrearEl = document.getElementById('modalCrearCliente');
+    if (modalCrearEl) {
+        modalCrearEl.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('formCrearCliente');
+            if (form) {
+                form.reset();
+                limpiarErroresModal(form, document.getElementById('errorCrearCliente'));
+            }
+        });
+    }
 
     // Buscador interactivo
     const buscadorClientes = document.getElementById('buscadorClientes');
@@ -132,12 +145,136 @@
     }
 
     document.querySelectorAll('input[name="dui"]').forEach(function (input) {
-        input.addEventListener('input', function () { aplicarMascaraDUI(input); });
+        input.addEventListener('input', function () {
+            aplicarMascaraDUI(input);
+            input.classList.remove('is-invalid');
+        });
     });
 
     document.querySelectorAll('input[name="telefono"]').forEach(function (input) {
-        input.addEventListener('input', function () { aplicarMascaraTelefono(input); });
+        input.addEventListener('input', function () {
+            aplicarMascaraTelefono(input);
+            input.classList.remove('is-invalid');
+        });
     });
+
+    // Quitar estado inválido al escribir en cualquier campo
+    document.querySelectorAll('#formCrearCliente input, #formModificarCliente input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            input.classList.remove('is-invalid');
+        });
+    });
+
+    function limpiarErroresModal(form, errorDiv) {
+        if (!form) return;
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        if (errorDiv) {
+            errorDiv.classList.add('d-none');
+            const txt = errorDiv.querySelector('.error-texto');
+            if (txt) txt.innerHTML = '';
+        }
+    }
+
+    function mostrarErroresModal(form, errorDiv, errors) {
+        let mensajes = [];
+        for (const [campo, errList] of Object.entries(errors)) {
+            const input = form.querySelector(`[name="${campo}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                const feedback = input.parentElement.querySelector('.invalid-feedback');
+                if (feedback && errList.length > 0) {
+                    feedback.textContent = errList[0];
+                }
+            }
+            mensajes.push(...errList);
+        }
+        if (errorDiv && mensajes.length > 0) {
+            const txt = errorDiv.querySelector('.error-texto');
+            if (txt) {
+                txt.innerHTML = mensajes.join('<br>');
+            }
+            errorDiv.classList.remove('d-none');
+        }
+    }
+
+    function configurarEnvioModal(formId, errorDivId, btnId) {
+        const form = document.getElementById(formId);
+        const errorDiv = document.getElementById(errorDivId);
+        const btn = document.getElementById(btnId);
+
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            limpiarErroresModal(form, errorDiv);
+
+            // Validaciones previas del lado del cliente
+            const duiInput = form.querySelector('input[name="dui"]');
+            const telInput = form.querySelector('input[name="telefono"]');
+
+            let erroresCliente = {};
+            if (telInput) {
+                const soloDigitosTel = telInput.value.replace(/\D/g, '');
+                if (soloDigitosTel.length !== 8) {
+                    erroresCliente['telefono'] = ['El número de teléfono debe contener exactamente 8 números.'];
+                }
+            }
+
+            if (duiInput) {
+                const soloDigitosDui = duiInput.value.replace(/\D/g, '');
+                if (soloDigitosDui.length !== 9) {
+                    erroresCliente['dui'] = ['El DUI debe tener 8 dígitos más 1 dígito verificador (00000000-0).'];
+                }
+            }
+
+            if (Object.keys(erroresCliente).length > 0) {
+                mostrarErroresModal(form, errorDiv, erroresCliente);
+                return;
+            }
+
+            // Activar estado de carga en el botón
+            if (btn) {
+                btn.disabled = true;
+                const spinner = btn.querySelector('.spinner-border');
+                if (spinner) spinner.classList.remove('d-none');
+            }
+
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(async (response) => {
+                const data = await response.json().catch(() => null);
+                if (response.ok && data && data.success) {
+                    // Éxito: recargar para ver el cambio con mensaje de Django
+                    window.location.reload();
+                } else {
+                    // Error: el modal NO se cierra y todos los datos se conservan
+                    const errors = (data && data.errors) ? data.errors : { '__all__': ['Ocurrió un error al procesar el registro.'] };
+                    mostrarErroresModal(form, errorDiv, errors);
+                }
+            })
+            .catch((err) => {
+                mostrarErroresModal(form, errorDiv, { '__all__': ['Error de conexión con el servidor. Los datos siguen en el formulario.'] });
+            })
+            .finally(() => {
+                if (btn) {
+                    btn.disabled = false;
+                    const spinner = btn.querySelector('.spinner-border');
+                    if (spinner) spinner.classList.add('d-none');
+                }
+            });
+        });
+    }
+
+    configurarEnvioModal('formCrearCliente', 'errorCrearCliente', 'btnSubmitCrearCliente');
+    configurarEnvioModal('formModificarCliente', 'errorModificarCliente', 'btnSubmitModificarCliente');
 </script>
 
 {% endblock %}

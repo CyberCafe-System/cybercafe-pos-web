@@ -2,13 +2,18 @@
 <div class="modal fade" id="modalModificarCliente" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="{% url 'modificar_cliente' %}">
+            <form method="POST" action="{% url 'modificar_cliente' %}" id="formModificarCliente">
                 {% csrf_token %}
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2 text-primary"></i>Modificar Cliente</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body px-4 pt-3 pb-4">
+                    <div id="errorModificarCliente" class="alert alert-danger rounded-3 py-2 small d-none mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <span class="error-texto"></span>
+                    </div>
+
                     <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
                     <input type="hidden" name="cliente_id" id="editarClienteId">
 
@@ -16,39 +21,48 @@
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Nombre <span class="text-danger fw-bold">*</span></label>
                             <input type="text" name="nombre" id="editarClienteNombre" class="form-control rounded-3" required>
+                            <div class="invalid-feedback">El nombre es obligatorio.</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Apellido <span class="text-danger fw-bold">*</span></label>
                             <input type="text" name="apellido" id="editarClienteApellido" class="form-control rounded-3" required>
+                            <div class="invalid-feedback">El apellido es obligatorio.</div>
                         </div>
                     </div>
 
                     <div class="row g-2">
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">DUI <span class="text-danger fw-bold">*</span></label>
-                            <input type="text" name="dui" id="editarClienteDui" class="form-control rounded-3" maxlength="10" required>
-                            <small class="text-muted">Formato: 00000000-0</small>
+                            <input type="text" name="dui" id="editarClienteDui" class="form-control rounded-3 font-monospace" maxlength="10" required>
+                            <small class="text-muted d-block mt-1">Formato: 00000000-0</small>
+                            <div class="invalid-feedback">DUI no válido o incompleto (00000000-0).</div>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label fw-semibold">Teléfono <span class="text-danger fw-bold">*</span></label>
-                            <input type="text" name="telefono" id="editarClienteTelefono" class="form-control rounded-3" maxlength="8" required>
-                            <small class="text-muted">8 dígitos numéricos.</small>
+                            <input type="text" name="telefono" id="editarClienteTelefono" class="form-control rounded-3 font-monospace" maxlength="8" required>
+                            <small class="text-muted d-block mt-1">Exactamente 8 dígitos numéricos.</small>
+                            <div class="invalid-feedback">El teléfono debe tener exactamente 8 números.</div>
                         </div>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Dirección <span class="text-danger fw-bold">*</span></label>
                         <input type="text" name="direccion" id="editarClienteDireccion" class="form-control rounded-3" required>
+                        <div class="invalid-feedback">La dirección es obligatoria.</div>
                     </div>
 
                     <div class="mb-2">
                         <label class="form-label fw-semibold">Correo Electrónico</label>
                         <input type="email" name="correo" id="editarClienteCorreo" class="form-control rounded-3">
+                        <div class="invalid-feedback">Ingresa un correo electrónico válido.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">Actualizar Cliente</button>
+                    <button type="submit" id="btnSubmitModificarCliente" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                        <span class="spinner-border spinner-border-sm me-1 d-none" role="status" aria-hidden="true"></span>
+                        <span class="btn-texto">Actualizar Cliente</span>
+                    </button>
                 </div>
             </form>
         </div>
