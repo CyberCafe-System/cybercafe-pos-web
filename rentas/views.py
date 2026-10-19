@@ -3,6 +3,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -11,6 +12,7 @@ from equipos.models import Equipo
 from usuarios.decorators import cajero_o_admin_required
 
 from .models import DetalleRenta, Renta
+from .ticket import generar_factura_renta_pdf
 
 ESTADOS_RENTABLES = ('DISPONIBLE', 'DANIOS_MENORES')
 ESTADOS_BLOQUEANTES = ('ACTIVA', 'PENDIENTE_REVISION')
@@ -18,6 +20,14 @@ ESTADOS_BLOQUEANTES = ('ACTIVA', 'PENDIENTE_REVISION')
 
 def _equipo_es_rentable(equipo):
     return equipo.estado in ESTADOS_RENTABLES
+
+
+def _respuesta_factura_renta(renta):
+    respuesta = HttpResponse(
+        generar_factura_renta_pdf(renta), content_type='application/pdf'
+    )
+    respuesta['Content-Disposition'] = f'inline; filename="factura_renta_{renta.renta_id}.pdf"'
+    return respuesta
 
 
 @login_required
@@ -204,9 +214,28 @@ def renta_finalizar(request):
                 f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
                 f'pendiente de revisión antes de volver a estar disponible.'
             )
+            request.session['ultima_renta_id'] = renta.renta_id
+            return _respuesta_factura_renta(renta)
         except ValueError as e:
             messages.error(request, str(e))
         except Exception:
             messages.error(request, 'No se pudo finalizar la renta. Inténtalo de nuevo.')
 
     return redirect('rentas')
+
+
+@login_required
+def renta_factura_pdf(request, renta_id=None):
+    renta = None
+    if renta_id is not None:
+        renta = Renta.objects.filter(pk=renta_id).first()
+    else:
+        ultima = request.session.get('ultima_renta_id')
+        if ultima:
+            renta = Renta.objects.filter(pk=ultima).first()
+
+    if renta is None:
+        messages.error(request, 'No hay ninguna renta registrada para generar la factura.')
+        return redirect('rentas')
+
+    return _respuesta_factura_renta(renta)

@@ -2,7 +2,7 @@
 <div class="modal fade" id="modalExtenderRenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="{% url 'extender_renta' %}">
+            <form method="POST" action="{% url 'extender_renta' %}" target="_blank">
                 {% csrf_token %}
                 <input type="hidden" name="detalle_renta_id" id="extenderDetalleId">
                 <input type="hidden" name="minutos_extra" id="extenderMinutosExtra" value="30">

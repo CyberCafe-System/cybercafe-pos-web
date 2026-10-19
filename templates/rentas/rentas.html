@@ -183,8 +183,8 @@
 
                 <p class="text-muted small mb-3">Se habilita cuando el módulo de revisiones lo libere.</p>
 
-                <div class="mt-auto">
-                    <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
+                <div class="mt-auto d-flex gap-2">
+                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
                             data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
                             data-nombre="{{ equipo.nombre }}"
                             data-tipo="{{ equipo.tipo }}"
@@ -198,6 +198,12 @@
                             title="Ver Periféricos e Información">
                         <i class="bi bi-info-circle me-1"></i> Info
                     </button>
+                    <a href="{% url 'factura_renta_id' equipo.revision_pendiente.renta.renta_id %}"
+                       target="_blank" rel="noopener"
+                       class="btn btn-outline-danger flex-grow-1 rounded-pill"
+                       title="Ver/Descargar factura de la renta">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Factura PDF
+                    </a>
                 </div>
             </div>
         </div>

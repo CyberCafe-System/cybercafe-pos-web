@@ -50,6 +50,8 @@ urlpatterns = [
     path('crear_renta/', rentas_views.renta_create, name='crear_renta'),
     path('extender_renta/', rentas_views.renta_extender, name='extender_renta'),
     path('finalizar_renta/', rentas_views.renta_finalizar, name='finalizar_renta'),
+    path('factura_renta/', rentas_views.renta_factura_pdf, name='factura_renta'),
+    path('factura_renta/<int:renta_id>/', rentas_views.renta_factura_pdf, name='factura_renta_id'),
 
     # POS
     path('agregar_carrito/', pos_views.agregar_carrito, name='agregar_carrito'),

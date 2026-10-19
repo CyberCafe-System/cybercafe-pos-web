@@ -2,7 +2,7 @@
 <div class="modal fade" id="modalCobroRenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
-            <form method="POST" action="{% url 'finalizar_renta' %}">
+            <form method="POST" action="{% url 'finalizar_renta' %}" target="_blank">
                 {% csrf_token %}
                 <input type="hidden" name="detalle_renta_id" id="cobroDetalleId">
 
