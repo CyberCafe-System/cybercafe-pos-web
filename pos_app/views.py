@@ -34,7 +34,7 @@ def inicio(request):
     ingresos_hoy = (subtotal_ventas + subtotal_rentas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     # Equipos en uso
-    equipos_ocupados = DetalleRenta.objects.filter(estado='ACTIVA').count()
+    equipos_ocupados = DetalleRenta.objects.filter(estado='ACTIVA').values('equipo_id').distinct().count()
     total_equipos = Equipo.objects.count()
     equipos_activos_str = f"{equipos_ocupados} / {total_equipos}" if total_equipos else "0 / 0"
 
@@ -64,9 +64,11 @@ def inicio(request):
         concepto = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
         if v.detalles.count() > 2:
             concepto += f" (+{v.detalles.count() - 2} más)"
+        cliente_nombre = f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General"
         transacciones.append({
             'id': f"TK-{v.venta_id}",
             'cliente': v.cliente,
+            'cliente_nombre': cliente_nombre,
             'concepto': concepto,
             'usuario': v.usuario,
             'fecha_hora': v.fecha,
@@ -79,9 +81,11 @@ def inicio(request):
         det = r.detalles.first()
         equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
         minutos = det.tiempo_de_renta if det else 60
+        cliente_nombre = f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General"
         transacciones.append({
             'id': f"RN-{r.renta_id}",
             'cliente': r.cliente,
+            'cliente_nombre': cliente_nombre,
             'concepto': f"Renta {equipo_nom} ({minutos} min)",
             'usuario': r.usuario,
             'fecha_hora': r.fecha,
@@ -90,19 +94,23 @@ def inicio(request):
             'es_venta': False,
         })
 
-    # Ordenar por fecha descendente y tomar las 8 más recientes
+    # Ordenar por fecha descendente y tomar las 5 más recientes
     transacciones.sort(key=lambda x: x['fecha_hora'], reverse=True)
-    ultimas_transacciones = transacciones[:8]
+    ultimas_transacciones = transacciones[:5]
 
-    # Gráfica 1: Últimos 7 días con desglose real de Ventas vs Rentas
-    dias_semana_es = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+    # Configuración de semana actual (Lunes a Domingo)
+    inicio_semana = hoy - timezone.timedelta(days=hoy.weekday())  # Lunes
+    fin_semana = inicio_semana + timezone.timedelta(days=6)       # Domingo
+
+    # Gráfica 1: Ingresos de la Semana (Lunes a Domingo)
+    dias_semana_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     chart_dias_labels = []
     chart_ventas_data = []
     chart_rentas_data = []
 
-    for i in range(6, -1, -1):
-        dia = hoy - timezone.timedelta(days=i)
-        etiqueta = "Hoy" if i == 0 else f"{dias_semana_es[dia.weekday()]} {dia.day}"
+    for i in range(7):
+        dia = inicio_semana + timezone.timedelta(days=i)
+        etiqueta = dias_semana_es[i]
         chart_dias_labels.append(etiqueta)
 
         v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__date=dia)) or Decimal('0.00')
@@ -111,9 +119,10 @@ def inicio(request):
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
 
-    # Gráfica 2: Top 5 Productos Más Vendidos
+    # Gráfica 2: Top 5 Productos Más Vendidos de la Semana (Lunes a Domingo)
     top_vendidos_qs = list(
-        DetalleVenta.objects.values('producto__nombre')
+        DetalleVenta.objects.filter(venta__fecha__date__range=(inicio_semana, fin_semana))
+        .values('producto__nombre')
         .annotate(total_unidades=Sum('cantidad'))
         .order_by('-total_unidades')[:5]
     )
@@ -126,17 +135,17 @@ def inicio(request):
 
     tiene_datos_top = bool(chart_top_labels)
     if not tiene_datos_top:
-        chart_top_labels = ['Sin ventas aún']
+        chart_top_labels = ['Sin ventas esta semana']
         chart_top_data = [1]
 
-    # Resumen semanal acumulado
+    # Resumen semanal acumulado (Lunes a Domingo)
     total_semana_ventas = sum(chart_ventas_data)
     total_semana_rentas = sum(chart_rentas_data)
     total_semana = total_semana_ventas + total_semana_rentas
 
     # Ocupación de equipos
     equipos_libres = max(0, total_equipos - equipos_ocupados)
-    porcentaje_ocupacion = round((equipos_ocupados / total_equipos * 100), 1) if total_equipos else 0
+    porcentaje_ocupacion = int(round((equipos_ocupados / total_equipos * 100))) if total_equipos else 0
 
     import json
 
@@ -150,6 +159,8 @@ def inicio(request):
         'ventas_hoy': ventas_hoy_count,
         'total_clientes': total_clientes_activos,
         'ultimas_ventas': ultimas_transacciones,
+        'inicio_semana': inicio_semana,
+        'fin_semana': fin_semana,
         'chart_dias_labels': json.dumps(chart_dias_labels),
         'chart_ventas_data': json.dumps(chart_ventas_data),
         'chart_rentas_data': json.dumps(chart_rentas_data),

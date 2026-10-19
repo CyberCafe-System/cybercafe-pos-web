@@ -6,7 +6,8 @@
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
         <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-speedometer2 me-2 text-coffee"></i>Panel Principal</h3>
-        <p class="text-muted small mb-0">Monitoreo de ingresos, ocupación de equipos y flujo de ventas en tiempo real.</p>
+        <p class="text-muted small mb-0">Monitoreo de ingresos, ocupación de equipos y flujo de ventas en tiempo real.
+        </p>
     </div>
     <div class="d-flex align-items-center gap-2">
         <div class="bg-white border rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
@@ -14,9 +15,15 @@
             <span class="text-secondary fw-semibold">{% now "d/m/Y" %}</span>
         </div>
         {% if request.user.es_admin or request.user.es_cajero %}
-        <a href="{% url 'pos' %}" class="btn btn-coffee rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
+        <a href="{% url 'pos' %}"
+            class="btn btn-coffee rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
             <i class="bi bi-cart-plus"></i>
             <span>Nueva Venta</span>
+        </a>
+        <a href="{% url 'rentas' %}"
+            class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small text-dark">
+            <i class="bi bi-pc-display text-coffee"></i>
+            <span class="fw-medium">Nueva Renta</span>
         </a>
         {% endif %}
     </div>
@@ -26,19 +33,19 @@
 <div class="row g-3 mb-4">
     <!-- Isla 1: Ingresos de Hoy -->
     <div class="col-xl-3 col-md-6">
-        <div class="card shadow-sm border-0 rounded-4 h-100 stat-kpi-card kpi-accent-coffee">
+        <div class="card border-0 kpi-glass-card kpi-glass-espresso h-100">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Ingresos de Hoy</span>
-                    <div class="kpi-icon-box kpi-icon-coffee shadow-sm">
-                        <i class="bi bi-wallet2 fs-5"></i>
+                    <span class="kpi-glass-title">Ingresos de Hoy</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-wallet2 fs-5 kpi-icon-gold"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-2 text-dark font-monospace">${{ ingresos_hoy|floatformat:2 }}</h3>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">${{ ingresos_hoy|floatformat:2 }}</h3>
                     <div class="d-flex align-items-center">
-                        <span class="kpi-pill kpi-pill-coffee">
-                            <i class="bi bi-graph-up-arrow me-1"></i> Ventas POS + Rentas
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-graph-up-arrow me-1 kpi-icon-gold"></i> Ventas POS + Rentas
                         </span>
                     </div>
                 </div>
@@ -48,22 +55,28 @@
 
     <!-- Isla 2: Equipos en Uso -->
     <div class="col-xl-3 col-md-6">
-        <div class="card shadow-sm border-0 rounded-4 h-100 stat-kpi-card kpi-accent-amber">
+        <div class="card border-0 kpi-glass-card kpi-glass-amber h-100">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Equipos en Uso</span>
-                    <div class="kpi-icon-box kpi-icon-amber shadow-sm">
-                        <i class="bi bi-pc-display fs-5"></i>
+                    <span class="kpi-glass-title">Equipos en Uso</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-pc-display fs-5 kpi-icon-warm"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-2 text-dark font-monospace">{{ equipos_ocupados }} <span class="fs-6 text-muted fw-normal">/ {{ total_equipos }}</span></h3>
-                    <div class="progress mb-2" style="height: 6px; background-color: #f1f5f9; border-radius: 999px;">
-                        <div class="progress-bar rounded-pill" role="progressbar" style="width: {{ porcentaje_ocupacion }}%; background-color: #d97706;" aria-valuenow="{{ porcentaje_ocupacion }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="d-flex align-items-baseline justify-content-between mb-2">
+                        <h3 class="mb-0 kpi-glass-value text-white font-monospace">{{ equipos_ocupados }} <span
+                                class="kpi-glass-subvalue text-white-50">/ {{ total_equipos }}</span></h3>
+                        <span class="small fw-bold text-white font-monospace">{{ porcentaje_ocupacion }}%</span>
+                    </div>
+                    <div class="progress kpi-glass-progress mb-2" style="height: 8px;">
+                        <div class="progress-bar kpi-glass-progress-bar rounded-pill" role="progressbar"
+                            style="width: {{ porcentaje_ocupacion }}%;" aria-valuenow="{{ porcentaje_ocupacion }}"
+                            aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <div class="d-flex align-items-center">
-                        <span class="kpi-pill kpi-pill-amber">
-                            <i class="bi bi-display me-1"></i> {{ equipos_libres }} equipos libres
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-display me-1 kpi-icon-warm"></i> {{ equipos_libres }} equipos libres
                         </span>
                     </div>
                 </div>
@@ -73,19 +86,20 @@
 
     <!-- Isla 3: Ventas POS Hoy -->
     <div class="col-xl-3 col-md-6">
-        <div class="card shadow-sm border-0 rounded-4 h-100 stat-kpi-card kpi-accent-emerald">
+        <div class="card border-0 kpi-glass-card kpi-glass-emerald h-100">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Ventas POS Hoy</span>
-                    <div class="kpi-icon-box kpi-icon-emerald shadow-sm">
-                        <i class="bi bi-bag-check-fill fs-5"></i>
+                    <span class="kpi-glass-title">Ventas POS Hoy</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-bag-check-fill fs-5 kpi-icon-mint"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-2 text-dark font-monospace">{{ ventas_hoy }} <span class="fs-6 text-muted fw-normal">tickets</span></h3>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ ventas_hoy }} <span
+                            class="kpi-glass-subvalue text-white-50">tickets</span></h3>
                     <div class="d-flex align-items-center">
-                        <span class="kpi-pill kpi-pill-emerald">
-                            <i class="bi bi-receipt me-1"></i> Órdenes cafetería
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-receipt me-1 kpi-icon-mint"></i> Ventas pos + Rentas
                         </span>
                     </div>
                 </div>
@@ -95,19 +109,20 @@
 
     <!-- Isla 4: Clientes Atendidos -->
     <div class="col-xl-3 col-md-6">
-        <div class="card shadow-sm border-0 rounded-4 h-100 stat-kpi-card kpi-accent-blue">
+        <div class="card border-0 kpi-glass-card kpi-glass-sapphire h-100">
             <div class="card-body p-4 d-flex flex-column justify-content-between">
                 <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="text-muted small fw-semibold text-uppercase tracking-wider">Clientes Atendidos</span>
-                    <div class="kpi-icon-box kpi-icon-blue shadow-sm">
-                        <i class="bi bi-people-fill fs-5"></i>
+                    <span class="kpi-glass-title">Clientes Atendidos</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-people-fill fs-5 kpi-icon-sky"></i>
                     </div>
                 </div>
                 <div>
-                    <h3 class="fw-bold mb-2 text-dark font-monospace">{{ total_clientes }} <span class="fs-6 text-muted fw-normal">personas</span></h3>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ total_clientes }} <span
+                            class="kpi-glass-subvalue text-white-50">personas</span></h3>
                     <div class="d-flex align-items-center">
-                        <span class="kpi-pill kpi-pill-blue">
-                            <i class="bi bi-person-check me-1"></i> Clientes activos hoy
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-person-check me-1 kpi-icon-sky"></i> Clientes activos hoy
                         </span>
                     </div>
                 </div>
@@ -121,27 +136,31 @@
     <!-- Gráfica 1: Ingresos Diarios (Ventas POS vs Rentas) -->
     <div class="col-lg-8">
         <div class="card shadow-sm border-0 rounded-4 h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div
+                class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     <h5 class="fw-bold mb-0 text-dark">
-                        <i class="bi bi-bar-chart-fill text-coffee me-2"></i>Evolución de Ingresos (Últimos 7 Días)
+                        <i class="bi bi-bar-chart-fill text-coffee me-2"></i>Ingresos Semanales (Lunes a Domingo)
                     </h5>
-                    <small class="text-muted">Comparativa diaria de facturación entre Ventas POS y Rentas de equipos.</small>
+                    <small class="text-muted">Facturación del Lunes {{ inicio_semana|date:"d/m" }} al Domingo {{
+                        fin_semana|date:"d/m" }}.</small>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <span class="badge bg-light text-dark border rounded-pill px-3 py-2 font-monospace">
-                        Total 7 días: <strong class="text-coffee">${{ total_semana|floatformat:2 }}</strong>
+                        Total semana: <strong class="text-coffee">${{ total_semana|floatformat:2 }}</strong>
                     </span>
                 </div>
             </div>
             <div class="card-body px-4 pb-4 pt-2">
                 <div class="d-flex gap-3 mb-2 small text-muted">
                     <div class="d-flex align-items-center gap-1">
-                        <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background-color: #b06b05;"></span>
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #b06b05;"></span>
                         <span>Ventas POS (${{ total_semana_ventas|floatformat:2 }})</span>
                     </div>
                     <div class="d-flex align-items-center gap-1">
-                        <span class="d-inline-block rounded-circle" style="width: 10px; height: 10px; background-color: #0d6efd;"></span>
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #0d6efd;"></span>
                         <span>Rentas Equipos (${{ total_semana_rentas|floatformat:2 }})</span>
                     </div>
                 </div>
@@ -157,9 +176,9 @@
         <div class="card shadow-sm border-0 rounded-4 h-100">
             <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
                 <h5 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos Más Vendidos
+                    <i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos de la Semana
                 </h5>
-                <small class="text-muted">Artículos de mayor demanda en el POS.</small>
+                <small class="text-muted">Artículos más vendidos de Lunes a Domingo.</small>
             </div>
             <div class="card-body px-4 pb-4 pt-2 d-flex flex-column align-items-center justify-content-center">
                 <div style="position: relative; height: 220px; width: 220px;" class="mb-3">
@@ -177,7 +196,8 @@
 
 <!-- Tabla de Últimas Transacciones -->
 <div class="card shadow-sm border-0 rounded-4 mb-4">
-    <div class="card-header bg-white border-0 pt-4 px-4 pb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+    <div
+        class="card-header bg-white border-0 pt-4 px-4 pb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <div>
             <h5 class="fw-bold mb-0 text-dark">
                 <i class="bi bi-clock-history text-coffee me-2"></i>Últimas Operaciones Realizadas
@@ -213,21 +233,19 @@
                         </td>
                         <td>
                             {% if trans.es_venta %}
-                                <span class="badge rounded-pill px-2 py-1" style="background-color: #f7ede2; color: #855204; font-weight: 500;">
-                                    <i class="bi bi-cart4 me-1"></i>Venta POS
-                                </span>
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #f7ede2; color: #855204; font-weight: 500;">
+                                <i class="bi bi-cart4 me-1"></i>Venta POS
+                            </span>
                             {% else %}
-                                <span class="badge rounded-pill px-2 py-1" style="background-color: #eff6ff; color: #1d4ed8; font-weight: 500;">
-                                    <i class="bi bi-pc-display me-1"></i>Renta
-                                </span>
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #eff6ff; color: #1d4ed8; font-weight: 500;">
+                                <i class="bi bi-pc-display me-1"></i>Renta
+                            </span>
                             {% endif %}
                         </td>
                         <td>
-                            {% if trans.cliente %}
-                                <span class="fw-semibold text-dark">{{ trans.cliente.nombre }} {{ trans.cliente.apellido }}</span>
-                            {% else %}
-                                <span class="text-muted fst-italic">Cliente General</span>
-                            {% endif %}
+                            <span class="fw-semibold text-dark">{{ trans.cliente_nombre }}</span>
                         </td>
                         <td class="text-muted small">
                             {{ trans.concepto }}
@@ -244,7 +262,8 @@
                             ${{ trans.total }}
                         </td>
                         <td class="text-center">
-                            <span class="badge rounded-pill px-3 py-1" style="background-color: #ecfdf5; color: #047857; font-weight: 600;">
+                            <span class="badge rounded-pill px-3 py-1"
+                                style="background-color: #ecfdf5; color: #047857; font-weight: 600;">
                                 {{ trans.estado }}
                             </span>
                         </td>
@@ -262,15 +281,29 @@
         </div>
     </div>
 </div>
+<!-- Contenedor seguro de datos para gráficas (inmune a autoformateadores) -->
+<div id="chart-meta-data" class="d-none"
+    data-dias='{{ chart_dias_labels }}'
+    data-ventas='{{ chart_ventas_data }}'
+    data-rentas='{{ chart_rentas_data }}'
+    data-top-labels='{{ chart_top_labels }}'
+    data-top-data='{{ chart_top_data }}'
+    data-tiene-top="{% if tiene_datos_top %}1{% else %}0{% endif %}">
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // 1. Gráfica de Ingresos de los Últimos 7 Días (Ventas vs Rentas)
-    const diasLabels = {{ chart_dias_labels|safe }};
-    const ventasData = {{ chart_ventas_data|safe }};
-    const rentasData = {{ chart_rentas_data|safe }};
+    const metaEl = document.getElementById('chart-meta-data');
+    const diasLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-dias') : '[]');
+    const ventasData = JSON.parse(metaEl ? metaEl.getAttribute('data-ventas') : '[]');
+    const rentasData = JSON.parse(metaEl ? metaEl.getAttribute('data-rentas') : '[]');
+    const topLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-top-labels') : '[]');
+    const topData = JSON.parse(metaEl ? metaEl.getAttribute('data-top-data') : '[]');
+    const tieneDatosTop = metaEl ? (metaEl.getAttribute('data-tiene-top') === '1') : false;
 
+    // 1. Gráfica de Ingresos de la Semana (Lunes a Domingo)
     const ctxIngresos = document.getElementById('graficaIngresos');
     if (ctxIngresos) {
         new Chart(ctxIngresos.getContext('2d'), {
@@ -312,7 +345,7 @@
                         padding: 10,
                         cornerRadius: 8,
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 let label = context.dataset.label || '';
                                 if (label) label += ': ';
                                 if (context.parsed.y !== null) {
@@ -330,7 +363,7 @@
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                                 return '$' + value;
                             }
                         },
@@ -343,11 +376,7 @@
         });
     }
 
-    // 2. Gráfica Donut: Top 5 Productos Más Vendidos
-    const topLabels = {{ chart_top_labels|safe }};
-    const topData = {{ chart_top_data|safe }};
-    const tieneDatosTop = {{ tiene_datos_top|yesno:"true,false" }};
-
+    // 2. Gráfica Donut: Top 5 Productos de la Semana
     const ctxTop = document.getElementById('graficaTopProductos');
     if (ctxTop) {
         const paletaColores = ['#b06b05', '#2c1e16', '#198754', '#0d6efd', '#6f42c1'];
@@ -378,7 +407,7 @@
                         padding: 10,
                         cornerRadius: 8,
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 if (!tieneDatosTop) return ' Sin ventas registradas';
                                 return ` ${context.label}: ${context.raw} unidades`;
                             }
