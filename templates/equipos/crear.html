@@ -1,6 +1,6 @@
 <!-- Modal Crear Equipo -->
 <div class="modal fade" id="modalCrearEquipo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-dark text-white rounded-top-4">
                 <h5 class="modal-title fw-bold"><i class="bi bi-cpu me-2"></i>Registrar Equipo</h5>
@@ -10,48 +10,93 @@
             <form method="POST" action="{% url 'crear_equipo' %}">
                 {% csrf_token %}
                 <div class="modal-body p-4">
-                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span>
-                        son obligatorios.</p>
+                    <div class="row g-4">
+                        <!-- Columna Izquierda: Datos del Equipo -->
+                        <div class="col-lg-6 border-end pe-lg-4">
+                            <p class="text-muted small mb-3">Los campos con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Nombre / Identificador <span
-                                class="text-danger fw-bold">*</span></label>
-                        <input type="text" name="nombre" class="form-control" placeholder="Ej. PC-01, Consola PS5-02"
-                            required>
-                    </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nombre / Identificador <span
+                                        class="text-danger fw-bold">*</span></label>
+                                <input type="text" name="nombre" class="form-control" placeholder="Ej. PC-01, Consola PS5-02"
+                                    required>
+                            </div>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Tipo <span
-                                    class="text-danger fw-bold">*</span></label>
-                            <select name="tipo" class="form-select" required>
-                                <option value="PC">PC</option>
-                                <option value="CONSOLA">Consola</option>
-                            </select>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Tipo <span
+                                            class="text-danger fw-bold">*</span></label>
+                                    <select name="tipo" class="form-select" required>
+                                        <option value="PC">PC</option>
+                                        <option value="CONSOLA">Consola</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Tarifa / Hr ($) <span
+                                            class="text-danger fw-bold">*</span></label>
+                                    <input type="number" step="0.01" name="tarifa_por_hora" class="form-control"
+                                        placeholder="Ej. 1.50" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Estado Inicial <span
+                                        class="text-danger fw-bold">*</span></label>
+                                <select name="estado" class="form-select" required>
+                                    <option value="DISPONIBLE">Disponible</option>
+                                    <option value="DANIOS_MENORES">Daños Menores</option>
+                                    <option value="DEFECTUOSO">Defectuoso</option>
+                                    <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="form-label fw-semibold">Descripción / Ubicación</label>
+                                <textarea name="descripcion" class="form-control" rows="3"
+                                    placeholder="Ej. Estación Gamer Zona A"></textarea>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Tarifa por Hora ($) <span
-                                    class="text-danger fw-bold">*</span></label>
-                            <input type="number" step="0.01" name="tarifa_por_hora" class="form-control"
-                                placeholder="Ej. 1.50" required>
+
+                        <!-- Columna Derecha: Componentes en Bodega / Libres -->
+                        <div class="col-lg-6 ps-lg-3 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">
+                                    <i class="bi bi-box-seam me-1 text-coffee"></i> Periféricos Libres
+                                </label>
+                                <span class="badge bg-light text-muted border small" id="contadorCompCrear">0 seleccionados</span>
+                            </div>
+                            <p class="text-muted small mb-2" style="font-size: 0.8rem;">
+                                Selecciona los periféricos en bodega para asignarlos a este equipo:
+                            </p>
+
+                            <div class="border rounded-3 p-2 bg-light overflow-auto flex-grow-1" style="max-height: 290px; min-height: 220px;">
+                                {% for comp in componentes_libres %}
+                                <div class="form-check d-flex align-items-center justify-content-between py-2 px-3 mb-2 bg-white rounded-3 border border-light shadow-sm">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-2 check-comp-crear" type="checkbox" name="componentes" value="{{ comp.componente_id }}" id="compCrear{{ comp.componente_id }}">
+                                        <label class="form-check-label small fw-medium text-dark cursor-pointer mb-0" for="compCrear{{ comp.componente_id }}">
+                                            {% if comp.tipo == 'TECLADO' %}<i class="bi bi-keyboard text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'MOUSE' %}<i class="bi bi-mouse text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'MONITOR' %}<i class="bi bi-display text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'CONTROL' %}<i class="bi bi-controller text-coffee me-1"></i>
+                                            {% else %}<i class="bi bi-plugin text-coffee me-1"></i>{% endif %}
+                                            {{ comp.nombre }}
+                                            {% if comp.numero_serie %}<span class="text-muted d-block" style="font-size: 0.72rem;">S/N: {{ comp.numero_serie }}</span>{% endif %}
+                                        </label>
+                                    </div>
+                                    <span class="badge bg-success-subtle text-success small" style="font-size: 0.7rem;">En Bodega</span>
+                                </div>
+                                {% empty %}
+                                <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center text-muted py-5">
+                                    <i class="bi bi-box-seam fs-1 d-block mb-2 text-muted opacity-50"></i>
+                                    <span class="small">No hay componentes libres en bodega para asignar.</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
+                                <i class="bi bi-shield-check me-1 text-success"></i> Solo se muestran periféricos operativos disponibles.
+                            </small>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Estado Inicial <span
-                                class="text-danger fw-bold">*</span></label>
-                        <select name="estado" class="form-select" required>
-                            <option value="DISPONIBLE">Disponible</option>
-                            <option value="DANIOS_MENORES">Daños Menores</option>
-                            <option value="DEFECTUOSO">Defectuoso</option>
-                            <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Descripción / Ubicación</label>
-                        <textarea name="descripcion" class="form-control" rows="2"
-                            placeholder="Ej. Estación Gamer Zona A"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">

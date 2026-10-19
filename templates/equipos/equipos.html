@@ -47,9 +47,22 @@
                         </td>
                         <td class="fw-bold">${{ equipo.tarifa_por_hora }}</td>
                         <td>
-                            <span class="badge bg-light text-dark border">
-                                {{ equipo.componentes.count }} periférico{% if equipo.componentes.count != 1 %}s{% endif %}
-                            </span>
+                            {% if equipo.componentes.all %}
+                                <div class="d-flex flex-wrap gap-1">
+                                    {% for c in equipo.componentes.all %}
+                                        <span class="badge bg-light text-dark border d-inline-flex align-items-center" style="font-size: 0.72rem;" title="{{ c.nombre }}">
+                                            {% if c.tipo == 'TECLADO' %}<i class="bi bi-keyboard text-coffee me-1"></i>
+                                            {% elif c.tipo == 'MOUSE' %}<i class="bi bi-mouse text-coffee me-1"></i>
+                                            {% elif c.tipo == 'MONITOR' %}<i class="bi bi-display text-coffee me-1"></i>
+                                            {% elif c.tipo == 'CONTROL' %}<i class="bi bi-controller text-coffee me-1"></i>
+                                            {% else %}<i class="bi bi-plugin text-coffee me-1"></i>{% endif %}
+                                            {{ c.nombre|truncatechars:14 }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">Sin componentes</span>
+                            {% endif %}
                         </td>
                         <td>
                             {% if equipo.estado == 'DISPONIBLE' %}
@@ -71,6 +84,7 @@
                                 data-tarifa="{{ equipo.tarifa_por_hora }}"
                                 data-estado="{{ equipo.estado }}"
                                 data-descripcion="{{ equipo.descripcion|default:'' }}"
+                                data-componentes="[{% for c in equipo.componentes.all %}{{ c.componente_id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
                                 title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -113,15 +127,97 @@ if (buscadorEq) {
     });
 }
 
+// Contador y gestión de componentes en Crear Equipo
+function actualizarContadorCrear() {
+    const checks = document.querySelectorAll('.check-comp-crear:checked');
+    const badge = document.getElementById('contadorCompCrear');
+    if (badge) {
+        badge.textContent = `${checks.length} seleccionado${checks.length === 1 ? '' : 's'}`;
+    }
+}
+
+document.querySelectorAll('.check-comp-crear').forEach(cb => {
+    cb.addEventListener('change', actualizarContadorCrear);
+});
+
+const modalCrear = document.getElementById('modalCrearEquipo');
+if (modalCrear) {
+    modalCrear.addEventListener('show.bs.modal', function () {
+        document.querySelectorAll('.check-comp-crear').forEach(cb => cb.checked = false);
+        actualizarContadorCrear();
+    });
+}
+
+// Contador y gestión de componentes en Editar Equipo
+function actualizarContadorEditar() {
+    const checks = document.querySelectorAll('.check-comp-edit:checked');
+    const badge = document.getElementById('contadorCompEditar');
+    if (badge) {
+        badge.textContent = `${checks.length} seleccionado${checks.length === 1 ? '' : 's'}`;
+    }
+}
+
+document.querySelectorAll('.check-comp-edit').forEach(cb => {
+    cb.addEventListener('change', actualizarContadorEditar);
+});
+
 // Pre-rellenar modal de edición
 document.querySelectorAll('.btn-editar-equipo').forEach(btn => {
     btn.addEventListener('click', function () {
-        document.getElementById('editEquipoId').value = this.dataset.id;
+        const eqId = this.dataset.id;
+        document.getElementById('editEquipoId').value = eqId;
         document.getElementById('editEquipoNombre').value = this.dataset.nombre;
         document.getElementById('editEquipoTipo').value = this.dataset.tipo;
         document.getElementById('editEquipoTarifa').value = this.dataset.tarifa;
         document.getElementById('editEquipoEstado').value = this.dataset.estado;
         document.getElementById('editEquipoDescripcion').value = this.dataset.descripcion;
+
+        let compIds = [];
+        try {
+            compIds = JSON.parse(this.dataset.componentes || '[]');
+        } catch (e) {
+            compIds = [];
+        }
+
+        let visibleCount = 0;
+        document.querySelectorAll('.item-comp-edit').forEach(item => {
+            const itemEqId = item.dataset.equipoId ? String(item.dataset.equipoId) : '';
+            const cb = item.querySelector('.check-comp-edit');
+            const statusBadge = item.querySelector('.badge-comp-status');
+
+            // Solo mostrar si está libre (en bodega) o asignado a ESTE equipo
+            if (!itemEqId || itemEqId === String(eqId)) {
+                item.classList.remove('d-none');
+                item.classList.add('d-flex');
+                visibleCount++;
+
+                const isAssigned = compIds.includes(parseInt(cb.value));
+                cb.checked = isAssigned;
+
+                if (statusBadge) {
+                    if (itemEqId === String(eqId)) {
+                        statusBadge.className = 'badge bg-primary-subtle text-primary small badge-comp-status';
+                        statusBadge.textContent = 'Asignado actual';
+                    } else {
+                        statusBadge.className = 'badge bg-success-subtle text-success small badge-comp-status';
+                        statusBadge.textContent = 'En Bodega';
+                    }
+                }
+            } else {
+                // Pertenece a otro equipo -> ocultar completamente
+                item.classList.remove('d-flex');
+                item.classList.add('d-none');
+                if (cb) cb.checked = false;
+            }
+        });
+
+        const emptyDiv = document.getElementById('emptyCompEditar');
+        if (emptyDiv) {
+            emptyDiv.classList.toggle('d-none', visibleCount > 0);
+            emptyDiv.classList.toggle('d-flex', visibleCount === 0);
+        }
+
+        actualizarContadorEditar();
     });
 });
 

@@ -1,6 +1,6 @@
 <!-- Modal Modificar Equipo -->
 <div class="modal fade" id="modalModificarEquipo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-dark text-white rounded-top-4">
                 <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Modificar Equipo</h5>
@@ -9,41 +9,101 @@
             <form method="POST" action="{% url 'modificar_equipo' %}">
                 {% csrf_token %}
                 <div class="modal-body p-4">
-                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
                     <input type="hidden" name="equipo_id" id="editEquipoId">
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Nombre / Identificador <span class="text-danger fw-bold">*</span></label>
-                        <input type="text" name="nombre" id="editEquipoNombre" class="form-control" required>
-                    </div>
+                    <div class="row g-4">
+                        <!-- Columna Izquierda: Datos del Equipo -->
+                        <div class="col-lg-6 border-end pe-lg-4">
+                            <p class="text-muted small mb-3">Los campos con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
 
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Tipo <span class="text-danger fw-bold">*</span></label>
-                            <select name="tipo" id="editEquipoTipo" class="form-select" required>
-                                <option value="PC">PC</option>
-                                <option value="CONSOLA">Consola</option>
-                            </select>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Nombre / Identificador <span class="text-danger fw-bold">*</span></label>
+                                <input type="text" name="nombre" id="editEquipoNombre" class="form-control" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Tipo <span class="text-danger fw-bold">*</span></label>
+                                    <select name="tipo" id="editEquipoTipo" class="form-select" required>
+                                        <option value="PC">PC</option>
+                                        <option value="CONSOLA">Consola</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label fw-semibold">Tarifa / Hr ($) <span class="text-danger fw-bold">*</span></label>
+                                    <input type="number" step="0.01" name="tarifa_por_hora" id="editEquipoTarifa" class="form-control" required>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Estado Físico <span class="text-danger fw-bold">*</span></label>
+                                <select name="estado" id="editEquipoEstado" class="form-select" required>
+                                    <option value="DISPONIBLE">Disponible</option>
+                                    <option value="DANIOS_MENORES">Daños Menores</option>
+                                    <option value="DEFECTUOSO">Defectuoso</option>
+                                    <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-0">
+                                <label class="form-label fw-semibold">Descripción o Ubicación</label>
+                                <textarea name="descripcion" id="editEquipoDescripcion" class="form-control" rows="3"></textarea>
+                            </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Tarifa por Hora ($) <span class="text-danger fw-bold">*</span></label>
-                            <input type="number" step="0.01" name="tarifa_por_hora" id="editEquipoTarifa" class="form-control" required>
+
+                        <!-- Columna Derecha: Componentes Asignados y Libres -->
+                        <div class="col-lg-6 ps-lg-3 d-flex flex-column">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <label class="form-label fw-semibold mb-0">
+                                    <i class="bi bi-motherboard me-1 text-coffee"></i> Componentes y Periféricos
+                                </label>
+                                <span class="badge bg-light text-muted border small" id="contadorCompEditar">0 seleccionados</span>
+                            </div>
+                            <p class="text-muted small mb-2" style="font-size: 0.8rem;">
+                                Periféricos actualmente asignados y disponibles en bodega:
+                            </p>
+
+                            <div class="border rounded-3 p-2 bg-light overflow-auto flex-grow-1" style="max-height: 290px; min-height: 220px;">
+                                {% for comp in componentes %}
+                                <div class="item-comp-edit form-check d-flex align-items-center justify-content-between py-2 px-3 mb-2 bg-white rounded-3 border border-light shadow-sm"
+                                     data-equipo-id="{{ comp.equipo_id|default:'' }}">
+                                    <div class="d-flex align-items-center">
+                                        <input class="form-check-input me-2 check-comp-edit" type="checkbox" name="componentes" value="{{ comp.componente_id }}" id="compEdit{{ comp.componente_id }}">
+                                        <label class="form-check-label small fw-medium text-dark cursor-pointer mb-0" for="compEdit{{ comp.componente_id }}">
+                                            {% if comp.tipo == 'TECLADO' %}<i class="bi bi-keyboard text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'MOUSE' %}<i class="bi bi-mouse text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'MONITOR' %}<i class="bi bi-display text-coffee me-1"></i>
+                                            {% elif comp.tipo == 'CONTROL' %}<i class="bi bi-controller text-coffee me-1"></i>
+                                            {% else %}<i class="bi bi-plugin text-coffee me-1"></i>{% endif %}
+                                            {{ comp.nombre }}
+                                            {% if comp.numero_serie %}<span class="text-muted d-block" style="font-size: 0.72rem;">S/N: {{ comp.numero_serie }}</span>{% endif %}
+                                        </label>
+                                    </div>
+                                    <div>
+                                        <span class="badge bg-secondary-subtle text-secondary small badge-comp-status"
+                                              data-equipo-id="{{ comp.equipo_id|default:'' }}"
+                                              data-equipo-nombre="{{ comp.equipo.nombre|default:'' }}"
+                                              style="font-size: 0.7rem;">
+                                            {% if comp.equipo %}En: {{ comp.equipo.nombre }}{% else %}En Bodega{% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <div class="h-100 d-flex flex-column align-items-center justify-content-center text-center text-muted py-5">
+                                    <i class="bi bi-inbox fs-1 d-block mb-2 text-muted opacity-50"></i>
+                                    <span class="small">No hay periféricos registrados.</span>
+                                </div>
+                                {% endfor %}
+
+                                <div id="emptyCompEditar" class="h-100 d-none flex-column align-items-center justify-content-center text-center text-muted py-5">
+                                    <i class="bi bi-box-seam fs-1 d-block mb-2 text-muted opacity-50"></i>
+                                    <span class="small">No hay periféricos asignados ni libres en bodega para este equipo.</span>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
+                                <i class="bi bi-info-circle me-1"></i> Marca o desmarca para asociar o regresar a bodega.
+                            </small>
                         </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Estado Físico <span class="text-danger fw-bold">*</span></label>
-                        <select name="estado" id="editEquipoEstado" class="form-select" required>
-                            <option value="DISPONIBLE">Disponible</option>
-                            <option value="DANIOS_MENORES">Daños Menores</option>
-                            <option value="DEFECTUOSO">Defectuoso</option>
-                            <option value="EN_MANTENIMIENTO">En Mantenimiento</option>
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Descripción o Ubicación</label>
-                        <textarea name="descripcion" id="editEquipoDescripcion" class="form-control" rows="2"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">

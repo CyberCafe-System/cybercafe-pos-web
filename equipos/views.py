@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 
+from componentes.models import Componente
 from usuarios.decorators import admin_required
 from .forms import EquipoForm
 from .models import Equipo
@@ -12,7 +13,17 @@ from .models import Equipo
 @admin_required
 def equipo_list(request):
     equipos = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
-    return render(request, 'equipos/equipos.html', {'equipos': equipos})
+    componentes = Componente.objects.select_related('equipo').filter(
+        activo=True
+    ).exclude(
+        estado='REQUIERE_REEMPLAZO'
+    ).order_by('tipo', 'nombre')
+    componentes_libres = [c for c in componentes if c.equipo_id is None]
+    return render(request, 'equipos/equipos.html', {
+        'equipos': equipos,
+        'componentes': componentes,
+        'componentes_libres': componentes_libres,
+    })
 
 
 @login_required
@@ -22,7 +33,10 @@ def equipo_create(request):
         form = EquipoForm(request.POST)
         if form.is_valid():
             try:
-                form.save()
+                equipo = form.save()
+                componentes_ids = request.POST.getlist('componentes')
+                if componentes_ids:
+                    Componente.objects.filter(pk__in=componentes_ids).update(equipo=equipo)
                 messages.success(request, 'Equipo registrado correctamente.')
             except Exception as e:
                 messages.error(request, f'Error al guardar el equipo: {e}')
@@ -40,7 +54,13 @@ def equipo_edit(request):
         form = EquipoForm(request.POST, instance=equipo)
         if form.is_valid():
             try:
-                form.save()
+                equipo = form.save()
+                componentes_ids = request.POST.getlist('componentes')
+                # Desvincular los que ya no están seleccionados para este equipo
+                equipo.componentes.exclude(pk__in=componentes_ids).update(equipo=None)
+                # Vincular los seleccionados
+                if componentes_ids:
+                    Componente.objects.filter(pk__in=componentes_ids).update(equipo=equipo)
                 messages.success(request, 'Equipo actualizado correctamente.')
             except Exception as e:
                 messages.error(request, f'Error al actualizar el equipo: {e}')
