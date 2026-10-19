@@ -1,0 +1,74 @@
+<!-- Modal Extender Tiempo de Renta -->
+<div class="modal fade" id="modalExtenderRenta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST" action="{% url 'extender_renta' %}">
+                {% csrf_token %}
+                <input type="hidden" name="detalle_renta_id" id="extenderDetalleId">
+                <input type="hidden" name="minutos_extra" id="extenderMinutosExtra" value="30">
+
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Extender Renta</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <div class="bg-light p-3 rounded-3 mb-3 border">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Equipo:</span>
+                            <strong class="text-dark" id="extenderEquipoNombre">--</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted">Cliente:</span>
+                            <span class="fw-semibold text-dark" id="extenderClienteNombre">--</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">Tarifa:</span>
+                            <span class="fw-bold text-coffee" id="extenderTarifa">--</span>
+                        </div>
+                    </div>
+
+                    <label class="form-label fw-semibold">Seleccionar Tiempo a Agregar:</label>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6 col-sm-3">
+                            <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 btn-preset-extender" data-min="15">
+                                +15 min
+                            </button>
+                        </div>
+                        <div class="col-6 col-sm-3">
+                            <button type="button" class="btn btn-coffee w-100 py-2 rounded-3 btn-preset-extender active" data-min="30">
+                                +30 min
+                            </button>
+                        </div>
+                        <div class="col-6 col-sm-3">
+                            <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 btn-preset-extender" data-min="60">
+                                +1 hora
+                            </button>
+                        </div>
+                        <div class="col-6 col-sm-3">
+                            <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 btn-preset-extender" data-min="120">
+                                +2 horas
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning border-0 rounded-3 mb-0 d-flex justify-content-between align-items-center py-2 px-3">
+                        <div>
+                            <span class="small d-block text-muted">Costo Adicional:</span>
+                            <strong class="fs-5 text-dark" id="extenderCostoExtra">+$0.00</strong>
+                        </div>
+                        <div class="text-end">
+                            <span class="small d-block text-muted">Tiempo a sumar:</span>
+                            <span class="badge bg-warning text-dark px-3 py-1 font-monospace fs-6" id="extenderBadgeMin">+30 min</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Confirmar Extensión
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

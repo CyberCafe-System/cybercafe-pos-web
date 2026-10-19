@@ -1,5 +1,10 @@
+import csv
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import groupby
+
+import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -13,6 +18,7 @@ from equipos.models import Equipo
 from inventario.models import Producto
 from rentas.models import DetalleRenta, Renta
 from usuarios.decorators import cajero_o_admin_required
+from usuarios.models import Usuario
 
 from .models import DetalleVenta, Venta
 from .ticket import generar_factura_pdf
@@ -378,6 +384,8 @@ def ticket_pdf(request, venta_id=None):
 def reportes(request):
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
+    tipo_filtro = request.GET.get('tipo', 'todos')
+    usuario_id_str = request.GET.get('usuario')
 
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
@@ -389,45 +397,242 @@ def reportes(request):
         ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
         rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
 
-    transacciones = []
-    for v in ventas_qs[:100]:
-        items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
-        articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-        transacciones.append({
-            'ticket': f"V-{v.venta_id}",
-            'fecha': v.fecha,
-            'usuario': v.usuario.username if v.usuario else "Sistema",
-            'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
-            'concepto': articulos,
-            'total': (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
-            'tipo': 'Venta POS',
-            'es_venta': True,
-            'venta_id': v.venta_id,
-        })
+    if usuario_id_str and usuario_id_str.isdigit():
+        uid = int(usuario_id_str)
+        ventas_qs = ventas_qs.filter(usuario_id=uid)
+        rentas_qs = rentas_qs.filter(usuario_id=uid)
 
-    for r in rentas_qs[:100]:
-        det = r.detalles.first()
-        equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-        minutos = det.tiempo_de_renta if det else 60
-        transacciones.append({
-            'ticket': f"R-{r.renta_id}",
-            'fecha': r.fecha,
-            'usuario': r.usuario.username if r.usuario else "Sistema",
-            'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-            'concepto': f"Renta {equipo_nom} ({minutos} min)",
-            'total': r.total,
-            'tipo': 'Renta de Equipo',
-            'es_venta': False,
-            'venta_id': None,
-        })
+    transacciones = []
+    total_ventas = Decimal('0.00')
+    total_rentas = Decimal('0.00')
+
+    if tipo_filtro in ['todos', 'ventas']:
+        for v in ventas_qs:
+            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
+            monto_v = (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_ventas += monto_v
+            transacciones.append({
+                'ticket': f"V-{v.venta_id}",
+                'fecha': v.fecha,
+                'usuario': v.usuario.username if v.usuario else "Sistema",
+                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
+                'concepto': articulos,
+                'total': monto_v,
+                'tipo': 'Venta POS',
+                'es_venta': True,
+                'venta_id': v.venta_id,
+            })
+
+    if tipo_filtro in ['todos', 'rentas']:
+        for r in rentas_qs:
+            det = r.detalles.first()
+            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
+            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            monto_r = r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_rentas += monto_r
+            transacciones.append({
+                'ticket': f"R-{r.renta_id}",
+                'fecha': r.fecha,
+                'usuario': r.usuario.username if r.usuario else "Sistema",
+                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
+                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'total': monto_r,
+                'tipo': 'Renta de Equipo',
+                'es_venta': False,
+                'venta_id': None,
+            })
 
     transacciones.sort(key=lambda x: x['fecha'], reverse=True)
-    total_recaudado = sum((t['total'] for t in transacciones), Decimal('0.00'))
+    total_global = total_ventas + total_rentas
+    num_transacciones = len(transacciones)
+    ticket_promedio = (total_global / Decimal(num_transacciones)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if num_transacciones else Decimal('0.00')
+
+    pct_ventas = int((total_ventas / total_global * 100)) if total_global > 0 else 0
+    pct_rentas = 100 - pct_ventas if total_global > 0 else 0
+
+    usuarios = Usuario.objects.filter(activo=True).order_by('username')
 
     return render(request, 'reportes.html', {
         'transacciones': transacciones,
-        'total_recaudado': total_recaudado,
+        'total_recaudado_global': total_global,
+        'total_ventas': total_ventas,
+        'total_rentas': total_rentas,
+        'num_transacciones': num_transacciones,
+        'ticket_promedio': ticket_promedio,
+        'pct_ventas': pct_ventas,
+        'pct_rentas': pct_rentas,
         'fecha_inicio': fecha_inicio_str or '',
         'fecha_fin': fecha_fin_str or '',
+        'tipo_filtro': tipo_filtro,
+        'usuario_id_seleccionado': int(usuario_id_str) if (usuario_id_str and usuario_id_str.isdigit()) else '',
+        'usuarios': usuarios,
+        'ahora': timezone.now(),
     })
+
+
+@login_required
+@cajero_o_admin_required
+def reportes_exportar_csv(request):
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+    tipo_filtro = request.GET.get('tipo', 'todos')
+    usuario_id_str = request.GET.get('usuario')
+
+    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
+    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
+
+    if fecha_inicio_str:
+        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
+        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
+    if fecha_fin_str:
+        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
+        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+
+    if usuario_id_str and usuario_id_str.isdigit():
+        uid = int(usuario_id_str)
+        ventas_qs = ventas_qs.filter(usuario_id=uid)
+        rentas_qs = rentas_qs.filter(usuario_id=uid)
+
+    filas = []
+    if tipo_filtro in ['todos', 'ventas']:
+        for v in ventas_qs:
+            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
+            filas.append({
+                'fecha_obj': v.fecha,
+                'ticket': f"V-{v.venta_id}",
+                'tipo': "Venta POS",
+                'fecha': v.fecha.strftime('%d/%m/%Y %I:%M %p'),
+                'cajero': v.usuario.username if v.usuario else "Sistema",
+                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
+                'concepto': articulos,
+                'total': f"${(v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
+            })
+
+    if tipo_filtro in ['todos', 'rentas']:
+        for r in rentas_qs:
+            det = r.detalles.first()
+            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
+            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            filas.append({
+                'fecha_obj': r.fecha,
+                'ticket': f"R-{r.renta_id}",
+                'tipo': "Renta de Equipo",
+                'fecha': r.fecha.strftime('%d/%m/%Y %I:%M %p'),
+                'cajero': r.usuario.username if r.usuario else "Sistema",
+                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
+                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'total': f"${r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
+            })
+
+    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.csv"'
+    response.write('\ufeff')  # UTF-8 BOM para Excel en español
+
+    writer = csv.writer(response)
+    writer.writerow(['Ticket', 'Tipo de Ingreso', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total'])
+    for f in filas:
+        writer.writerow([f['ticket'], f['tipo'], f['fecha'], f['cajero'], f['cliente'], f['concepto'], f['total']])
+
+    return response
+
+
+@login_required
+@cajero_o_admin_required
+def reportes_exportar_excel(request):
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+    tipo_filtro = request.GET.get('tipo', 'todos')
+    usuario_id_str = request.GET.get('usuario')
+
+    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
+    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
+
+    if fecha_inicio_str:
+        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
+        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
+    if fecha_fin_str:
+        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
+        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+
+    if usuario_id_str and usuario_id_str.isdigit():
+        uid = int(usuario_id_str)
+        ventas_qs = ventas_qs.filter(usuario_id=uid)
+        rentas_qs = rentas_qs.filter(usuario_id=uid)
+
+    filas = []
+    if tipo_filtro in ['todos', 'ventas']:
+        for v in ventas_qs:
+            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
+            filas.append({
+                'fecha_obj': v.fecha,
+                'ticket': f"V-{v.venta_id}",
+                'tipo': "Venta POS",
+                'fecha': v.fecha.strftime('%d/%m/%Y %I:%M %p'),
+                'cajero': v.usuario.username if v.usuario else "Sistema",
+                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
+                'concepto': articulos,
+                'total': float((v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+            })
+
+    if tipo_filtro in ['todos', 'rentas']:
+        for r in rentas_qs:
+            det = r.detalles.first()
+            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
+            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            filas.append({
+                'fecha_obj': r.fecha,
+                'ticket': f"R-{r.renta_id}",
+                'tipo': "Renta de Equipo",
+                'fecha': r.fecha.strftime('%d/%m/%Y %I:%M %p'),
+                'cajero': r.usuario.username if r.usuario else "Sistema",
+                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
+                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'total': float(r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
+            })
+
+    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Reporte de Ingresos"
+
+    headers = ['N° Ticket', 'Tipo de Ingreso', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total ($)']
+    ws.append(headers)
+
+    header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='2C1E16', end_color='2C1E16', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center')
+
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+
+    for row_idx, f in enumerate(filas, start=2):
+        ws.cell(row=row_idx, column=1, value=f['ticket'])
+        ws.cell(row=row_idx, column=2, value=f['tipo'])
+        ws.cell(row=row_idx, column=3, value=f['fecha'])
+        ws.cell(row=row_idx, column=4, value=f['cajero'])
+        ws.cell(row=row_idx, column=5, value=f['cliente'])
+        ws.cell(row=row_idx, column=6, value=f['concepto'])
+        total_cell = ws.cell(row=row_idx, column=7, value=f['total'])
+        total_cell.number_format = '$#,##0.00'
+
+    for col in ws.columns:
+        max_len = max(len(str(cell.value or '')) for cell in col)
+        col_letter = get_column_letter(col[0].column)
+        ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.xlsx"'
+    wb.save(response)
+    return response
 

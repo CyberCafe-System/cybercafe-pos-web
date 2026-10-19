@@ -26,12 +26,50 @@ def renta_list(request):
     for eq in equipos:
         eq.renta_activa = rentas_por_equipo.get(eq.equipo_id)
 
+    count_en_uso = sum(1 for eq in equipos if eq.renta_activa)
+    count_mantenimiento = sum(1 for eq in equipos if eq.estado in ['MANTENIMIENTO', 'EN_MANTENIMIENTO'])
+    count_disponibles = max(0, len(equipos) - count_en_uso - count_mantenimiento)
+
     return render(request, 'rentas/rentas.html', {
         'equipos': equipos,
         'clientes': clientes,
         'detalles_activos': detalles_activos,
+        'count_en_uso': count_en_uso,
+        'count_disponibles': count_disponibles,
+        'count_mantenimiento': count_mantenimiento,
         'now': timezone.now(),
     })
+
+
+@login_required
+@cajero_o_admin_required
+def renta_extender(request):
+    if request.method == 'POST':
+        detalle_id = request.POST.get('detalle_renta_id')
+        try:
+            minutos_extra = int(request.POST.get('minutos_extra', 0))
+            if minutos_extra <= 0:
+                raise ValueError("El tiempo adicional debe ser mayor a 0.")
+
+            detalle = get_object_or_404(DetalleRenta, pk=detalle_id, estado='ACTIVA')
+            equipo = detalle.equipo
+            tarifa = Decimal(str(equipo.tarifa_por_hora))
+            horas_extra = Decimal(minutos_extra) / Decimal('60')
+            costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
+            detalle.subtotal += costo_extra
+            detalle.save(update_fields=['tiempo_agregado', 'subtotal'])
+
+            renta = detalle.renta
+            renta.total += costo_extra
+            renta.save(update_fields=['total'])
+
+            messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Nuevo total: ${detalle.subtotal}')
+        except Exception as e:
+            messages.error(request, f'Error al extender la renta: {e}')
+
+    return redirect('rentas')
 
 
 @login_required

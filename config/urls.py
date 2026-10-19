@@ -43,9 +43,12 @@ urlpatterns = [
     path('componentes/', componentes_views.componente_list, name='componentes'),
     path('usuarios/', usuarios_views.usuario_list, name='usuarios'),
     path('reportes/', pos_views.reportes, name='reportes'),
+    path('reportes/exportar_csv/', pos_views.reportes_exportar_csv, name='reportes_exportar_csv'),
+    path('reportes/exportar_excel/', pos_views.reportes_exportar_excel, name='reportes_exportar_excel'),
 
     # --- RENTAS ---
     path('crear_renta/', rentas_views.renta_create, name='crear_renta'),
+    path('extender_renta/', rentas_views.renta_extender, name='extender_renta'),
     path('finalizar_renta/', rentas_views.renta_finalizar, name='finalizar_renta'),
 
     # POS

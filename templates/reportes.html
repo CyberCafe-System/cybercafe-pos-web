@@ -2,66 +2,194 @@
 {% load static %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h3 class="mb-0"><i class="bi bi-graph-up me-2"></i>Historial de Ventas y Tickets</h3>
-        <p class="text-muted small mb-0">Consolidado general de ingresos por punto de venta y rentas de equipo.</p>
+<!-- Encabezado exclusivo para Impresión / Cierre de Caja -->
+<div class="d-none d-print-block mb-4 pb-3 border-bottom">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0 text-dark">The COFFEE LAN</h2>
+            <h5 class="text-secondary mb-0">Cierre de Caja y Reporte de Ingresos</h5>
+        </div>
+        <div class="text-end small text-muted">
+            <div><strong>Fecha de Emisión:</strong> {{ ahora|date:"d/m/Y h:i A" }}</div>
+            <div><strong>Generado por:</strong> {{ request.user.username }}</div>
+        </div>
     </div>
-    <button class="btn btn-outline-dark rounded-pill px-3 shadow-sm" onclick="window.print()">
-        <i class="bi bi-printer me-1"></i> Imprimir Reporte
-    </button>
+    <div class="mt-2 small text-muted">
+        <span><strong>Filtro aplicado:</strong> 
+            {% if fecha_inicio and fecha_fin %}Del {{ fecha_inicio }} al {{ fecha_fin }}
+            {% elif fecha_inicio %}Desde {{ fecha_inicio }}
+            {% elif fecha_fin %}Hasta {{ fecha_fin }}
+            {% else %}Histórico Completo{% endif %}
+            | <strong>Tipo:</strong> {{ tipo_filtro|title }}
+        </span>
+    </div>
 </div>
 
-<!-- Filtros de búsqueda por Rango de Fechas -->
-<div class="card shadow-sm border-0 rounded-4 mb-4">
+<!-- Encabezado en Pantalla -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 d-print-none">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-graph-up me-2 text-coffee"></i>Reportes e Historial de Ingresos</h3>
+        <p class="text-muted small mb-0">Auditoría consolidada de cobros en punto de venta y rentas de equipo.</p>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{% url 'reportes_exportar_excel' %}?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&tipo={{ tipo_filtro }}&usuario={{ usuario_id_seleccionado }}"
+           class="btn btn-outline-success rounded-pill px-3 shadow-sm" title="Descargar reporte en formato Microsoft Excel (.xlsx)">
+            <i class="bi bi-file-earmark-excel me-1"></i> Exportar a Excel (.xlsx)
+        </a>
+        <a href="{% url 'reportes_exportar_csv' %}?fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}&tipo={{ tipo_filtro }}&usuario={{ usuario_id_seleccionado }}"
+           class="btn btn-outline-secondary rounded-pill px-3 shadow-sm" title="Descargar reporte en formato CSV delimitado por comas (.csv)">
+            <i class="bi bi-file-earmark-text me-1"></i> Exportar a CSV (.csv)
+        </a>
+        <button class="btn btn-outline-dark rounded-pill px-3 shadow-sm" onclick="window.print()" title="Imprimir hoja formal de cierre de caja">
+            <i class="bi bi-printer me-1"></i> Imprimir Cierre de Caja
+        </button>
+    </div>
+</div>
+
+<!-- Panel de Filtros Completo (Oculto en Impresión) -->
+<div class="card shadow-sm border-0 rounded-4 mb-4 d-print-none">
     <div class="card-body p-4">
-        <form method="GET" action="{% url 'reportes' %}" class="row g-3 align-items-end">
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Fecha de Inicio</label>
-                <input type="date" name="fecha_inicio" class="form-control rounded-3" value="{{ fecha_inicio }}">
+        <!-- Fila 1: Accesos Rápidos de un Clic -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-3 border-bottom">
+            <div class="d-flex align-items-center gap-2">
+                <span class="small fw-semibold text-muted"><i class="bi bi-lightning-charge text-warning me-1"></i>Filtro Rápido:</span>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button type="button" class="btn btn-outline-secondary btn-filtro-rapido" data-rango="hoy">Hoy</button>
+                    <button type="button" class="btn btn-outline-secondary btn-filtro-rapido" data-rango="ayer">Ayer</button>
+                    <button type="button" class="btn btn-outline-secondary btn-filtro-rapido" data-rango="semana">Esta Semana</button>
+                    <button type="button" class="btn btn-outline-secondary btn-filtro-rapido" data-rango="mes">Este Mes</button>
+                    <button type="button" class="btn btn-outline-secondary btn-filtro-rapido" data-rango="todo">Todo</button>
+                </div>
             </div>
-            <div class="col-md-4">
-                <label class="form-label fw-semibold">Fecha Fin</label>
-                <input type="date" name="fecha_fin" class="form-control rounded-3" value="{{ fecha_fin }}">
+            {% if fecha_inicio or fecha_fin or tipo_filtro != 'todos' or usuario_id_seleccionado %}
+            <a href="{% url 'reportes' %}" class="btn btn-sm btn-light border rounded-pill px-3 text-muted">
+                <i class="bi bi-arrow-counterclockwise me-1"></i> Restablecer Filtros
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- Fila 2: Formulario de Filtros de Servidor -->
+        <form method="GET" action="{% url 'reportes' %}" id="formFiltrosReportes" class="row g-3 align-items-end">
+            <!-- Fecha Inicio -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Fecha de Inicio</label>
+                <input type="date" name="fecha_inicio" id="filtroFechaInicio" class="form-control rounded-3" value="{{ fecha_inicio }}">
             </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm">
-                    <i class="bi bi-filter me-1"></i> Filtrar
+
+            <!-- Fecha Fin -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Fecha Fin</label>
+                <input type="date" name="fecha_fin" id="filtroFechaFin" class="form-control rounded-3" value="{{ fecha_fin }}">
+            </div>
+
+            <!-- Filtro por Tipo de Ingreso -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Tipo de Ingreso</label>
+                <select name="tipo" id="filtroTipoIngreso" class="form-select rounded-3">
+                    <option value="todos" {% if tipo_filtro == 'todos' %}selected{% endif %}>Todos los Ingresos</option>
+                    <option value="ventas" {% if tipo_filtro == 'ventas' %}selected{% endif %}>Solo Ventas POS</option>
+                    <option value="rentas" {% if tipo_filtro == 'rentas' %}selected{% endif %}>Solo Rentas de Equipos</option>
+                </select>
+            </div>
+
+            <!-- Filtro por Cajero / Usuario -->
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-semibold small text-muted mb-1">Cajero / Atendido Por</label>
+                <select name="usuario" id="filtroUsuario" class="form-select rounded-3">
+                    <option value="">Todos los Cajeros</option>
+                    {% for u in usuarios %}
+                    <option value="{{ u.usuario_id }}" {% if usuario_id_seleccionado == u.usuario_id %}selected{% endif %}>
+                        {{ u.username }} ({{ u.rol.nombre|default:"Cajero" }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Fila de Búsqueda y Botón Filtrar -->
+            <div class="col-12 mt-3 pt-2 border-top d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="input-group input-group-sm flex-grow-1" style="max-width: 380px;">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorReportes" class="form-control border-start-0" placeholder="Buscar por ticket, cliente o detalle...">
+                </div>
+
+                <button type="submit" class="btn btn-coffee px-4 rounded-pill shadow-sm">
+                    <i class="bi bi-funnel me-1"></i> Aplicar Filtros
                 </button>
-                {% if fecha_inicio or fecha_fin %}
-                <a href="{% url 'reportes' %}" class="btn btn-light rounded-pill px-3 border" title="Limpiar filtro">
-                    <i class="bi bi-arrow-counterclockwise"></i>
-                </a>
-                {% endif %}
             </div>
         </form>
+    </div>
+</div>
 
-        <hr class="my-3">
-
-        <div class="row g-2 align-items-center">
-            <div class="col-md-8">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorReportes" class="form-control border-start-0" placeholder="Buscar en resultados...">
+<!-- Tarjetas Resumen / KPIs -->
+<div class="row g-3 mb-4">
+    <!-- Total Recaudado Global -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100 overflow-hidden bg-white border-start border-4 border-success">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px;">Total Recaudado Global</span>
+                    <span class="badge bg-success-subtle text-success p-2 rounded-circle"><i class="bi bi-cash-stack fs-5"></i></span>
                 </div>
-                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
-                    <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">N° Ticket/Correlativo</strong>, <strong class="text-dark">Cliente</strong> y <strong class="text-dark">Atendido Por</strong></span>
+                <h3 class="fw-bold text-success mb-1 font-monospace">${{ total_recaudado_global|floatformat:2 }}</h3>
+                <small class="text-muted">Total acumulado en el periodo</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Desglose: Ventas POS -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100 overflow-hidden bg-white border-start border-4 border-primary">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px;">Ventas POS</span>
+                    <span class="badge bg-primary-subtle text-primary p-2 rounded-circle"><i class="bi bi-cart-check fs-5"></i></span>
+                </div>
+                <h3 class="fw-bold text-primary mb-1 font-monospace">${{ total_ventas|floatformat:2 }}</h3>
+                <div class="d-flex justify-content-between align-items-center small text-muted">
+                    <span>Productos / Cafetería</span>
+                    <span class="badge bg-light text-dark border">{{ pct_ventas }}%</span>
                 </div>
             </div>
-            <div class="col-md-4 text-md-end">
-                <span class="text-muted small d-block">Total del Periodo:</span>
-                <span class="fw-bold fs-4 text-success">${{ total_recaudado|floatformat:2 }}</span>
+        </div>
+    </div>
+
+    <!-- Desglose: Rentas de Equipos -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100 overflow-hidden bg-white border-start border-4 border-warning">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px;">Rentas de Equipos</span>
+                    <span class="badge bg-warning-subtle text-warning p-2 rounded-circle"><i class="bi bi-pc-display fs-5"></i></span>
+                </div>
+                <h3 class="fw-bold text-dark mb-1 font-monospace">${{ total_rentas|floatformat:2 }}</h3>
+                <div class="d-flex justify-content-between align-items-center small text-muted">
+                    <span>Tiempo de PC y Consolas</span>
+                    <span class="badge bg-light text-dark border">{{ pct_rentas }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total Tickets y Ticket Promedio -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card shadow-sm border-0 rounded-4 h-100 overflow-hidden bg-white border-start border-4 border-secondary">
+            <div class="card-body p-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing: 0.5px;">Operaciones</span>
+                    <span class="badge bg-secondary-subtle text-secondary p-2 rounded-circle"><i class="bi bi-receipt fs-5"></i></span>
+                </div>
+                <h3 class="fw-bold text-dark mb-1 font-monospace">{{ num_transacciones }} <span class="fs-6 text-muted fw-normal">tickets</span></h3>
+                <small class="text-muted">Ticket Promedio: <strong class="text-success">${{ ticket_promedio|floatformat:2 }}</strong></small>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Tabla de Reportes -->
+<!-- Tabla de Reportes e Historial -->
 <div class="card shadow-sm border-0 rounded-4">
     <div class="card-body p-4">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0" id="tablaReportes">
                 <thead class="table-light">
                     <tr>
                         <th>N° Ticket</th>
@@ -70,31 +198,32 @@
                         <th>Atendido por</th>
                         <th>Cliente</th>
                         <th>Detalle / Concepto</th>
-                        <th>Total</th>
-                        <th class="text-end">Comprobante</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end d-print-none">Comprobante</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for t in transacciones %}
-                    <tr class="fila-reporte" data-busqueda="{{ t.ticket|lower }} {{ t.cliente|lower }} {{ t.usuario|lower }} {{ t.tipo|lower }}">
+                    <tr class="fila-reporte" data-busqueda="{{ t.ticket|lower }} {{ t.cliente|lower }} {{ t.usuario|lower }} {{ t.tipo|lower }} {{ t.concepto|lower }}">
                         <td class="fw-bold font-monospace">#{{ t.ticket }}</td>
                         <td>
                             <span class="badge {% if t.es_venta %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill">
+                                {% if t.es_venta %}<i class="bi bi-cart me-1"></i>{% else %}<i class="bi bi-pc-display me-1"></i>{% endif %}
                                 {{ t.tipo }}
                             </span>
                         </td>
-                        <td>{{ t.fecha|date:"d/m/Y h:i A" }}</td>
-                        <td><i class="bi bi-person me-1 text-muted"></i>{{ t.usuario }}</td>
+                        <td class="small">{{ t.fecha|date:"d/m/Y h:i A" }}</td>
+                        <td class="small"><i class="bi bi-person me-1 text-muted"></i>{{ t.usuario }}</td>
                         <td class="fw-semibold text-dark">{{ t.cliente }}</td>
-                        <td class="text-muted small text-truncate" style="max-width: 250px;" title="{{ t.concepto }}">{{ t.concepto }}</td>
-                        <td class="fw-bold text-success">${{ t.total|floatformat:2 }}</td>
-                        <td class="text-end">
+                        <td class="text-muted small text-truncate" style="max-width: 280px;" title="{{ t.concepto }}">{{ t.concepto }}</td>
+                        <td class="fw-bold text-success font-monospace text-end">${{ t.total|floatformat:2 }}</td>
+                        <td class="text-end d-print-none">
                             {% if t.es_venta and t.venta_id %}
-                            <a href="{% url 'ticket_pdf_venta' venta_id=t.venta_id %}" target="_blank" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Descargar Ticket PDF">
-                                <i class="bi bi-file-earmark-pdf"></i> Ticket
+                            <a href="{% url 'ticket_pdf_venta' venta_id=t.venta_id %}" target="_blank" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Ticket PDF">
+                                <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
                             </a>
                             {% else %}
-                            <span class="badge bg-light text-muted border">Renta</span>
+                            <span class="badge bg-light text-muted border small">Renta</span>
                             {% endif %}
                         </td>
                     </tr>
@@ -102,14 +231,14 @@
                     <tr class="fila-vacia">
                         <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-calendar-x fs-1 d-block mb-2 text-muted opacity-50"></i>
-                            No se encontraron transacciones registradas en el rango seleccionado.
+                            No se encontraron transacciones registradas con los filtros seleccionados.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosReportes" class="d-none">
                         <td colspan="8" class="text-center text-muted py-4">
-                            <i class="bi bi-search fs-2 d-block mb-2"></i>
-                            No se encontraron registros que coincidan con la búsqueda.
+                            <i class="bi bi-search fs-2 d-block mb-2 text-muted"></i>
+                            No se encontraron registros que coincidan con la búsqueda por texto.
                         </td>
                     </tr>
                 </tbody>
@@ -118,24 +247,123 @@
     </div>
 </div>
 
+<!-- Bloque de Firmas para Cierre de Caja Impreso -->
+<div class="d-none d-print-block mt-5 pt-4">
+    <div class="row text-center">
+        <div class="col-6">
+            <div style="border-top: 1px solid #333; width: 60%; margin: 0 auto; padding-top: 8px;">
+                <strong>Firma del Cajero</strong><br>
+                <small class="text-muted">{{ request.user.username }}</small>
+            </div>
+        </div>
+        <div class="col-6">
+            <div style="border-top: 1px solid #333; width: 60%; margin: 0 auto; padding-top: 8px;">
+                <strong>Firma Administrador / Supervisor</strong><br>
+                <small class="text-muted">Conformidad de Cierre</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    @media print {
+        body {
+            background-color: #ffffff !important;
+            font-size: 11pt !important;
+        }
+        #sidebar-wrapper, .top-header, .toast-container, .btn, .d-print-none {
+            display: none !important;
+        }
+        #page-content-wrapper, .main-content {
+            margin: 0 !important;
+            padding: 0 !important;
+            height: auto !important;
+            overflow: visible !important;
+        }
+        .card {
+            box-shadow: none !important;
+            border: 1px solid #ddd !important;
+        }
+        .table {
+            font-size: 9.5pt !important;
+        }
+    }
+</style>
+
 <script>
-    const buscadorReportes = document.getElementById('buscadorReportes');
-    if (buscadorReportes) {
+document.addEventListener('DOMContentLoaded', function () {
+    // -------------------------------------------------------------
+    // 1. FILTROS RÁPIDOS DE UN CLIC (Hoy, Ayer, Esta Semana, Este Mes)
+    // -------------------------------------------------------------
+    const form = document.getElementById('formFiltrosReportes');
+    const inputInicio = document.getElementById('filtroFechaInicio');
+    const inputFin = document.getElementById('filtroFechaFin');
+
+    function formatearFechaISO(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    document.querySelectorAll('.btn-filtro-rapido').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const rango = this.dataset.rango;
+            const hoy = new Date();
+
+            if (rango === 'hoy') {
+                const f = formatearFechaISO(hoy);
+                inputInicio.value = f;
+                inputFin.value = f;
+            } else if (rango === 'ayer') {
+                const ayer = new Date(hoy);
+                ayer.setDate(hoy.getDate() - 1);
+                const f = formatearFechaISO(ayer);
+                inputInicio.value = f;
+                inputFin.value = f;
+            } else if (rango === 'semana') {
+                const primerDiaSemana = new Date(hoy);
+                const dia = hoy.getDay();
+                const diff = hoy.getDate() - dia + (dia === 0 ? -6 : 1); // Lunes
+                primerDiaSemana.setDate(diff);
+                inputInicio.value = formatearFechaISO(primerDiaSemana);
+                inputFin.value = formatearFechaISO(hoy);
+            } else if (rango === 'mes') {
+                const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                inputInicio.value = formatearFechaISO(primerDiaMes);
+                inputFin.value = formatearFechaISO(hoy);
+            } else if (rango === 'todo') {
+                inputInicio.value = '';
+                inputFin.value = '';
+            }
+
+            if (form) form.submit();
+        });
+    });
+
+    // -------------------------------------------------------------
+    // 2. BUSCADOR INTERACTIVO EN TABLA
+    // -------------------------------------------------------------
+    const buscador = document.getElementById('buscadorReportes');
+    if (buscador) {
         const filas = document.querySelectorAll('.fila-reporte');
-        const filaVacia = document.querySelector('.fila-vacia');
         const sinResultados = document.getElementById('sinResultadosReportes');
 
-        buscadorReportes.addEventListener('input', function () {
-            const termino = buscadorReportes.value.trim().toLowerCase();
+        buscador.addEventListener('input', function () {
+            const termino = this.value.trim().toLowerCase();
             let visibles = 0;
-            filas.forEach(function (fila) {
-                const coincide = fila.dataset.busqueda.includes(termino);
+
+            filas.forEach(fila => {
+                const coincide = !termino || (fila.dataset.busqueda || '').includes(termino);
                 fila.classList.toggle('d-none', !coincide);
                 if (coincide) visibles++;
             });
-            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
-            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+
+            if (sinResultados) {
+                sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+            }
         });
     }
+});
 </script>
 {% endblock %}
