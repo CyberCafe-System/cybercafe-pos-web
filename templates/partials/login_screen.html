@@ -15,9 +15,23 @@
         <form method="POST" action="{{ form_action }}">
             {% csrf_token %}
 
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}warning{% endif %} rounded-4 py-2 text-center small mb-3">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
             {% if form.errors %}
             <div class="alert alert-danger rounded-4 py-2 text-center small mb-3">
-                Usuario o contraseña incorrectos.
+                {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                {% else %}
+                    Usuario o contraseña incorrectos.
+                {% endif %}
             </div>
             {% endif %}
 

@@ -1,13 +1,13 @@
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
-from usuarios.decorators import admin_required, asistente_o_admin_required
+from usuarios.decorators import admin_required
 from .forms import CategoriaForm
 from .models import Categoria
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def categoria_list(request):
     categorias = Categoria.objects.all().order_by('categoria_id')
     return render(request, 'categorias/categorias.html', {'categorias': categorias})

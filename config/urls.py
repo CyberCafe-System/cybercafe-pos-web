@@ -13,6 +13,7 @@ from inventario import views as inventario_views
 from pos_app import views as pos_views
 from rentas import views as rentas_views
 from usuarios import views as usuarios_views
+from usuarios.forms import WebAuthenticationForm
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -20,7 +21,11 @@ urlpatterns = [
     # --- RUTAS DE ACCESO ---
     path(
         'login/',
-        LoginView.as_view(template_name='login.html', redirect_authenticated_user=True),
+        LoginView.as_view(
+            template_name='login.html',
+            authentication_form=WebAuthenticationForm,
+            redirect_authenticated_user=True,
+        ),
         name='login',
     ),
     path('logout/', LogoutView.as_view(), name='logout'),

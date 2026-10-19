@@ -3,14 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
 from equipos.models import Equipo
-from usuarios.decorators import asistente_o_admin_required
+from usuarios.decorators import admin_required
 
 from .forms import ComponenteForm
 from .models import Componente
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def componente_list(request):
     componentes = (
         Componente.objects.select_related('equipo')
@@ -25,7 +25,7 @@ def componente_list(request):
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def componente_create(request):
     if request.method == 'POST':
         form = ComponenteForm(request.POST)
@@ -42,7 +42,7 @@ def componente_create(request):
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def componente_edit(request):
     if request.method == 'POST':
         componente = get_object_or_404(Componente, pk=request.POST.get('componente_id'))
@@ -60,7 +60,7 @@ def componente_edit(request):
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def componente_toggle(request):
     if request.method == 'POST':
         componente = get_object_or_404(Componente, pk=request.POST.get('componente_id'))

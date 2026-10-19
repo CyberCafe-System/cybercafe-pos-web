@@ -35,17 +35,17 @@
                     <a href="{% url 'pos' %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
                 </li>
                 {% endif %}
-                {% if request.user.es_admin or request.user.es_asistente %}
+                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'inventario' %}"><i class="bi bi-box-seam"></i> Inventario</a>
                 </li>
                 {% endif %}
-                {% if request.user.es_admin or request.user.es_asistente %}
+                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'categorias' %}"><i class="bi bi-tags"></i> Categorías</a>
                 </li>
                 {% endif %}
-                {% if request.user.es_admin or request.user.es_asistente %}
+                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'equipos' %}"><i class="bi bi-cpu"></i> Equipos</a>
                 </li>

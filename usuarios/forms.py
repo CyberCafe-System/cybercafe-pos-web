@@ -1,7 +1,22 @@
 from django import forms
-from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField
 
 from .models import Usuario
+
+
+class WebAuthenticationForm(AuthenticationForm):
+    """
+    Formulario de autenticación para la plataforma Web.
+    Bloquea el inicio de sesión a usuarios con rol Asistente, reservándolo exclusivamente para la app móvil.
+    """
+    def confirm_login_allowed(self, user):
+        super().confirm_login_allowed(user)
+        if getattr(user, 'es_asistente', False):
+            raise forms.ValidationError(
+                'El usuario con rol Asistente solo tiene acceso a través de la aplicación móvil.',
+                code='asistente_web_blocked',
+            )
+
 
 
 class UsuarioCreationForm(forms.ModelForm):

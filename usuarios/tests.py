@@ -132,30 +132,110 @@ class DecoratorTests(SimpleTestCase):
         self.assertEqual(response_cajero, 'success')
         mock_view.assert_called_once()
 
-    def test_asistente_o_admin_required_blocks_cajero_and_allows_asistente(self):
+    def test_asistente_o_admin_required_delegates_to_admin_in_web(self):
         from unittest.mock import Mock
         from usuarios.decorators import asistente_o_admin_required
 
         mock_view = Mock(return_value='success')
         decorated = asistente_o_admin_required(mock_view)
 
-        # Caso Cajero (Bloqueado de Inventario / Equipos)
+        # Caso Cajero (Bloqueado)
         request_cajero = Mock()
         request_cajero.user.is_authenticated = True
         request_cajero.user.es_admin = False
-        request_cajero.user.es_asistente = False
         response = decorated(request_cajero)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/')
         mock_view.assert_not_called()
 
-        # Caso Asistente (Permitido en Inventario / Categorias / Equipos)
+        # Caso Asistente (Bloqueado en la web)
         request_asistente = Mock()
         request_asistente.user.is_authenticated = True
         request_asistente.user.es_admin = False
         request_asistente.user.es_asistente = True
         response_asistente = decorated(request_asistente)
-        self.assertEqual(response_asistente, 'success')
+        self.assertEqual(response_asistente.status_code, 302)
+        self.assertEqual(response_asistente.url, '/')
+        mock_view.assert_not_called()
+
+        # Caso Admin (Permitido)
+        request_admin = Mock()
+        request_admin.user.is_authenticated = True
+        request_admin.user.es_admin = True
+        response_admin = decorated(request_admin)
+        self.assertEqual(response_admin, 'success')
         mock_view.assert_called_once()
+
+
+class WebSecurityIsolationTests(SimpleTestCase):
+    def test_web_auth_form_blocks_asistente(self):
+        from unittest.mock import Mock
+        from django.core.exceptions import ValidationError
+        from usuarios.forms import WebAuthenticationForm
+
+        form = WebAuthenticationForm()
+        mock_asistente = Mock()
+        mock_asistente.is_active = True
+        mock_asistente.es_asistente = True
+
+        with self.assertRaises(ValidationError) as ctx:
+            form.confirm_login_allowed(mock_asistente)
+
+        self.assertEqual(ctx.exception.code, 'asistente_web_blocked')
+
+    def test_web_auth_form_allows_admin_and_cajero(self):
+        from unittest.mock import Mock
+        from usuarios.forms import WebAuthenticationForm
+
+        form = WebAuthenticationForm()
+
+        mock_admin = Mock()
+        mock_admin.is_active = True
+        mock_admin.es_asistente = False
+        self.assertIsNone(form.confirm_login_allowed(mock_admin))
+
+        mock_cajero = Mock()
+        mock_cajero.is_active = True
+        mock_cajero.es_asistente = False
+        self.assertIsNone(form.confirm_login_allowed(mock_cajero))
+
+    def test_middleware_blocks_and_logs_out_asistente(self):
+        from unittest.mock import Mock, patch
+        from usuarios.middleware import BloqueoAsistenteWebMiddleware
+
+        mock_get_response = Mock(return_value='next_response')
+        middleware = BloqueoAsistenteWebMiddleware(mock_get_response)
+
+        mock_request = Mock()
+        mock_request.user.is_authenticated = True
+        mock_request.user.es_asistente = True
+
+        with patch('usuarios.middleware.logout') as mock_logout, \
+             patch('usuarios.middleware.messages.warning') as mock_warning:
+            response = middleware(mock_request)
+
+            mock_logout.assert_called_once_with(mock_request)
+            mock_warning.assert_called_once()
+            self.assertEqual(response.status_code, 302)
+            self.assertEqual(response.url, '/login/')
+            mock_get_response.assert_not_called()
+
+    def test_middleware_allows_admin_and_cajero(self):
+        from unittest.mock import Mock, patch
+        from usuarios.middleware import BloqueoAsistenteWebMiddleware
+
+        mock_get_response = Mock(return_value='next_response')
+        middleware = BloqueoAsistenteWebMiddleware(mock_get_response)
+
+        mock_request = Mock()
+        mock_request.user.is_authenticated = True
+        mock_request.user.es_asistente = False
+
+        with patch('usuarios.middleware.logout') as mock_logout:
+            response = middleware(mock_request)
+            mock_logout.assert_not_called()
+            self.assertEqual(response, 'next_response')
+            mock_get_response.assert_called_once_with(mock_request)
+
 
 

@@ -53,6 +53,9 @@
                             <span class="badge {% if usuario.rol.nombre == 'ADMINISTRADOR' %}bg-dark{% elif usuario.rol.nombre == 'CAJERO' %}bg-primary{% else %}bg-secondary{% endif %}">
                                 {{ usuario.rol.nombre }}
                             </span>
+                            {% if usuario.es_asistente %}
+                            <span class="badge bg-info text-dark ms-1"><i class="bi bi-phone"></i> Solo App Móvil</span>
+                            {% endif %}
                         </td>
                         <td>
                             {% if usuario.activo %}
