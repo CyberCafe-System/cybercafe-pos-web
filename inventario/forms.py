@@ -4,8 +4,8 @@ from django import forms
 from django.conf import settings
 
 from categorias.models import Categoria
-
 from .models import Producto
+from .utils import procesar_imagen_a_webp
 
 
 class ProductoForm(forms.ModelForm):
@@ -31,19 +31,34 @@ class ProductoForm(forms.ModelForm):
         self.fields['categoria'].queryset = Categoria.objects.filter(activa=True).order_by('nombre')
         self.fields['categoria'].empty_label = 'Seleccione una categoría'
 
+    def clean_precio_compra(self):
+        precio = self.cleaned_data.get('precio_compra')
+        if precio is not None and precio < 0:
+            raise forms.ValidationError("El precio de compra no puede ser negativo.")
+        return precio
+
+    def clean_precio_venta(self):
+        precio = self.cleaned_data.get('precio_venta')
+        if precio is not None and precio < 0:
+            raise forms.ValidationError("El precio de venta no puede ser negativo.")
+        return precio
+
+    def clean_cantidad(self):
+        cantidad = self.cleaned_data.get('cantidad')
+        if cantidad is not None and cantidad < 0:
+            raise forms.ValidationError("La cantidad no puede ser negativa.")
+        return cantidad
+
     def save(self, commit=True):
         producto = super().save(commit=False)
         archivo = self.cleaned_data.get('imagen_upload')
         if archivo:
-            # Guardar en media/productos/
-            carpeta = settings.MEDIA_ROOT / 'productos'
-            carpeta.mkdir(parents=True, exist_ok=True)
-            nombre_archivo = f"{producto.nombre.lower().replace(' ', '_')}_{archivo.name}"
-            ruta_fisica = carpeta / nombre_archivo
-            with open(ruta_fisica, 'wb+') as destino:
-                for chunk in archivo.chunks():
-                    destino.write(chunk)
-            producto.imagen = f"productos/{nombre_archivo}"
+            imagen_anterior = self.instance.imagen if (self.instance and self.instance.pk) else None
+            producto.imagen = procesar_imagen_a_webp(
+                archivo,
+                nombre_producto=producto.nombre,
+                imagen_anterior=imagen_anterior,
+            )
         if commit:
             producto.save()
         return producto

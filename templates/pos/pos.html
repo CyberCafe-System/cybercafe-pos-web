@@ -78,9 +78,15 @@
                             style="height: 120px; overflow: hidden;">
                             {% if producto.imagen %}
                             <img src="/media/{{ producto.imagen }}" class="w-100 h-100 object-fit-cover"
-                                alt="{{ producto.nombre }}">
+                                alt="{{ producto.nombre }}"
+                                onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                            <div class="w-100 h-100 d-none d-flex align-items-center justify-content-center bg-light text-muted">
+                                <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                            </div>
                             {% else %}
-                            <i class="bi bi-cup-hot fs-1 text-muted"></i>
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center bg-light text-muted">
+                                <i class="bi bi-box-seam fs-1 opacity-50"></i>
+                            </div>
                             {% endif %}
                             <span
                                 class="position-absolute top-0 end-0 m-2 badge {% if producto.cantidad > 5 %}bg-success{% elif producto.cantidad > 0 %}bg-warning text-dark{% else %}bg-danger{% endif %} rounded-pill shadow-sm">

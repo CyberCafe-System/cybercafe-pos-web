@@ -43,10 +43,18 @@
                         <input type="number" name="cantidad" id="editarProductoCantidad" class="form-control rounded-3" min="0" required>
                     </div>
 
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold">Cambiar Imagen</label>
-                        <input type="file" name="imagen_upload" class="form-control rounded-3" accept="image/*">
-                        <small class="text-muted">Deje vacío este campo si desea conservar la imagen actual.</small>
+                    <div class="mb-3 d-flex align-items-center gap-3">
+                        <div class="flex-shrink-0" style="width: 56px; height: 56px;">
+                            <img id="editarProductoPreviewImg" src="" class="rounded-3 border object-fit-cover shadow-sm w-100 h-100 d-none" alt="Vista previa" onerror="this.classList.add('d-none'); document.getElementById('editarProductoPreviewIcon').classList.remove('d-none');">
+                            <span id="editarProductoPreviewIcon" class="w-100 h-100 d-flex align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted">
+                                <i class="bi bi-box-seam fs-4 opacity-50"></i>
+                            </span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <label class="form-label fw-semibold mb-1">Cambiar Imagen</label>
+                            <input type="file" name="imagen_upload" class="form-control rounded-3" accept="image/*">
+                            <small class="text-muted">Formatos: JPG, PNG, WEBP. Deje vacío para conservar la actual.</small>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
