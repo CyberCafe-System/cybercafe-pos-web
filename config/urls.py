@@ -50,7 +50,9 @@ urlpatterns = [
 
     # POS
     path('agregar_carrito/', pos_views.agregar_carrito, name='agregar_carrito'),
+    path('actualizar_cantidad_carrito/', pos_views.actualizar_cantidad_carrito, name='actualizar_cantidad_carrito'),
     path('quitar_carrito/', pos_views.quitar_carrito, name='quitar_carrito'),
+    path('limpiar_carrito/', pos_views.limpiar_carrito, name='limpiar_carrito'),
     path('procesar_venta/', pos_views.procesar_venta, name='procesar_venta'),
     path('ticket_pdf/', pos_views.ticket_pdf, name='ticket_pdf'),
     path('ticket_pdf/<int:venta_id>/', pos_views.ticket_pdf, name='ticket_pdf_venta'),

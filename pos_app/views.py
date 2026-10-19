@@ -216,7 +216,7 @@ def pos(request):
     # Organizar por categorías
     categorias_dict = {}
     for p in productos:
-        cat_nom = p.categoria.nombre if p.categoria else 'General'
+        cat_nom = p.categoria.nombre.strip().title() if p.categoria else 'General'
         if cat_nom not in categorias_dict:
             categorias_dict[cat_nom] = []
         categorias_dict[cat_nom].append(p)
@@ -271,11 +271,47 @@ def agregar_carrito(request):
 
 @login_required
 @cajero_o_admin_required
+def actualizar_cantidad_carrito(request):
+    if request.method == 'POST':
+        producto_id = str(request.POST.get('producto_id'))
+        accion = request.POST.get('accion')
+        producto = get_object_or_404(Producto, pk=producto_id, activo=True)
+        carrito = _obtener_carrito(request)
+        actual = carrito.get(producto_id, 0)
+
+        if accion == 'incrementar':
+            if actual + 1 > producto.cantidad:
+                messages.error(
+                    request,
+                    f'Inventario insuficiente de "{producto.nombre}" (disponible: {producto.cantidad}).',
+                )
+            else:
+                carrito[producto_id] = actual + 1
+        elif accion == 'decrementar':
+            if actual - 1 <= 0:
+                carrito.pop(producto_id, None)
+            else:
+                carrito[producto_id] = actual - 1
+        request.session['carrito'] = carrito
+    return redirect('pos')
+
+
+@login_required
+@cajero_o_admin_required
 def quitar_carrito(request):
     if request.method == 'POST':
         carrito = _obtener_carrito(request)
         carrito.pop(str(request.POST.get('producto_id')), None)
         request.session['carrito'] = carrito
+    return redirect('pos')
+
+
+@login_required
+@cajero_o_admin_required
+def limpiar_carrito(request):
+    if request.method == 'POST':
+        request.session['carrito'] = {}
+        messages.info(request, 'El carrito ha sido vaciado.')
     return redirect('pos')
 
 
