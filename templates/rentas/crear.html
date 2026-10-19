@@ -24,10 +24,8 @@
                         <label class="form-label fw-semibold">Seleccionar Equipo <span class="text-danger fw-bold">*</span></label>
                         <select name="equipo_id" id="selectEquipoRenta" class="form-select rounded-3" required>
                             <option value="" data-tarifa="0">Seleccione un equipo disponible</option>
-                            {% for eq in equipos %}
-                            {% if not eq.renta_activa and eq.estado != 'MANTENIMIENTO' %}
+                            {% for eq in equipos_rentables %}
                             <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{ eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
-                            {% endif %}
                             {% endfor %}
                         </select>
                     </div>

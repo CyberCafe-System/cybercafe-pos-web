@@ -26,6 +26,9 @@
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="en_uso">
                     <i class="bi bi-hourglass-split me-1 text-warning"></i> En Uso <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_en_uso }}</span>
                 </button>
+                <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="revision">
+                    <i class="bi bi-clipboard-check me-1 text-info"></i> Revisión <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_revision }}</span>
+                </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="disponible">
                     <i class="bi bi-check-circle me-1 text-success"></i> Disponibles <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_disponibles }}</span>
                 </button>
@@ -53,9 +56,9 @@
 <div class="row g-4" id="grillaEquiposRentas">
     {% for equipo in equipos %}
     <div class="col-xl-3 col-lg-4 col-md-6 tarjeta-equipo"
-         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.estado in 'MANTENIMIENTO EN_MANTENIMIENTO' %}mantenimiento{% else %}disponible{% endif %}"
+         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
          data-tipo="{% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}consola{% else %}pc{% endif %}"
-         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% else %}disponible{% endif %}">
+         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
 
         {% if equipo.renta_activa %}
         <!-- Equipo EN USO -->
@@ -152,20 +155,33 @@
             </div>
         </div>
 
-        {% elif equipo.estado in 'MANTENIMIENTO EN_MANTENIMIENTO' %}
-        <!-- Equipo EN MANTENIMIENTO -->
-        <div class="card shadow-sm border-0 border-top border-4 border-secondary h-100 rounded-4">
+        {% elif equipo.revision_pendiente %}
+        <!-- Equipo PENDIENTE DE REVISIÓN -->
+        <div class="card shadow-sm border-0 border-top border-4 border-info h-100 rounded-4">
             <div class="card-body p-4 d-flex flex-column text-center">
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-secondary px-3 py-1 rounded-pill">
-                        <i class="bi bi-tools me-1"></i> Mantenimiento
+                    <span class="badge bg-info text-dark px-3 py-1 rounded-pill">
+                        <i class="bi bi-clipboard-check me-1"></i> Pendiente de Revisión
                     </span>
                     <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
                 </div>
 
-                <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
-                <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
-                <p class="text-muted small mb-3">Equipo en revisión técnica</p>
+                <i class="bi bi-clipboard2-pulse text-info mb-2" style="font-size: 2.8rem;"></i>
+                <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}</p>
+
+                <div class="bg-light p-2 rounded-3 mb-3 text-start small">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Fin:</span>
+                        <span class="fw-bold">{{ equipo.revision_pendiente.hora_fin|date:"h:i A" }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Total cobrado:</span>
+                        <span class="fw-bold text-success">${{ equipo.revision_pendiente.subtotal }}</span>
+                    </div>
+                </div>
+
+                <p class="text-muted small mb-3">Se habilita cuando el módulo de revisiones lo libere.</p>
 
                 <div class="mt-auto">
                     <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
@@ -173,7 +189,41 @@
                             data-nombre="{{ equipo.nombre }}"
                             data-tipo="{{ equipo.tipo }}"
                             data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="Mantenimiento"
+                            data-estado="Pendiente de Revisión"
+                            data-cliente="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
+                            data-inicio="{{ equipo.revision_pendiente.hora_inicio|date:'d/m/Y h:i A' }}"
+                            data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
+                            data-total="${{ equipo.revision_pendiente.subtotal }}"
+                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                            title="Ver Periféricos e Información">
+                        <i class="bi bi-info-circle me-1"></i> Info
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {% elif not equipo.es_rentable %}
+        <!-- Equipo NO RENTABLE (mantenimiento / defectuoso) -->
+        <div class="card shadow-sm border-0 border-top border-4 border-secondary h-100 rounded-4">
+            <div class="card-body p-4 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span class="badge bg-secondary px-3 py-1 rounded-pill">
+                        <i class="bi bi-tools me-1"></i> {{ equipo.get_estado_display }}
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
+                <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-3">Equipo no disponible para renta</p>
+
+                <div class="mt-auto">
+                    <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
+                            data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}"
+                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="{{ equipo.get_estado_display }}"
                             data-cliente="--"
                             data-inicio="--"
                             data-tiempo="--"
@@ -665,7 +715,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('infoEquipoEstado').textContent = btn.dataset.estado;
 
             const seccionRenta = document.getElementById('seccionInfoRenta');
-            if (btn.dataset.estado === 'En Uso') {
+            if (btn.dataset.estado === 'En Uso' || btn.dataset.estado === 'Pendiente de Revisión') {
                 seccionRenta.classList.remove('d-none');
                 document.getElementById('infoEquipoCliente').textContent = btn.dataset.cliente;
                 document.getElementById('infoEquipoInicio').textContent = btn.dataset.inicio;

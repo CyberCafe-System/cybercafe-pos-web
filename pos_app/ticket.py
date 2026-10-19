@@ -1,5 +1,6 @@
 from io import BytesIO
 
+from django.utils import timezone
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_RIGHT
 from reportlab.lib.pagesizes import A4
@@ -63,7 +64,7 @@ def generar_factura_pdf(venta):
         Spacer(1, 6 * mm),
     ]
 
-    fecha = venta.fecha.strftime('%d/%m/%Y %H:%M')
+    fecha = timezone.localtime(venta.fecha).strftime('%d/%m/%Y %H:%M')
     info = [
         [
             Paragraph('Factura', etiqueta), Paragraph(f'#{venta.venta_id:06d}', seccion),

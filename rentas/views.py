@@ -2,6 +2,7 @@ from decimal import ROUND_HALF_UP, Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -11,32 +12,57 @@ from usuarios.decorators import cajero_o_admin_required
 
 from .models import DetalleRenta, Renta
 
+ESTADOS_RENTABLES = ('DISPONIBLE', 'DANIOS_MENORES')
+ESTADOS_BLOQUEANTES = ('ACTIVA', 'PENDIENTE_REVISION')
+
+
+def _equipo_es_rentable(equipo):
+    return equipo.estado in ESTADOS_RENTABLES
+
 
 @login_required
 def renta_list(request):
     equipos = list(Equipo.objects.prefetch_related('componentes').all().order_by('nombre'))
     clientes = Cliente.objects.all().order_by('nombre', 'apellido')
-    detalles_activos = list(
+    detalles_relevantes = list(
         DetalleRenta.objects
         .select_related('renta__cliente', 'renta__usuario', 'equipo')
-        .filter(estado='ACTIVA')
+        .filter(estado__in=ESTADOS_BLOQUEANTES)
         .order_by('hora_inicio')
     )
-    rentas_por_equipo = {d.equipo_id: d for d in detalles_activos}
+
+    rentas_por_equipo = {d.equipo_id: d for d in detalles_relevantes if d.estado == 'ACTIVA'}
+    revisiones_por_equipo = {d.equipo_id: d for d in detalles_relevantes if d.estado == 'PENDIENTE_REVISION'}
+
+    equipos_rentables = []
     for eq in equipos:
         eq.renta_activa = rentas_por_equipo.get(eq.equipo_id)
+        eq.revision_pendiente = revisiones_por_equipo.get(eq.equipo_id)
+        eq.es_rentable = (
+            eq.renta_activa is None
+            and eq.revision_pendiente is None
+            and _equipo_es_rentable(eq)
+        )
+        if eq.es_rentable:
+            equipos_rentables.append(eq)
 
     count_en_uso = sum(1 for eq in equipos if eq.renta_activa)
-    count_mantenimiento = sum(1 for eq in equipos if eq.estado in ['MANTENIMIENTO', 'EN_MANTENIMIENTO'])
-    count_disponibles = max(0, len(equipos) - count_en_uso - count_mantenimiento)
+    count_revision = sum(1 for eq in equipos if eq.revision_pendiente)
+    count_mantenimiento = sum(
+        1 for eq in equipos
+        if not eq.es_rentable and not eq.renta_activa and not eq.revision_pendiente
+    )
+    count_disponibles = len(equipos_rentables)
 
     return render(request, 'rentas/rentas.html', {
         'equipos': equipos,
+        'equipos_rentables': equipos_rentables,
         'clientes': clientes,
-        'detalles_activos': detalles_activos,
+        'detalles_activos': [d for d in detalles_relevantes if d.estado == 'ACTIVA'],
         'count_en_uso': count_en_uso,
         'count_disponibles': count_disponibles,
         'count_mantenimiento': count_mantenimiento,
+        'count_revision': count_revision,
         'now': timezone.now(),
     })
 
@@ -51,23 +77,30 @@ def renta_extender(request):
             if minutos_extra <= 0:
                 raise ValueError("El tiempo adicional debe ser mayor a 0.")
 
-            detalle = get_object_or_404(DetalleRenta, pk=detalle_id, estado='ACTIVA')
-            equipo = detalle.equipo
-            tarifa = Decimal(str(equipo.tarifa_por_hora))
-            horas_extra = Decimal(minutos_extra) / Decimal('60')
-            costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            with transaction.atomic():
+                detalle = get_object_or_404(
+                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    pk=detalle_id,
+                    estado='ACTIVA',
+                )
+                equipo = detalle.equipo
+                tarifa = Decimal(str(equipo.tarifa_por_hora))
+                horas_extra = Decimal(minutos_extra) / Decimal('60')
+                costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-            detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
-            detalle.subtotal += costo_extra
-            detalle.save(update_fields=['tiempo_agregado', 'subtotal'])
+                detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
+                detalle.subtotal += costo_extra
+                detalle.save(update_fields=['tiempo_agregado', 'subtotal'])
 
-            renta = detalle.renta
-            renta.total += costo_extra
-            renta.save(update_fields=['total'])
+                renta = detalle.renta
+                renta.total += costo_extra
+                renta.save(update_fields=['total'])
 
             messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Nuevo total: ${detalle.subtotal}')
-        except Exception as e:
-            messages.error(request, f'Error al extender la renta: {e}')
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            messages.error(request, 'No se pudo extender la renta. Inténtalo de nuevo.')
 
     return redirect('rentas')
 
@@ -81,40 +114,61 @@ def renta_create(request):
         tiempo_str = request.POST.get('tiempo_de_renta', '60')
 
         try:
-            equipo = get_object_or_404(Equipo, pk=equipo_id)
-            cliente = get_object_or_404(Cliente, pk=cliente_id)
             tiempo = int(tiempo_str)
             if tiempo <= 0:
                 raise ValueError("El tiempo debe ser mayor a 0.")
 
-            tarifa = Decimal(str(equipo.tarifa_por_hora))
-            horas = Decimal(tiempo) / Decimal('60')
-            subtotal = (tarifa * horas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            cliente = get_object_or_404(Cliente, pk=cliente_id)
             ahora = timezone.now()
 
-            renta = Renta.objects.create(
-                usuario=request.user,
-                cliente=cliente,
-                fecha=ahora,
-                total=subtotal,
-                estado_de_pago='PENDIENTE',
-            )
+            with transaction.atomic():
+                equipo = get_object_or_404(
+                    Equipo.objects.select_for_update(), pk=equipo_id
+                )
 
-            DetalleRenta.objects.create(
-                renta=renta,
-                equipo=equipo,
-                hora_inicio=ahora,
-                tiempo_de_renta=tiempo,
-                tiempo_agregado=0,
-                hora_fin=None,
-                subtotal=subtotal,
-                estado='ACTIVA',
-            )
+                if not _equipo_es_rentable(equipo):
+                    raise ValueError(
+                        f"El equipo {equipo.nombre} no está disponible para renta "
+                        f"(estado: {equipo.get_estado_display()})."
+                    )
+
+                if DetalleRenta.objects.filter(
+                    equipo=equipo, estado__in=ESTADOS_BLOQUEANTES
+                ).exists():
+                    raise ValueError(
+                        f"El equipo {equipo.nombre} ya tiene una sesión activa "
+                        f"o pendiente de revisión."
+                    )
+
+                tarifa = Decimal(str(equipo.tarifa_por_hora))
+                horas = Decimal(tiempo) / Decimal('60')
+                subtotal = (tarifa * horas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+                renta = Renta.objects.create(
+                    usuario=request.user,
+                    cliente=cliente,
+                    fecha=ahora,
+                    total=subtotal,
+                    estado_de_pago='PENDIENTE',
+                )
+
+                DetalleRenta.objects.create(
+                    renta=renta,
+                    equipo=equipo,
+                    hora_inicio=ahora,
+                    tiempo_de_renta=tiempo,
+                    tiempo_agregado=0,
+                    hora_fin=None,
+                    subtotal=subtotal,
+                    estado='ACTIVA',
+                )
 
             messages.success(request, f'Renta iniciada para {equipo.nombre} — {tiempo} min. Total: ${subtotal}')
 
-        except Exception as e:
-            messages.error(request, f'Error al crear la renta: {e}')
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            messages.error(request, 'No se pudo crear la renta. Verifica los datos e inténtalo de nuevo.')
 
     return redirect('rentas')
 
@@ -125,17 +179,34 @@ def renta_finalizar(request):
     if request.method == 'POST':
         detalle_id = request.POST.get('detalle_renta_id')
         try:
-            detalle = get_object_or_404(DetalleRenta, pk=detalle_id)
-            detalle.estado = 'FINALIZADA'
-            detalle.hora_fin = timezone.now()
-            detalle.save(update_fields=['estado', 'hora_fin'])
+            with transaction.atomic():
+                detalle = get_object_or_404(
+                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    pk=detalle_id,
+                )
 
-            renta = detalle.renta
-            renta.estado_de_pago = 'PAGADO'
-            renta.save(update_fields=['estado_de_pago'])
+                if detalle.estado != 'ACTIVA':
+                    raise ValueError(
+                        f"La renta de {detalle.equipo.nombre} no está activa "
+                        f"(estado actual: {detalle.get_estado_display()})."
+                    )
 
-            messages.success(request, f'Renta de {detalle.equipo.nombre} finalizada y cobrada.')
-        except Exception as e:
-            messages.error(request, f'Error al finalizar la renta: {e}')
+                detalle.estado = 'PENDIENTE_REVISION'
+                detalle.hora_fin = timezone.now()
+                detalle.save(update_fields=['estado', 'hora_fin'])
+
+                renta = detalle.renta
+                renta.estado_de_pago = 'PAGADO'
+                renta.save(update_fields=['estado_de_pago'])
+
+            messages.success(
+                request,
+                f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
+                f'pendiente de revisión antes de volver a estar disponible.'
+            )
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            messages.error(request, 'No se pudo finalizar la renta. Inténtalo de nuevo.')
 
     return redirect('rentas')
