@@ -1,10 +1,12 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import admin_required
 from .forms import UsuarioCreateForm, UsuarioEditForm
 from .models import Rol, Usuario
+from .validators import validar_password_intermedia
 
 
 @login_required
@@ -27,8 +29,9 @@ def usuario_create(request):
             except Exception as e:
                 messages.error(request, f'Error al crear el usuario: {e}')
         else:
-            for error in form.errors.values():
-                messages.error(request, error.as_text().lstrip('* '))
+            for field, error_list in form.errors.items():
+                for err in error_list:
+                    messages.error(request, err)
     return redirect('usuarios')
 
 
@@ -44,14 +47,21 @@ def usuario_edit(request):
                 # Cambiar contraseña si se proporcionó una nueva
                 nueva_password = request.POST.get('nueva_password', '').strip()
                 if nueva_password:
-                    usuario_guardado.set_password(nueva_password)
+                    try:
+                        validar_password_intermedia(nueva_password, user=usuario_guardado)
+                        usuario_guardado.set_password(nueva_password)
+                    except ValidationError as e:
+                        for msg in e.messages:
+                            messages.error(request, f'Contraseña inválida: {msg}')
+                        return redirect('usuarios')
                 usuario_guardado.save()
                 messages.success(request, 'Usuario actualizado correctamente.')
             except Exception as e:
                 messages.error(request, f'Error al actualizar el usuario: {e}')
         else:
-            for error in form.errors.values():
-                messages.error(request, error.as_text().lstrip('* '))
+            for field, error_list in form.errors.items():
+                for err in error_list:
+                    messages.error(request, err)
     return redirect('usuarios')
 
 

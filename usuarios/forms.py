@@ -2,6 +2,7 @@ from django import forms
 from django.contrib.auth.forms import AuthenticationForm, ReadOnlyPasswordHashField
 
 from .models import Usuario
+from .validators import validar_password_intermedia
 
 
 class WebAuthenticationForm(AuthenticationForm):
@@ -23,6 +24,7 @@ class UsuarioCreationForm(forms.ModelForm):
     password1 = forms.CharField(
         label='Contraseña',
         widget=forms.PasswordInput,
+        help_text='Mínimo 8 caracteres, debe combinar letras y números.',
     )
     password2 = forms.CharField(
         label='Confirmar contraseña',
@@ -32,6 +34,17 @@ class UsuarioCreationForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ('username', 'nombre', 'correo', 'rol', 'activo', 'is_superuser')
+
+    def clean_password1(self):
+        password = self.cleaned_data.get('password1')
+        if password:
+            temp_user = Usuario(
+                username=self.cleaned_data.get('username'),
+                nombre=self.cleaned_data.get('nombre'),
+                correo=self.cleaned_data.get('correo'),
+            )
+            validar_password_intermedia(password, user=temp_user)
+        return password
 
     def clean_password2(self):
         password1 = self.cleaned_data.get('password1')
@@ -97,6 +110,17 @@ class UsuarioCreateForm(forms.ModelForm):
         if Usuario.objects.filter(username=username).exists():
             raise forms.ValidationError('No pueden haber dos usernames iguales.')
         return username
+
+    def clean_password(self):
+        password = self.cleaned_data.get('password')
+        if password:
+            temp_user = Usuario(
+                username=self.cleaned_data.get('username'),
+                nombre=self.cleaned_data.get('nombre'),
+                correo=self.cleaned_data.get('correo'),
+            )
+            validar_password_intermedia(password, user=temp_user)
+        return password
 
 
 class UsuarioEditForm(forms.ModelForm):

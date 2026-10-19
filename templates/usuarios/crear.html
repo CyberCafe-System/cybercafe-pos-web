@@ -38,7 +38,10 @@
 
                     <div class="mb-2">
                         <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger fw-bold">*</span></label>
-                        <input type="password" name="password" class="form-control rounded-3" placeholder="Mínimo 8 caracteres" required>
+                        <input type="password" name="password" class="form-control rounded-3" placeholder="Mínimo 8 caracteres (letras y números)" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="La contraseña debe tener al menos 8 caracteres y combinar letras y números." required>
+                        <div class="form-text small text-muted mt-1">
+                            <i class="bi bi-shield-check me-1 text-success"></i>Seguridad mínima: al menos 8 caracteres, incluyendo letras y números.
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
