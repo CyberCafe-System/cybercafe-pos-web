@@ -1,20 +1,21 @@
 <!-- Modal Eliminar Equipo -->
-<div class="modal fade" id="modalEliminarEquipo" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
+<div class="modal fade" id="modalEliminarEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-exclamation-triangle me-2"></i>Eliminar Equipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
             <form method="POST" action="{% url 'eliminar_equipo' %}">
                 {% csrf_token %}
-                <div class="modal-header">
-                    <h5 class="modal-title text-danger">Eliminar Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="equipo_id" id="eliminarEquipoId">
+                    <p>¿Estás seguro de que deseas eliminar el equipo <strong id="eliminarEquipoNombre"></strong>?</p>
+                    <p class="text-muted small">Los componentes asignados a este equipo quedarán en bodega sin asignación.</p>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" name="equipo_id" value="{{ equipo.equipo_id }}">
-                    <p>¿Desea eliminar el equipo del catálogo?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash me-1"></i> Eliminar</button>
                 </div>
             </form>
         </div>

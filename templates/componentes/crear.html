@@ -1,49 +1,70 @@
 <!-- Modal Crear Componente -->
 <div class="modal fade" id="modalCrearComponente" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow rounded-4">
             <div class="modal-header bg-dark text-white rounded-top-4">
                 <h5 class="modal-title fw-bold"><i class="bi bi-mouse2 me-2"></i>Registrar Componente</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
-            <form method="POST" action="#">
+            <form method="POST" action="{% url 'crear_componente' %}">
                 {% csrf_token %}
                 <div class="modal-body p-4">
                     <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Nombre / Tipo de Componente</label>
-                        <input type="text" name="nombre" class="form-control" placeholder="Ej. Teclado Mecánico, Mouse Gamer, Monitor 24''" required>
+                        <label class="form-label fw-semibold">Nombre del Componente <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" class="form-control" placeholder="Ej. Mouse Gamer, Teclado Mecánico" required>
                     </div>
 
                     <div class="row">
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold required-field">Marca / Modelo</label>
-                            <input type="text" name="marca_modelo" class="form-control" placeholder="Ej. Logitech G203" required>
+                            <label class="form-label fw-semibold">Marca</label>
+                            <input type="text" name="marca" class="form-control" placeholder="Ej. Logitech, Dell">
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label class="form-label fw-semibold">Número de Serie</label>
-                            <input type="text" name="numero_serie" class="form-control" placeholder="Opcional">
+                            <label class="form-label fw-semibold">Modelo</label>
+                            <input type="text" name="modelo" class="form-control" placeholder="Ej. G203, MK270">
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Asignar a Dispositivo (Equipo)</label>
-                        <select name="equipo_id" class="form-select" required>
-                            <option value="">-- Dejar en Bodega (Sin asignar) --</option>
+                        <label class="form-label fw-semibold">Número de Serie</label>
+                        <input type="text" name="numero_serie" class="form-control" placeholder="Ej. SN-A4K-98203">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo de Componente <span class="text-danger fw-bold">*</span></label>
+                            <select name="tipo" class="form-select" required>
+                                <option value="MOUSE">Mouse</option>
+                                <option value="TECLADO">Teclado</option>
+                                <option value="MONITOR">Monitor</option>
+                                <option value="CONTROL">Control</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Estado Físico <span class="text-danger fw-bold">*</span></label>
+                            <select name="estado" class="form-select" required>
+                                <option value="DISPONIBLE">Disponible</option>
+                                <option value="DANIOS_MENORES">Daños Menores</option>
+                                <option value="REQUIERE_REEMPLAZO">Requiere Reemplazo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Asignar a Equipo</label>
+                        <select name="equipo" class="form-select">
+                            <option value="">— Sin asignar (Bodega) —</option>
                             {% for equipo in equipos %}
-                                <option value="{{ equipo.id }}">{{ equipo.nombre }} ({{ equipo.tipo }})</option>
+                            <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }})</option>
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label fw-semibold required-field">Estado del Componente</label>
-                        <select name="estado" class="form-select" required>
-                            <option value="OPERATIVO">Operativo</option>
-                            <option value="EN_REVISION">En Revisión</option>
-                            <option value="DANADO">Dañado</option>
-                        </select>
+                        <label class="form-label fw-semibold">Observaciones</label>
+                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Anotaciones adicionales sobre el estado o condición"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">

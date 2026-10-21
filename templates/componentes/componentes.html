@@ -1,32 +1,139 @@
-<!-- Plantilla base de Componentes -->
 {% extends 'base.html' %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Inventario de Hardware y Periféricos</h3>
-    <button class="btn btn-dark" data-bs-toggle="modal" data-bs-target="#modalCrearComponente">Registrar Componente</button>
+    <h3><i class="bi bi-mouse2 me-2"></i>Inventario de Hardware y Periféricos</h3>
+    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearComponente">
+        <i class="bi bi-plus-circle me-1"></i> Registrar Componente
+    </button>
 </div>
 
-<div class="card shadow-sm border-0">
+<!-- Buscador -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-body">
-        <table class="table table-hover">
-            <thead>
-                <tr>
-                    <th>Nombre</th>
-                    <th>Tipo</th>
-                    <th>Asignado a</th>
-                    <th>Estado Físico</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Backend: Kelvin se la come -->
-            </tbody>
-        </table>
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="buscadorComponentes" class="form-control border-start-0"
+                placeholder="Buscar componente...">
+        </div>
+        <small class="text-muted mt-1 d-block">
+            <i class="bi bi-info-circle me-1"></i>Buscando en: <strong>Nombre, N° Serie, Tipo, Equipo Asignado y Estado</strong>
+        </small>
+    </div>
+</div>
+
+<!-- Tabla -->
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre</th>
+                        <th>N° Serie</th>
+                        <th>Tipo</th>
+                        <th>Marca / Modelo</th>
+                        <th>Asignado a</th>
+                        <th>Estado</th>
+                        <th>Activo</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for comp in componentes %}
+                    <tr class="fila-componente"
+                        data-busqueda="{{ comp.nombre|lower }} {{ comp.numero_serie|lower|default:'' }} {{ comp.get_tipo_display|lower }} {% if comp.equipo %}{{ comp.equipo.nombre|lower }}{% else %}bodega{% endif %} {{ comp.get_estado_display|lower }}">
+                        <td class="fw-semibold">{{ comp.nombre }}</td>
+                        <td class="text-muted small">{{ comp.numero_serie|default:"—" }}</td>
+                        <td>
+                            <span class="badge bg-secondary">{{ comp.get_tipo_display }}</span>
+                        </td>
+                        <td class="text-muted small">{{ comp.descripcion|default:"—" }}</td>
+                        <td>
+                            {% if comp.equipo %}
+                                <span class="badge bg-dark">{{ comp.equipo.nombre }}</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted border">Bodega</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if comp.estado == 'DISPONIBLE' %}
+                                <span class="badge bg-success">{{ comp.get_estado_display }}</span>
+                            {% elif comp.estado == 'DANIOS_MENORES' %}
+                                <span class="badge bg-warning text-dark">{{ comp.get_estado_display }}</span>
+                            {% else %}
+                                <span class="badge bg-danger">{{ comp.get_estado_display }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if comp.activo %}
+                                <span class="badge bg-success">Activo</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-componente"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarComponente"
+                                data-id="{{ comp.componente_id }}"
+                                data-nombre="{{ comp.nombre }}"
+                                data-serie="{{ comp.numero_serie|default:'' }}"
+                                data-tipo="{{ comp.tipo }}"
+                                data-estado="{{ comp.estado }}"
+                                data-equipo="{{ comp.equipo_id|default:'' }}"
+                                data-observaciones="{{ comp.observaciones|default:'' }}"
+                                title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <form method="POST" action="{% url 'desactivar_componente' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="componente_id" value="{{ comp.componente_id }}">
+                                <button type="submit" class="btn btn-sm {% if comp.activo %}btn-outline-warning{% else %}btn-outline-success{% endif %}"
+                                    title="{% if comp.activo %}Desactivar{% else %}Activar{% endif %}">
+                                    <i class="bi {% if comp.activo %}bi-toggle-on{% else %}bi-toggle-off{% endif %}"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-mouse2 fs-2 d-block mb-2"></i>
+                            No hay componentes registrados.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 {% include 'componentes/crear.html' %}
 {% include 'componentes/editar.html' %}
-{% include 'componentes/eliminar.html' %}
+
+<script>
+const buscadorComp = document.getElementById('buscadorComponentes');
+if (buscadorComp) {
+    buscadorComp.addEventListener('input', function () {
+        const termino = this.value.trim().toLowerCase();
+        document.querySelectorAll('.fila-componente').forEach(function (fila) {
+            fila.classList.toggle('d-none', !fila.dataset.busqueda.includes(termino));
+        });
+    });
+}
+
+// Pre-rellenar modal de edición
+document.querySelectorAll('.btn-editar-componente').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        document.getElementById('editCompId').value = this.dataset.id;
+        document.getElementById('editCompNombre').value = this.dataset.nombre;
+        document.getElementById('editCompSerie').value = this.dataset.serie;
+        document.getElementById('editCompTipo').value = this.dataset.tipo;
+        document.getElementById('editCompEstado').value = this.dataset.estado;
+        document.getElementById('editCompEquipo').value = this.dataset.equipo;
+        document.getElementById('editCompObservaciones').value = this.dataset.observaciones;
+    });
+});
+</script>
 {% endblock %}

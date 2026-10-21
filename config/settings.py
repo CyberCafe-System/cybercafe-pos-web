@@ -52,7 +52,10 @@ INSTALLED_APPS = [
     'categorias',
     'inventario',
     'clientes',
-    'pos_app'
+    'pos_app',
+    'equipos',
+    'componentes',
+    'rentas',
 ]
 
 AUTH_USER_MODEL = 'usuarios.Usuario'
@@ -69,6 +72,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'usuarios.middleware.BloqueoAsistenteWebMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -128,6 +132,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        },
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -135,15 +142,21 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'usuarios.validators.SeguridadIntermediaPasswordValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        },
+    },
 ]
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = env('LANGUAGE_CODE', default='en-us') #type: ignore
+LANGUAGE_CODE = env('LANGUAGE_CODE', default='es-sv') #type: ignore
 
-TIME_ZONE = env('TIME_ZONE', default='UTC') #type: ignore
+TIME_ZONE = env('TIME_ZONE', default='America/El_Salvador') #type: ignore
 
 USE_I18N = True
 
@@ -174,6 +187,14 @@ EMAIL_USE_SSL = env('EMAIL_USE_SSL')
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.Argon2PasswordHasher'
 ]
+
+# Configuración de sesión (Límite de 1 hora)
+SESSION_COOKIE_AGE = 3600
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Media files (imágenes de productos subidas)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 #configuracion de auth
 

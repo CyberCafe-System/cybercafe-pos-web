@@ -2,146 +2,278 @@
 {% load static %}
 
 {% block contenido %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Panel de Operaciones y Estadísticas</h3>
-    <span class="badge bg-dark px-3 py-2 fs-6"><i class="bi bi-calendar3 me-2"></i>Resumen General</span>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-md-3 col-sm-6">
-        <div class="card stat-card stat-card-1 shadow-sm h-100">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h6 class="text-uppercase mb-1 opacity-75">Ingresos de Hoy</h6>
-                    <h3 class="fw-bold mb-0 text-white">${{ ingresos_hoy|default:"145.50" }}</h3>
-                </div>
-                <i class="bi bi-cash-coin stat-icon"></i>
-            </div>
-        </div>
+<!-- Encabezado del Dashboard -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-speedometer2 me-2 text-coffee"></i>Panel Principal</h3>
+        <p class="text-muted small mb-0">Monitoreo de ingresos, ocupación de equipos y flujo de ventas en tiempo real.
+        </p>
     </div>
-
-    <div class="col-md-3 col-sm-6">
-        <div class="card stat-card stat-card-2 shadow-sm h-100">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h6 class="text-uppercase mb-1 opacity-75">Equipos en Uso</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ equipos_activos|default:"8 / 12" }}</h3>
-                </div>
-                <i class="bi bi-pc-display stat-icon"></i>
-            </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="bg-white border rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
+            <i class="bi bi-calendar3 text-coffee"></i>
+            <span class="text-secondary fw-semibold">{% now "d/m/Y" %}</span>
         </div>
-    </div>
-
-    <div class="col-md-3 col-sm-6">
-        <div class="card stat-card stat-card-3 shadow-sm h-100">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h6 class="text-uppercase mb-1 opacity-75">Ventas POS Hoy</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ ventas_hoy|default:"34" }}</h3>
-                </div>
-                <i class="bi bi-bag-check stat-icon"></i>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-3 col-sm-6">
-        <div class="card stat-card stat-card-4 shadow-sm h-100">
-            <div class="card-body d-flex justify-content-between align-items-center p-4">
-                <div>
-                    <h6 class="text-uppercase mb-1 opacity-75">Clientes Activos</h6>
-                    <h3 class="fw-bold mb-0 text-white">{{ total_clientes|default:"120" }}</h3>
-                </div>
-                <i class="bi bi-people stat-icon"></i>
-            </div>
-        </div>
+        {% if request.user.es_admin or request.user.es_cajero %}
+        <a href="{% url 'pos' %}"
+            class="btn btn-coffee rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
+            <i class="bi bi-cart-plus"></i>
+            <span>Nueva Venta</span>
+        </a>
+        <a href="{% url 'rentas' %}"
+            class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small text-dark">
+            <i class="bi bi-pc-display text-coffee"></i>
+            <span class="fw-medium">Nueva Renta</span>
+        </a>
+        {% endif %}
     </div>
 </div>
 
+<!-- Las 4 Islas Principales (KPI Cards) -->
+<div class="row g-3 mb-4">
+    <!-- Isla 1: Ingresos de Hoy -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 kpi-glass-card kpi-glass-espresso h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="kpi-glass-title">Ingresos de Hoy</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-wallet2 fs-5 kpi-icon-gold"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">${{ ingresos_hoy|floatformat:2 }}</h3>
+                    <div class="d-flex align-items-center">
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-graph-up-arrow me-1 kpi-icon-gold"></i> Ventas POS + Rentas
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <!-- Isla 2: Equipos en Uso -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 kpi-glass-card kpi-glass-amber h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="kpi-glass-title">Equipos en Uso</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-pc-display fs-5 kpi-icon-warm"></i>
+                    </div>
+                </div>
+                <div>
+                    <div class="d-flex align-items-baseline justify-content-between mb-2">
+                        <h3 class="mb-0 kpi-glass-value text-white font-monospace">{{ equipos_ocupados }} <span
+                                class="kpi-glass-subvalue text-white-50">/ {{ total_equipos }}</span></h3>
+                        <span class="small fw-bold text-white font-monospace">{{ porcentaje_ocupacion }}%</span>
+                    </div>
+                    <div class="progress kpi-glass-progress mb-2" style="height: 8px;">
+                        <div class="progress-bar kpi-glass-progress-bar rounded-pill" role="progressbar"
+                            style="width: {{ porcentaje_ocupacion }}%;" aria-valuenow="{{ porcentaje_ocupacion }}"
+                            aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-display me-1 kpi-icon-warm"></i> {{ equipos_libres }} equipos libres
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Isla 3: Ventas POS Hoy -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 kpi-glass-card kpi-glass-emerald h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="kpi-glass-title">Ventas POS Hoy</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-bag-check-fill fs-5 kpi-icon-mint"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ ventas_hoy }} <span
+                            class="kpi-glass-subvalue text-white-50">tickets</span></h3>
+                    <div class="d-flex align-items-center">
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-receipt me-1 kpi-icon-mint"></i> Ventas pos + Rentas
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Isla 4: Clientes Atendidos -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 kpi-glass-card kpi-glass-sapphire h-100">
+            <div class="card-body p-4 d-flex flex-column justify-content-between">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <span class="kpi-glass-title">Clientes Atendidos</span>
+                    <div class="kpi-glass-icon-box">
+                        <i class="bi bi-people-fill fs-5 kpi-icon-sky"></i>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ total_clientes }} <span
+                            class="kpi-glass-subvalue text-white-50">personas</span></h3>
+                    <div class="d-flex align-items-center">
+                        <span class="kpi-glass-pill text-white">
+                            <i class="bi bi-person-check me-1 kpi-icon-sky"></i> Clientes activos hoy
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección de Gráficas Operativas -->
 <div class="row g-4 mb-4">
-    <!-- Gráfica de Ingresos de la Semana -->
+    <!-- Gráfica 1: Ingresos Diarios (Ventas POS vs Rentas) -->
     <div class="col-lg-8">
         <div class="card shadow-sm border-0 rounded-4 h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h5 class="fw-bold mb-0"><i class="bi bi-bar-chart-line text-warning me-2"></i>Ingresos de los Últimos 7 Días</h5>
+            <div
+                class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-bar-chart-fill text-coffee me-2"></i>Ingresos Semanales (Lunes a Domingo)
+                    </h5>
+                    <small class="text-muted">Facturación del Lunes {{ inicio_semana|date:"d/m" }} al Domingo {{
+                        fin_semana|date:"d/m" }}.</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 font-monospace">
+                        Total semana: <strong class="text-coffee">${{ total_semana|floatformat:2 }}</strong>
+                    </span>
+                </div>
             </div>
-            <div class="card-body px-4 pb-4">
-                <canvas id="graficaIngresos" height="110"></canvas>
+            <div class="card-body px-4 pb-4 pt-2">
+                <div class="d-flex gap-3 mb-2 small text-muted">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #b06b05;"></span>
+                        <span>Ventas POS (${{ total_semana_ventas|floatformat:2 }})</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #0d6efd;"></span>
+                        <span>Rentas Equipos (${{ total_semana_rentas|floatformat:2 }})</span>
+                    </div>
+                </div>
+                <div style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="graficaIngresos"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- Gráfica 2: Top Productos Más Vendidos -->
     <div class="col-lg-4">
         <div class="card shadow-sm border-0 rounded-4 h-100">
-            <div class="card-header bg-white border-0 pt-4 px-4">
-                <h5 class="fw-bold mb-0"><i class="bi bi-trophy text-warning me-2"></i>Top Productos Vendidos</h5>
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos de la Semana
+                </h5>
+                <small class="text-muted">Artículos más vendidos de Lunes a Domingo.</small>
             </div>
-            <div class="card-body d-flex align-items-center justify-content-center px-4 pb-4">
-                <canvas id="graficaTopProductos" height="220"></canvas>
+            <div class="card-body px-4 pb-4 pt-2 d-flex flex-column align-items-center justify-content-center">
+                <div style="position: relative; height: 220px; width: 220px;" class="mb-3">
+                    <canvas id="graficaTopProductos"></canvas>
+                </div>
+                <div class="w-100 mt-auto">
+                    <div id="leyendaTopProductos" class="small">
+                        <!-- Leyenda interactiva poblada por JS -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
-
-<div class="card shadow-sm border-0 rounded-4">
-    <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
-        <h5 class="fw-bold mb-0"><i class="bi bi-clock-history text-warning me-2"></i>Últimas Ventas y Rentas Realizadas</h5>
-        <a href="#" class="btn btn-sm btn-coffee">Ver Todo el Historial</a>
+<!-- Tabla de Últimas Transacciones -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div
+        class="card-header bg-white border-0 pt-4 px-4 pb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-clock-history text-coffee me-2"></i>Últimas Operaciones Realizadas
+            </h5>
+            <small class="text-muted">Historial en vivo de rentas iniciadas y tickets de venta facturados.</small>
+        </div>
+        {% if request.user.es_admin %}
+        <a href="{% url 'reportes' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-journal-text me-1"></i> Ver Reporte Completo
+        </a>
+        {% endif %}
     </div>
-    <div class="card-body p-4">
+    <div class="card-body p-4 pt-0">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th># Ticket</th>
+                        <th>N° Ticket</th>
+                        <th>Tipo</th>
                         <th>Cliente</th>
                         <th>Concepto / Detalle</th>
                         <th>Atendido por</th>
                         <th>Hora</th>
-                        <th>Total</th>
-                        <th>Estado</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Estado</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for venta in ultimas_ventas %}
+                    {% for trans in ultimas_ventas %}
                     <tr>
-                        <td class="fw-bold">#{{ venta.id }}</td>
-                        <td>{{ venta.cliente.nombre|default:"Cliente General" }}</td>
-                        <td>{{ venta.concepto }}</td>
-                        <td>{{ venta.usuario.username }}</td>
-                        <td>{{ venta.fecha_hora|date:"H:i A" }}</td>
-                        <td class="fw-bold text-success">${{ venta.total }}</td>
-                        <td><span class="badge bg-success">Pagado</span></td>
+                        <td class="fw-bold font-monospace text-dark">
+                            {{ trans.id }}
+                        </td>
+                        <td>
+                            {% if trans.es_venta %}
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #f7ede2; color: #855204; font-weight: 500;">
+                                <i class="bi bi-cart4 me-1"></i>Venta POS
+                            </span>
+                            {% else %}
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #eff6ff; color: #1d4ed8; font-weight: 500;">
+                                <i class="bi bi-pc-display me-1"></i>Renta
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-dark">{{ trans.cliente_nombre }}</span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ trans.concepto }}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">
+                                {{ trans.usuario.username|default:"Sistema" }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ trans.fecha_hora|date:"d/m H:i A" }}
+                        </td>
+                        <td class="fw-bold font-monospace text-end text-success">
+                            ${{ trans.total }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-1"
+                                style="background-color: #ecfdf5; color: #047857; font-weight: 600;">
+                                {{ trans.estado }}
+                            </span>
+                        </td>
                     </tr>
                     {% empty %}
-                    <!-- Datos de muestra mientras el backend conecta la vista -->
                     <tr>
-                        <td class="fw-bold">#1045</td>
-                        <td>Carlos Mendoza</td>
-                        <td>Renta PC-03 (2 Horas) + 1x Café Helado</td>
-                        <td>admin</td>
-                        <td>04:15 PM</td>
-                        <td class="fw-bold text-success">$4.50</td>
-                        <td><span class="badge bg-success">Completado</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold">#1044</td>
-                        <td>Cliente General</td>
-                        <td>2x Doritos Nacho, 2x Coca-Cola Lata</td>
-                        <td>cajero1</td>
-                        <td>03:50 PM</td>
-                        <td class="fw-bold text-success">$3.80</td>
-                        <td><span class="badge bg-success">Completado</span></td>
-                    </tr>
-                    <tr>
-                        <td class="fw-bold">#1043</td>
-                        <td>Andrea Gómez</td>
-                        <td>Renta Consola PS5-01 (1 Hora)</td>
-                        <td>cajero1</td>
-                        <td>03:10 PM</td>
-                        <td class="fw-bold text-success">$2.00</td>
-                        <td><span class="badge bg-success">Completado</span></td>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-receipt fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay transacciones registradas el día de hoy todavía.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -149,48 +281,164 @@
         </div>
     </div>
 </div>
+<!-- Contenedor seguro de datos para gráficas (inmune a autoformateadores) -->
+<div id="chart-meta-data" class="d-none"
+    data-dias='{{ chart_dias_labels }}'
+    data-ventas='{{ chart_ventas_data }}'
+    data-rentas='{{ chart_rentas_data }}'
+    data-top-labels='{{ chart_top_labels }}'
+    data-top-data='{{ chart_top_data }}'
+    data-tiene-top="{% if tiene_datos_top %}1{% else %}0{% endif %}">
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  
-    const ctxIngresos = document.getElementById('graficaIngresos').getContext('2d');
-    new Chart(ctxIngresos, {
-        type: 'bar',
-        data: {
-            labels: ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'],
-            datasets: [{
-                label: 'Ingresos ($ USD)',
-                data: [85, 92, 78, 110, 145, 190, 160],
-                backgroundColor: '#b06b05',
-                borderRadius: 6
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true } }
-        }
-    });
+    const metaEl = document.getElementById('chart-meta-data');
+    const diasLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-dias') : '[]');
+    const ventasData = JSON.parse(metaEl ? metaEl.getAttribute('data-ventas') : '[]');
+    const rentasData = JSON.parse(metaEl ? metaEl.getAttribute('data-rentas') : '[]');
+    const topLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-top-labels') : '[]');
+    const topData = JSON.parse(metaEl ? metaEl.getAttribute('data-top-data') : '[]');
+    const tieneDatosTop = metaEl ? (metaEl.getAttribute('data-tiene-top') === '1') : false;
 
-    
-    const ctxTop = document.getElementById('graficaTopProductos').getContext('2d');
-    new Chart(ctxTop, {
-        type: 'doughnut',
-        data: {
-            labels: ['Café Frappé', 'Coca-Cola', 'Maruchan', 'Doritos', 'Galletas'],
-            datasets: [{
-                data: [35, 25, 20, 12, 8],
-                backgroundColor: ['#2c1e16', '#b06b05', '#198754', '#0d6efd', '#6c757d'],
-                borderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom' }
+    // 1. Gráfica de Ingresos de la Semana (Lunes a Domingo)
+    const ctxIngresos = document.getElementById('graficaIngresos');
+    if (ctxIngresos) {
+        new Chart(ctxIngresos.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: diasLabels,
+                datasets: [
+                    {
+                        label: 'Ventas POS ($)',
+                        data: ventasData,
+                        backgroundColor: '#b06b05',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
+                    },
+                    {
+                        label: 'Rentas de Equipos ($)',
+                        data: rentasData,
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f1b18',
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += '$' + context.parsed.y.toFixed(2);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return '$' + value;
+                            }
+                        },
+                        grid: {
+                            color: '#f0edea'
+                        }
+                    }
+                }
             }
+        });
+    }
+
+    // 2. Gráfica Donut: Top 5 Productos de la Semana
+    const ctxTop = document.getElementById('graficaTopProductos');
+    if (ctxTop) {
+        const paletaColores = ['#b06b05', '#2c1e16', '#198754', '#0d6efd', '#6f42c1'];
+        const colores = tieneDatosTop ? paletaColores.slice(0, topLabels.length) : ['#e9ecef'];
+
+        new Chart(ctxTop.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: topLabels,
+                datasets: [{
+                    data: topData,
+                    backgroundColor: colores,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '72%',
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f1b18',
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function (context) {
+                                if (!tieneDatosTop) return ' Sin ventas registradas';
+                                return ` ${context.label}: ${context.raw} unidades`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Generar lista estilizada de leyenda debajo de la gráfica
+        const contenedorLeyenda = document.getElementById('leyendaTopProductos');
+        if (contenedorLeyenda && tieneDatosTop) {
+            let htmlLeyenda = '<div class="d-flex flex-column gap-1">';
+            topLabels.forEach((label, idx) => {
+                const color = paletaColores[idx % paletaColores.length];
+                const cantidad = topData[idx];
+                htmlLeyenda += `
+                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
+                        <div class="d-flex align-items-center gap-2 text-truncate" style="max-width: 170px;">
+                            <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background-color: ${color};"></span>
+                            <span class="text-truncate fw-medium text-dark">${label}</span>
+                        </div>
+                        <span class="badge bg-light text-dark border font-monospace">${cantidad} uds</span>
+                    </div>
+                `;
+            });
+            htmlLeyenda += '</div>';
+            contenedorLeyenda.innerHTML = htmlLeyenda;
+        } else if (contenedorLeyenda) {
+            contenedorLeyenda.innerHTML = '<p class="text-center text-muted mb-0 py-2">Registra ventas en el POS para ver el ranking aquí.</p>';
         }
-    });
+    }
 </script>
 {% endblock %}

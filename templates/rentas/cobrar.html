@@ -1,0 +1,63 @@
+<!-- Modal de Confirmación de Cobro de Renta -->
+<div class="modal fade" id="modalCobroRenta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <form method="POST" action="{% url 'finalizar_renta' %}" target="_blank">
+                {% csrf_token %}
+                <input type="hidden" name="detalle_renta_id" id="cobroDetalleId">
+
+                <div class="modal-header bg-dark text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-cash-stack me-2 text-warning"></i>Cobro de Sesión de Renta</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Resumen de Sesión -->
+                    <div class="bg-light p-3 rounded-4 mb-3 border">
+                        <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                            <div>
+                                <h6 class="fw-bold mb-0 text-dark" id="cobroEquipoNombre">--</h6>
+                                <small class="text-muted" id="cobroClienteNombre">--</small>
+                            </div>
+                            <span class="badge bg-warning text-dark px-3 py-1 rounded-pill">
+                                <i class="bi bi-clock me-1"></i><span id="cobroTiempoTotal">--</span>
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted fw-semibold">Total a Cobrar:</span>
+                            <span class="fw-bold text-success fs-3 font-monospace" id="cobroTotalTexto">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Calculadora Rápida de Cambio/Vuelto -->
+                    <div class="card border rounded-4 p-3 bg-white mb-2 shadow-xs">
+                        <label class="form-label fw-semibold small text-muted mb-1">
+                            <i class="bi bi-calculator me-1"></i>Calculadora de Vuelto / Efectivo:
+                        </label>
+                        <div class="input-group mb-2">
+                            <span class="input-group-text bg-light fw-bold">$</span>
+                            <input type="number" step="0.01" id="inputPagaConRenta" class="form-control font-monospace fs-5 fw-bold" placeholder="0.00">
+                        </div>
+                        <div class="d-flex flex-wrap gap-1 mb-3">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="exacto">Exacto</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="1">$1</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="2">$2</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="5">$5</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="10">$10</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-cobro" data-monto="20">$20</button>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
+                            <span class="small fw-semibold text-muted">Cambio / Vuelto:</span>
+                            <strong class="fs-5 font-monospace text-dark" id="cobroVueltoTexto">$0.00</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success rounded-pill px-4 shadow">
+                        <i class="bi bi-check2-circle me-1"></i> Confirmar Cobro y Liberar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

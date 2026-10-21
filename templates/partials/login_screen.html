@@ -15,9 +15,23 @@
         <form method="POST" action="{{ form_action }}">
             {% csrf_token %}
 
+            {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}warning{% endif %} rounded-4 py-2 text-center small mb-3">
+                {{ message }}
+            </div>
+            {% endfor %}
+            {% endif %}
+
             {% if form.errors %}
             <div class="alert alert-danger rounded-4 py-2 text-center small mb-3">
-                Usuario o contraseña incorrectos.
+                {% if form.non_field_errors %}
+                    {% for error in form.non_field_errors %}
+                        {{ error }}<br>
+                    {% endfor %}
+                {% else %}
+                    Usuario o contraseña incorrectos.
+                {% endif %}
             </div>
             {% endif %}
 
@@ -30,7 +44,8 @@
                     <div class="icon-circle-glass"><i class="bi bi-person-fill"></i></div>
                     Nombre de Usuario
                 </label>
-                <input type="text" name="username" class="form-control glass-input" required autofocus>
+                <input type="text" name="username" class="form-control glass-input"
+                    placeholder="Ingresa tu nombre de usuario" required autofocus>
             </div>
 
             <div class="mb-4">
@@ -38,7 +53,8 @@
                     <div class="icon-circle-glass"><i class="bi bi-lock-fill"></i></div>
                     Contraseña
                 </label>
-                <input type="password" name="password" class="form-control glass-input" placeholder="••••••••••••" required>
+                <input type="password" name="password" class="form-control glass-input"
+                    placeholder="Ingresa tu contraseña" required>
             </div>
 
             <div class="text-center mt-5">
@@ -48,7 +64,7 @@
 
         <div class="text-center mt-4 glass-footer">
             Si olvidaste tu contraseña.<br>
-            <a href="#" class="glass-link">Notifica al Administrador</a>
+            Notifica al Administrador
         </div>
 
     </div>

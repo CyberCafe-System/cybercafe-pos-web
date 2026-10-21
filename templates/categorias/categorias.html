@@ -3,12 +3,16 @@
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h3>Administración de Categorías</h3>
+    <div>
+        <h3 class="mb-0"><i class="bi bi-tags me-2"></i>Administración de Categorías</h3>
+        <p class="text-muted small mb-0">Agrupación lógica de productos para el catálogo del punto de venta.</p>
+    </div>
+    {% if request.user.es_admin %}
     <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearCategoria">
         <i class="bi bi-plus-circle me-1"></i> Nueva Categoría
     </button>
+    {% endif %}
 </div>
-
 
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-body">
@@ -16,7 +20,11 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorCategorias" class="form-control border-start-0" placeholder="Buscar categoría por nombre...">
+                    <input type="text" id="buscadorCategorias" class="form-control border-start-0" placeholder="Buscar categoría...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre</strong> y <strong class="text-dark">Descripción</strong></span>
                 </div>
             </div>
         </div>
@@ -30,18 +38,18 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>ID</th>
                         <th>Nombre de la Categoría</th>
                         <th>Descripción</th>
                         <th>Estado</th>
+                        {% if request.user.es_admin %}
                         <th class="text-end">Acciones</th>
+                        {% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% for categoria in categorias %}
                     <tr class="fila-categoria" data-busqueda="{{ categoria.nombre|lower }} {{ categoria.descripcion|default:''|lower }}">
-                        <td class="fw-bold">#{{ categoria.categoria_id }}</td>
-                        <td class="fw-semibold">{{ categoria.nombre }}</td>
+                        <td class="fw-semibold text-dark">{{ categoria.nombre }}</td>
                         <td class="text-muted">{{ categoria.descripcion|default:"Sin descripción" }}</td>
                         <td>
                             {% if categoria.activa %}
@@ -50,6 +58,7 @@
                                 <span class="badge bg-secondary">Inactiva</span>
                             {% endif %}
                         </td>
+                        {% if request.user.es_admin %}
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria"
                                 data-id="{{ categoria.categoria_id }}" data-nombre="{{ categoria.nombre }}" data-descripcion="{{ categoria.descripcion|default:'' }}" title="Editar">
@@ -69,19 +78,20 @@
                                 {% endif %}
                             </form>
                         </td>
+                        {% endif %}
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="5" class="text-center text-muted py-4">
-                            <i class="bi bi-tags fs-2 d-block mb-2"></i>
+                        <td colspan="{% if request.user.es_admin %}4{% else %}3{% endif %}" class="text-center text-muted py-5">
+                            <i class="bi bi-tags fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay categorías registradas aún.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosCategorias" class="d-none">
-                        <td colspan="5" class="text-center text-muted py-4">
+                        <td colspan="4" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
-                            No se encontraron categorías.
+                            No se encontraron categorías que coincidan con la búsqueda.
                         </td>
                     </tr>
                 </tbody>
@@ -89,7 +99,6 @@
         </div>
     </div>
 </div>
-
 
 {% include 'categorias/crear.html' %}
 {% include 'categorias/editar.html' %}
