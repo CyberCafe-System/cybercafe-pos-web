@@ -2,7 +2,7 @@
 <div class="modal fade" id="modalCobroRenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
-            <form method="POST" action="{% url 'finalizar_renta' %}" target="_blank">
+            <form method="POST" action="{% url 'finalizar_renta' %}" target="_blank" id="formCobroRenta">
                 {% csrf_token %}
                 <input type="hidden" name="detalle_renta_id" id="cobroDetalleId">
 
@@ -50,10 +50,26 @@
                             <strong class="fs-5 font-monospace text-dark" id="cobroVueltoTexto">$0.00</strong>
                         </div>
                     </div>
+
+                    <!-- Checklist de Envío de Comprobante por Correo Electrónico -->
+                    <div class="card border rounded-4 p-3 bg-white mb-2 shadow-xs">
+                        <div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
+                            <input class="form-check-input mt-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoRenta" value="1" checked>
+                            <label class="form-check-label fw-semibold text-dark mb-0" for="checkEnviarCorreoRenta" style="cursor: pointer;">
+                                <i class="bi bi-envelope-at-fill text-primary me-1"></i> Enviar comprobante al correo del cliente
+                            </label>
+                        </div>
+                        <div id="infoCorreoClienteRentaContainer" class="small text-muted mt-2 ps-4">
+                            <span id="textoCorreoDestinoRenta" class="text-secondary fst-italic"></span>
+                        </div>
+                        <div class="mt-1 ps-4 text-muted" style="font-size: 0.75rem;">
+                            <i class="bi bi-send-check text-success me-1"></i>Remitente: <strong class="text-dark">thecoffeelan@gmail.com</strong>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-success rounded-pill px-4 shadow">
+                    <button type="submit" id="btnConfirmarCobroRenta" class="btn btn-success rounded-pill px-4 shadow">
                         <i class="bi bi-check2-circle me-1"></i> Confirmar Cobro y Liberar
                     </button>
                 </div>

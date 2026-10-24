@@ -145,6 +145,7 @@
                             data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
                             data-equipo-nombre="{{ equipo.nombre }}"
                             data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
+                            data-cliente-correo="{{ equipo.renta_activa.renta.cliente.correo|default:'' }}"
                             data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
                             data-total="{{ equipo.renta_activa.subtotal|unlocalize }}"
                             title="Finalizar y Cobrar Sesión">
@@ -665,6 +666,22 @@ document.addEventListener('DOMContentLoaded', function () {
                 inputPaga.value = '';
                 actualizarVueltoCobro();
             }
+
+            // Gestionar checklist de envío de factura por correo
+            const correo = (this.dataset.clienteCorreo || '').trim();
+            const checkCorreo = document.getElementById('checkEnviarCorreoRenta');
+            const textoDestino = document.getElementById('textoCorreoDestinoRenta');
+            if (checkCorreo && textoDestino) {
+                if (correo) {
+                    checkCorreo.disabled = false;
+                    checkCorreo.checked = true;
+                    textoDestino.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Se enviará a: <strong class="text-dark">${correo}</strong>`;
+                } else {
+                    checkCorreo.checked = false;
+                    checkCorreo.disabled = true;
+                    textoDestino.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Este cliente no tiene correo registrado.`;
+                }
+            }
         });
     });
 
@@ -720,6 +737,29 @@ document.addEventListener('DOMContentLoaded', function () {
             if (inputPaga) {
                 inputPaga.focus();
             }
+        });
+    }
+
+    // Al confirmar cobro de renta: abrir factura PDF en pestaña nueva y refrescar rentas
+    const formCobroRenta = document.getElementById('formCobroRenta');
+    const btnConfirmarCobroRenta = document.getElementById('btnConfirmarCobroRenta');
+    if (formCobroRenta) {
+        formCobroRenta.addEventListener('submit', function () {
+            if (btnConfirmarCobroRenta) {
+                btnConfirmarCobroRenta.disabled = true;
+                btnConfirmarCobroRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
+            }
+            if (modalCobroEl && window.bootstrap) {
+                setTimeout(function () {
+                    const modalInstance = bootstrap.Modal.getInstance(modalCobroEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 600);
+            }
+            setTimeout(function () {
+                window.location.reload();
+            }, 1800);
         });
     }
 

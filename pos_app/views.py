@@ -389,7 +389,20 @@ def procesar_venta(request):
 
     request.session['carrito'] = {}
     request.session['ultima_venta_id'] = venta.venta_id
-    messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
+
+    # Enviar factura por correo si el checklist está activado
+    enviar_correo = bool(request.POST.get('enviar_correo'))
+    if enviar_correo and cliente.correo:
+        from config.servicios_email import enviar_factura_venta_correo
+        ok, msg_correo = enviar_factura_venta_correo(venta)
+        if ok:
+            messages.success(request, f'Venta #{venta.venta_id} registrada. Factura enviada a {cliente.correo}.')
+        else:
+            messages.warning(request, f'Venta #{venta.venta_id} registrada. (Aviso de correo: {msg_correo})')
+    elif enviar_correo and not cliente.correo:
+        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrónico registrado).')
+    else:
+        messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
 
     return _respuesta_pdf(venta)
 

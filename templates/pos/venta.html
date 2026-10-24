@@ -20,7 +20,9 @@
                         <select name="cliente_id" id="posSelectCliente" class="form-select form-select-lg rounded-3" required>
                             <option value="" selected disabled>Seleccione un cliente...</option>
                             {% for cliente in clientes %}
-                            <option value="{{ cliente.cliente_id }}">{{ cliente.nombre }} {{ cliente.apellido }}</option>
+                            <option value="{{ cliente.cliente_id }}" data-correo="{{ cliente.correo|default:'' }}" data-nombre="{{ cliente.nombre }} {{ cliente.apellido }}">
+                                {{ cliente.nombre }} {{ cliente.apellido }} {% if cliente.correo %}({{ cliente.correo }}){% else %}[Sin correo]{% endif %}
+                            </option>
                             {% endfor %}
                         </select>
                     </div>
@@ -33,7 +35,7 @@
                     </div>
 
                     <!-- Calculadora Rápida de Cambio/Vuelto -->
-                    <div class="card border rounded-4 p-3 bg-white mb-2 shadow-xs">
+                    <div class="card border rounded-4 p-3 bg-white mb-3 shadow-xs">
                         <label class="form-label fw-semibold small text-muted mb-1">
                             <i class="bi bi-calculator me-1"></i>Calculadora de Vuelto / Efectivo:
                         </label>
@@ -52,6 +54,24 @@
                         <div class="d-flex justify-content-between align-items-center p-2 rounded-3 bg-light border">
                             <span class="small fw-semibold text-muted">Cambio / Vuelto:</span>
                             <strong class="fs-5 font-monospace text-dark" id="cobroVueltoTextoVenta">$0.00</strong>
+                        </div>
+                    </div>
+
+                    <!-- Checklist de Envío de Factura por Correo Electrónico -->
+                    <div class="card border rounded-4 p-3 bg-white mb-3 shadow-xs">
+                        <div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
+                            <input class="form-check-input mt-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoVenta" value="1" checked>
+                            <label class="form-check-label fw-semibold text-dark mb-0" for="checkEnviarCorreoVenta" style="cursor: pointer;">
+                                <i class="bi bi-envelope-at-fill text-primary me-1"></i> Enviar factura al correo electrónico del cliente
+                            </label>
+                        </div>
+                        <div id="infoCorreoClienteContainer" class="small text-muted mt-2 ps-4">
+                            <span id="textoCorreoDestino" class="text-secondary fst-italic">
+                                <i class="bi bi-info-circle me-1"></i>Seleccione un cliente para verificar su correo.
+                            </span>
+                        </div>
+                        <div class="mt-1 ps-4 text-muted" style="font-size: 0.75rem;">
+                            <i class="bi bi-send-check text-success me-1"></i>Remitente: <strong class="text-dark">thecoffeelan@gmail.com</strong>
                         </div>
                     </div>
 

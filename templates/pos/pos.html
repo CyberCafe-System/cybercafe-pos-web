@@ -495,6 +495,38 @@
             });
         });
 
+        const selectClientePos = document.getElementById('posSelectCliente');
+        const checkCorreoVenta = document.getElementById('checkEnviarCorreoVenta');
+        const textoCorreoDestino = document.getElementById('textoCorreoDestino');
+
+        function actualizarInfoCorreoCliente() {
+            if (!selectClientePos || !checkCorreoVenta || !textoCorreoDestino) return;
+            const opt = selectClientePos.options[selectClientePos.selectedIndex];
+            if (!opt || !opt.value) {
+                textoCorreoDestino.innerHTML = '<i class="bi bi-info-circle me-1"></i>Seleccione un cliente para verificar su correo registrado.';
+                textoCorreoDestino.className = 'text-secondary fst-italic';
+                checkCorreoVenta.disabled = false;
+                return;
+            }
+
+            const correo = (opt.dataset.correo || '').trim();
+            if (correo) {
+                textoCorreoDestino.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+                textoCorreoDestino.className = 'text-success';
+                checkCorreoVenta.disabled = false;
+                checkCorreoVenta.checked = true;
+            } else {
+                textoCorreoDestino.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado en su ficha.';
+                textoCorreoDestino.className = 'text-warning fw-semibold';
+                checkCorreoVenta.checked = false;
+                checkCorreoVenta.disabled = true;
+            }
+        }
+
+        if (selectClientePos) {
+            selectClientePos.addEventListener('change', actualizarInfoCorreoCliente);
+        }
+
         const modalVentaEl = document.getElementById('modalProcesarVenta');
         if (modalVentaEl) {
             modalVentaEl.addEventListener('shown.bs.modal', function () {
@@ -504,23 +536,31 @@
                     actualizarVueltoVenta();
                     inputPaga.focus();
                 }
+                actualizarInfoCorreoCliente();
             });
         }
 
         // Al enviar el formulario de venta: abre PDF en pestaña nueva y refresca el POS
         const formVenta = document.getElementById('formProcesarVenta');
+        const btnCompletarVenta = document.getElementById('btnCompletarVenta');
         if (formVenta) {
             formVenta.addEventListener('submit', function () {
+                if (btnCompletarVenta) {
+                    btnCompletarVenta.disabled = true;
+                    btnCompletarVenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
+                }
                 const modalElement = document.getElementById('modalProcesarVenta');
                 if (modalElement && window.bootstrap) {
-                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
+                    setTimeout(function () {
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    }, 600);
                 }
                 setTimeout(function () {
                     window.location.reload();
-                }, 800);
+                }, 1800);
             });
         }
     });

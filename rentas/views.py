@@ -209,11 +209,34 @@ def renta_finalizar(request):
                 renta.estado_de_pago = 'PAGADO'
                 renta.save(update_fields=['estado_de_pago'])
 
-            messages.success(
-                request,
-                f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
-                f'pendiente de revisión antes de volver a estar disponible.'
-            )
+            # Enviar comprobante por correo si el checklist está activado
+            enviar_correo = bool(request.POST.get('enviar_correo'))
+            cliente_correo = renta.cliente.correo if renta.cliente else None
+            if enviar_correo and cliente_correo:
+                from config.servicios_email import enviar_factura_renta_correo
+                ok, msg_correo = enviar_factura_renta_correo(renta)
+                if ok:
+                    messages.success(
+                        request,
+                        f'Renta de {detalle.equipo.nombre} cobrada. Factura enviada por correo a {cliente_correo}.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Renta de {detalle.equipo.nombre} cobrada. (Aviso de correo: {msg_correo})'
+                    )
+            elif enviar_correo and not cliente_correo:
+                messages.info(
+                    request,
+                    f'Renta de {detalle.equipo.nombre} cobrada. (El cliente no tiene correo electrónico registrado).'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
+                    f'pendiente de revisión antes de volver a estar disponible.'
+                )
+
             request.session['ultima_renta_id'] = renta.renta_id
             return _respuesta_factura_renta(renta)
         except ValueError as e:
