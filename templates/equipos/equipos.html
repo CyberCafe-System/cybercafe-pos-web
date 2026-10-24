@@ -54,8 +54,7 @@
                             <div class="d-flex align-items-center gap-2">
                                 <span
                                     class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
-                                    <i class="bi bi-motherboard me-1"></i>{{ total_comp }} asignado{{
-                                    total_comp|pluralize:"s" }}
+                                    <i class="bi bi-motherboard me-1"></i>{{ total_comp }} asignado{{ total_comp|pluralize:"s" }}
                                 </span>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 btn-ver-componentes"
@@ -83,8 +82,7 @@
                                         <div>
                                             <div class="fw-bold text-dark">{{ c.nombre }}</div>
                                             <div class="text-muted small">
-                                                <span class="badge bg-light text-dark border me-1">{{ c.get_tipo_display
-                                                    }}</span>
+                                                <span class="badge bg-light text-dark border me-1">{{ c.get_tipo_display }}</span>
                                                 {% if c.numero_serie %}<span class="text-secondary">S/N:
                                                     <code>{{ c.numero_serie }}</code></span>{% endif %}
                                             </div>
@@ -99,8 +97,7 @@
                                             class="badge bg-warning-subtle text-warning border border-warning-subtle">Daños
                                             Menores</span>
                                         {% else %}
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{
-                                            c.get_estado_display }}</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ c.get_estado_display }}</span>
                                         {% endif %}
                                     </div>
                                 </div>
@@ -211,10 +208,56 @@
         cb.addEventListener('change', actualizarContadorCrear);
     });
 
+    // Buscador interactivo en modal Crear Equipo (busca por nombre y categoría)
+    const inputBuscarCompCrear = document.getElementById('buscarCompCrear');
+    const btnLimpiarBuscarCompCrear = document.getElementById('btnLimpiarBuscarCompCrear');
+    const noMatchCompCrear = document.getElementById('noMatchCompCrear');
+
+    function filtrarCompCrear() {
+        const query = (inputBuscarCompCrear ? inputBuscarCompCrear.value : '').trim().toLowerCase();
+        if (btnLimpiarBuscarCompCrear) {
+            btnLimpiarBuscarCompCrear.classList.toggle('d-none', !query);
+        }
+
+        const items = document.querySelectorAll('.item-comp-crear');
+        let coincidencias = 0;
+
+        items.forEach(item => {
+            const textoBusqueda = (item.dataset.busqueda || '').toLowerCase();
+            const coincide = !query || textoBusqueda.includes(query);
+            item.classList.toggle('d-none', !coincide);
+            item.classList.toggle('d-flex', coincide);
+            if (coincide) coincidencias++;
+        });
+
+        if (noMatchCompCrear) {
+            const totalItems = items.length;
+            noMatchCompCrear.classList.toggle('d-none', coincidencias > 0 || totalItems === 0);
+            noMatchCompCrear.classList.toggle('d-flex', coincidencias === 0 && totalItems > 0 && query.length > 0);
+        }
+    }
+
+    if (inputBuscarCompCrear) {
+        inputBuscarCompCrear.addEventListener('input', filtrarCompCrear);
+    }
+    if (btnLimpiarBuscarCompCrear) {
+        btnLimpiarBuscarCompCrear.addEventListener('click', function () {
+            if (inputBuscarCompCrear) {
+                inputBuscarCompCrear.value = '';
+                filtrarCompCrear();
+                inputBuscarCompCrear.focus();
+            }
+        });
+    }
+
     const modalCrear = document.getElementById('modalCrearEquipo');
     if (modalCrear) {
         modalCrear.addEventListener('show.bs.modal', function () {
             document.querySelectorAll('.check-comp-crear').forEach(cb => cb.checked = false);
+            if (inputBuscarCompCrear) {
+                inputBuscarCompCrear.value = '';
+            }
+            filtrarCompCrear();
             actualizarContadorCrear();
         });
     }
@@ -232,10 +275,70 @@
         cb.addEventListener('change', actualizarContadorEditar);
     });
 
+    // Buscador interactivo en modal Modificar Equipo (busca por nombre y categoría)
+    let currentEditingEquipoId = '';
+    const inputBuscarCompEditar = document.getElementById('buscarCompEditar');
+    const btnLimpiarBuscarCompEditar = document.getElementById('btnLimpiarBuscarCompEditar');
+    const noMatchCompEditar = document.getElementById('noMatchCompEditar');
+
+    function filtrarCompEditar() {
+        const query = (inputBuscarCompEditar ? inputBuscarCompEditar.value : '').trim().toLowerCase();
+        if (btnLimpiarBuscarCompEditar) {
+            btnLimpiarBuscarCompEditar.classList.toggle('d-none', !query);
+        }
+
+        let visibles = 0;
+        let elegiblesTotal = 0;
+
+        document.querySelectorAll('.item-comp-edit').forEach(item => {
+            const itemEqId = item.dataset.equipoId ? String(item.dataset.equipoId) : '';
+            const esElegible = !itemEqId || itemEqId === String(currentEditingEquipoId);
+
+            if (esElegible) {
+                elegiblesTotal++;
+                const textoBusqueda = (item.dataset.busqueda || '').toLowerCase();
+                const coincide = !query || textoBusqueda.includes(query);
+
+                item.classList.toggle('d-none', !coincide);
+                item.classList.toggle('d-flex', coincide);
+                if (coincide) visibles++;
+            } else {
+                item.classList.remove('d-flex');
+                item.classList.add('d-none');
+            }
+        });
+
+        const emptyDiv = document.getElementById('emptyCompEditar');
+        if (emptyDiv) {
+            emptyDiv.classList.toggle('d-none', elegiblesTotal > 0);
+            emptyDiv.classList.toggle('d-flex', elegiblesTotal === 0);
+        }
+
+        if (noMatchCompEditar) {
+            const hayNoMatch = elegiblesTotal > 0 && visibles === 0 && query.length > 0;
+            noMatchCompEditar.classList.toggle('d-none', !hayNoMatch);
+            noMatchCompEditar.classList.toggle('d-flex', hayNoMatch);
+        }
+    }
+
+    if (inputBuscarCompEditar) {
+        inputBuscarCompEditar.addEventListener('input', filtrarCompEditar);
+    }
+    if (btnLimpiarBuscarCompEditar) {
+        btnLimpiarBuscarCompEditar.addEventListener('click', function () {
+            if (inputBuscarCompEditar) {
+                inputBuscarCompEditar.value = '';
+                filtrarCompEditar();
+                inputBuscarCompEditar.focus();
+            }
+        });
+    }
+
     // Pre-rellenar modal de edición
     document.querySelectorAll('.btn-editar-equipo').forEach(btn => {
         btn.addEventListener('click', function () {
             const eqId = this.dataset.id;
+            currentEditingEquipoId = eqId;
             document.getElementById('editEquipoId').value = eqId;
             document.getElementById('editEquipoNombre').value = this.dataset.nombre;
             document.getElementById('editEquipoTipo').value = this.dataset.tipo;
@@ -244,6 +347,13 @@
             document.getElementById('editEquipoEstado').value = this.dataset.estado;
             document.getElementById('editEquipoDescripcion').value = this.dataset.descripcion;
 
+            if (inputBuscarCompEditar) {
+                inputBuscarCompEditar.value = '';
+            }
+            if (btnLimpiarBuscarCompEditar) {
+                btnLimpiarBuscarCompEditar.classList.add('d-none');
+            }
+
             let compIds = [];
             try {
                 compIds = JSON.parse(this.dataset.componentes || '[]');
@@ -251,18 +361,13 @@
                 compIds = [];
             }
 
-            let visibleCount = 0;
             document.querySelectorAll('.item-comp-edit').forEach(item => {
                 const itemEqId = item.dataset.equipoId ? String(item.dataset.equipoId) : '';
                 const cb = item.querySelector('.check-comp-edit');
                 const statusBadge = item.querySelector('.badge-comp-status');
 
-                // Solo mostrar si está libre (en bodega) o asignado a ESTE equipo
+                // Solo si está libre (en bodega) o asignado a ESTE equipo
                 if (!itemEqId || itemEqId === String(eqId)) {
-                    item.classList.remove('d-none');
-                    item.classList.add('d-flex');
-                    visibleCount++;
-
                     const isAssigned = compIds.includes(parseInt(cb.value));
                     cb.checked = isAssigned;
 
@@ -276,19 +381,11 @@
                         }
                     }
                 } else {
-                    // Pertenece a otro equipo -> ocultar completamente
-                    item.classList.remove('d-flex');
-                    item.classList.add('d-none');
                     if (cb) cb.checked = false;
                 }
             });
 
-            const emptyDiv = document.getElementById('emptyCompEditar');
-            if (emptyDiv) {
-                emptyDiv.classList.toggle('d-none', visibleCount > 0);
-                emptyDiv.classList.toggle('d-flex', visibleCount === 0);
-            }
-
+            filtrarCompEditar();
             actualizarContadorEditar();
         });
     });
