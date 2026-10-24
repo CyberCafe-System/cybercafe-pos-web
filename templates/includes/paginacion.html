@@ -1,0 +1,49 @@
+<!-- Componente de Paginación Reutilizable (10 registros por página) -->
+{% if page_obj and page_obj.paginator.count > 0 %}
+<nav aria-label="Navegación de páginas" class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4 pt-3 border-top">
+    <div class="small text-muted">
+        Mostrando <span class="fw-bold text-dark">{{ page_obj.start_index }}</span> a <span class="fw-bold text-dark">{{ page_obj.end_index }}</span> de <span class="fw-bold text-dark">{{ page_obj.paginator.count }}</span> registros
+    </div>
+    <ul class="pagination pagination-sm mb-0 align-items-center gap-1">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link rounded-pill px-3 shadow-2xs" href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page=1" title="Primera página">
+                <i class="bi bi-chevron-double-left"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link rounded-pill px-3 shadow-2xs" href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">
+                <i class="bi bi-chevron-left me-1"></i> Anterior
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link rounded-pill px-3 text-muted opacity-50"><i class="bi bi-chevron-left me-1"></i> Anterior</span>
+        </li>
+        {% endif %}
+
+        <li class="page-item">
+            <span class="page-link rounded-pill px-3 bg-coffee border-0 text-white fw-bold shadow-xs">
+                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+            </span>
+        </li>
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link rounded-pill px-3 shadow-2xs" href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">
+                Siguiente <i class="bi bi-chevron-right ms-1"></i>
+            </a>
+        </li>
+        <li class="page-item">
+            <a class="page-link rounded-pill px-3 shadow-2xs" href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" title="Última página">
+                <i class="bi bi-chevron-double-right"></i>
+            </a>
+        </li>
+        {% else %}
+        <li class="page-item disabled">
+            <span class="page-link rounded-pill px-3 text-muted opacity-50">Siguiente <i class="bi bi-chevron-right ms-1"></i></span>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}

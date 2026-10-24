@@ -9,6 +9,7 @@ from openpyxl.utils import get_column_letter
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -436,7 +437,10 @@ def reportes(request):
 
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             monto_v = (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_ventas += monto_v
@@ -454,9 +458,16 @@ def reportes(request):
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             monto_r = r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_rentas += monto_r
             transacciones.append({
@@ -464,7 +475,7 @@ def reportes(request):
                 'fecha': r.fecha,
                 'usuario': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': monto_r,
                 'tipo': 'Renta de Equipo',
                 'es_venta': False,
@@ -479,10 +490,14 @@ def reportes(request):
     pct_ventas = int((total_ventas / total_global * 100)) if total_global > 0 else 0
     pct_rentas = 100 - pct_ventas if total_global > 0 else 0
 
+    paginator = Paginator(transacciones, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     usuarios = Usuario.objects.filter(activo=True).order_by('username')
 
     return render(request, 'reportes.html', {
-        'transacciones': transacciones,
+        'transacciones': page_obj,
+        'page_obj': page_obj,
         'total_recaudado_global': total_global,
         'total_ventas': total_ventas,
         'total_rentas': total_rentas,
@@ -521,7 +536,10 @@ def reportes_exportar_csv(request):
     filas = []
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             filas.append({
                 'fecha_obj': v.fecha,
@@ -536,9 +554,16 @@ def reportes_exportar_csv(request):
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             filas.append({
                 'fecha_obj': r.fecha,
                 'ticket': f"R-{r.renta_id}",
@@ -546,7 +571,7 @@ def reportes_exportar_csv(request):
                 'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'cajero': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': f"${r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
             })
 
@@ -586,7 +611,10 @@ def reportes_exportar_excel(request):
     filas = []
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             filas.append({
                 'fecha_obj': v.fecha,
@@ -601,9 +629,16 @@ def reportes_exportar_excel(request):
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             filas.append({
                 'fecha_obj': r.fecha,
                 'ticket': f"R-{r.renta_id}",
@@ -611,7 +646,7 @@ def reportes_exportar_excel(request):
                 'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'cajero': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': float(r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             })
 

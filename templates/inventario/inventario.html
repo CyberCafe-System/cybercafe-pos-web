@@ -18,11 +18,13 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorProductos" class="form-control border-start-0" placeholder="Buscar producto...">
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0"
+                        placeholder="Buscar producto...">
                 </div>
                 <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
                     <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong class="text-dark">Categoría</strong></span>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong
+                            class="text-dark">Categoría</strong></span>
                 </div>
             </div>
         </div>
@@ -47,15 +49,22 @@
                 </thead>
                 <tbody>
                     {% for producto in productos %}
-                    <tr class="fila-producto" data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
+                    <tr class="fila-producto"
+                        data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
                         <td>
                             {% if producto.imagen %}
-                            <img src="/media/{{ producto.imagen }}" class="rounded-3 object-fit-cover shadow-sm border" style="width: 50px; height: 50px;" alt="{{ producto.nombre }}" onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
-                            <span class="d-none align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted" style="width: 50px; height: 50px;">
+                            <img src="/media/{{ producto.imagen }}" class="rounded-3 object-fit-cover shadow-sm border"
+                                style="width: 50px; height: 50px;" alt="{{ producto.nombre }}"
+                                onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                            <span
+                                class="d-none align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted"
+                                style="width: 50px; height: 50px;">
                                 <i class="bi bi-box-seam fs-4 opacity-50"></i>
                             </span>
                             {% else %}
-                            <span class="d-inline-flex align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted" style="width: 50px; height: 50px;">
+                            <span
+                                class="d-inline-flex align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted"
+                                style="width: 50px; height: 50px;">
                                 <i class="bi bi-box-seam fs-4 opacity-50"></i>
                             </span>
                             {% endif %}
@@ -66,28 +75,29 @@
                         </td>
                         <td>
                             {% if producto.cantidad > 5 %}
-                                <span class="badge bg-success">{{ producto.cantidad }}</span>
+                            <span class="badge bg-success">{{ producto.cantidad }}</span>
                             {% elif producto.cantidad > 0 %}
-                                <span class="badge bg-warning text-dark">{{ producto.cantidad }}</span>
+                            <span class="badge bg-warning text-dark">{{ producto.cantidad }}</span>
                             {% else %}
-                                <span class="badge bg-danger">{{ producto.cantidad }}</span>
+                            <span class="badge bg-danger">{{ producto.cantidad }}</span>
                             {% endif %}
                         </td>
                         <td>${{ producto.precio_compra|floatformat:2 }}</td>
                         <td class="fw-bold text-success">${{ producto.precio_venta|floatformat:2 }}</td>
                         <td>
                             {% if producto.activo %}
-                                <span class="badge bg-success">Activo</span>
+                            <span class="badge bg-success">Activo</span>
                             {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
+                            <span class="badge bg-secondary">Inactivo</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto" data-bs-toggle="modal" data-bs-target="#modalModificarProducto"
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarProducto"
                                 data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
                                 data-categoria="{{ producto.categoria_id }}"
-                                data-precio-compra="{{ producto.precio_compra }}" data-precio-venta="{{ producto.precio_venta }}"
-                                data-cantidad="{{ producto.cantidad }}"
+                                data-precio-compra="{{ producto.precio_compra }}"
+                                data-precio-venta="{{ producto.precio_venta }}" data-cantidad="{{ producto.cantidad }}"
                                 data-imagen="{{ producto.imagen|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -123,6 +133,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' %}
     </div>
 </div>
 

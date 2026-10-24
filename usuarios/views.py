@@ -1,6 +1,7 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import admin_required
@@ -12,9 +13,19 @@ from .validators import validar_password_intermedia
 @login_required
 @admin_required
 def usuario_list(request):
-    usuarios = Usuario.objects.select_related('rol').all().order_by('usuario_id')
+    usuarios_qs = Usuario.objects.select_related('rol').all().order_by('usuario_id')
+    paginator = Paginator(usuarios_qs, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
     roles = Rol.objects.all().order_by('nombre')
-    return render(request, 'usuarios/usuarios.html', {'usuarios': usuarios, 'roles': roles})
+    return render(
+        request,
+        'usuarios/usuarios.html',
+        {
+            'usuarios': page_obj,
+            'page_obj': page_obj,
+            'roles': roles,
+        },
+    )
 
 
 @login_required

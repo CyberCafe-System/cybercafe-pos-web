@@ -2,6 +2,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
 
+from django.core.paginator import Paginator
+
 from categorias.models import Categoria
 from usuarios.decorators import admin_required
 
@@ -12,12 +14,18 @@ from .models import Producto
 @login_required
 @admin_required
 def producto_list(request):
-    productos = Producto.objects.select_related('categoria').all().order_by('producto_id')
+    productos_qs = Producto.objects.select_related('categoria').all().order_by('producto_id')
+    paginator = Paginator(productos_qs, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
     categorias = Categoria.objects.filter(activa=True).order_by('nombre')
     return render(
         request,
         'inventario/inventario.html',
-        {'productos': productos, 'categorias': categorias},
+        {
+            'productos': page_obj,
+            'page_obj': page_obj,
+            'categorias': categorias,
+        },
     )
 
 

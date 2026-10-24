@@ -1,5 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -12,7 +13,9 @@ from .models import Equipo
 @login_required
 @admin_required
 def equipo_list(request):
-    equipos = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
+    equipos_qs = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
+    paginator = Paginator(equipos_qs, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
     componentes = Componente.objects.select_related('equipo').filter(
         activo=True
     ).exclude(
@@ -20,7 +23,8 @@ def equipo_list(request):
     ).order_by('tipo', 'nombre')
     componentes_libres = [c for c in componentes if c.equipo_id is None]
     return render(request, 'equipos/equipos.html', {
-        'equipos': equipos,
+        'equipos': page_obj,
+        'page_obj': page_obj,
         'componentes': componentes,
         'componentes_libres': componentes_libres,
     })

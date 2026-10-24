@@ -18,11 +18,14 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorClientes" class="form-control border-start-0" placeholder="Buscar cliente...">
+                    <input type="text" id="buscadorClientes" class="form-control border-start-0"
+                        placeholder="Buscar cliente...">
                 </div>
                 <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
                     <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Nombre</strong>, <strong class="text-dark">Apellido</strong>, <strong class="text-dark">DUI</strong>, <strong class="text-dark">Teléfono</strong> y <strong class="text-dark">Correo</strong></span>
+                    <span>Buscando en: <strong class="text-dark">Nombre</strong>, <strong
+                            class="text-dark">Apellido</strong>, <strong class="text-dark">DUI</strong>, <strong
+                            class="text-dark">Teléfono</strong> y <strong class="text-dark">Correo</strong></span>
                 </div>
             </div>
         </div>
@@ -45,17 +48,20 @@
                 </thead>
                 <tbody>
                     {% for cliente in clientes %}
-                    <tr class="fila-cliente" data-busqueda="{{ cliente.nombre|lower }} {{ cliente.apellido|lower }} {{ cliente.dui|lower }} {{ cliente.telefono }} {{ cliente.correo|default:''|lower }}">
+                    <tr class="fila-cliente"
+                        data-busqueda="{{ cliente.nombre|lower }} {{ cliente.apellido|lower }} {{ cliente.dui|lower }} {{ cliente.telefono }} {{ cliente.correo|default:''|lower }}">
                         <td class="fw-semibold text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</td>
                         <td><span class="badge bg-light text-dark border font-monospace">{{ cliente.dui }}</span></td>
                         <td>{{ cliente.telefono }}</td>
                         <td class="text-muted">{{ cliente.correo|default:"-" }}</td>
                         <td class="text-muted">{{ cliente.direccion }}</td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary btn-editar-cliente" data-bs-toggle="modal" data-bs-target="#modalModificarCliente"
-                                data-id="{{ cliente.cliente_id }}" data-nombre="{{ cliente.nombre }}" data-apellido="{{ cliente.apellido }}"
+                            <button class="btn btn-sm btn-outline-primary btn-editar-cliente" data-bs-toggle="modal"
+                                data-bs-target="#modalModificarCliente" data-id="{{ cliente.cliente_id }}"
+                                data-nombre="{{ cliente.nombre }}" data-apellido="{{ cliente.apellido }}"
                                 data-dui="{{ cliente.dui }}" data-direccion="{{ cliente.direccion }}"
-                                data-telefono="{{ cliente.telefono }}" data-correo="{{ cliente.correo|default:'' }}" title="Editar">
+                                data-telefono="{{ cliente.telefono }}" data-correo="{{ cliente.correo|default:'' }}"
+                                title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                         </td>
@@ -77,6 +83,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' %}
     </div>
 </div>
 
@@ -249,27 +256,27 @@
                     'Accept': 'application/json'
                 }
             })
-            .then(async (response) => {
-                const data = await response.json().catch(() => null);
-                if (response.ok && data && data.success) {
-                    // Éxito: recargar para ver el cambio con mensaje de Django
-                    window.location.reload();
-                } else {
-                    // Error: el modal NO se cierra y todos los datos se conservan
-                    const errors = (data && data.errors) ? data.errors : { '__all__': ['Ocurrió un error al procesar el registro.'] };
-                    mostrarErroresModal(form, errorDiv, errors);
-                }
-            })
-            .catch((err) => {
-                mostrarErroresModal(form, errorDiv, { '__all__': ['Error de conexión con el servidor. Los datos siguen en el formulario.'] });
-            })
-            .finally(() => {
-                if (btn) {
-                    btn.disabled = false;
-                    const spinner = btn.querySelector('.spinner-border');
-                    if (spinner) spinner.classList.add('d-none');
-                }
-            });
+                .then(async (response) => {
+                    const data = await response.json().catch(() => null);
+                    if (response.ok && data && data.success) {
+                        // Éxito: recargar para ver el cambio con mensaje de Django
+                        window.location.reload();
+                    } else {
+                        // Error: el modal NO se cierra y todos los datos se conservan
+                        const errors = (data && data.errors) ? data.errors : { '__all__': ['Ocurrió un error al procesar el registro.'] };
+                        mostrarErroresModal(form, errorDiv, errors);
+                    }
+                })
+                .catch((err) => {
+                    mostrarErroresModal(form, errorDiv, { '__all__': ['Error de conexión con el servidor. Los datos siguen en el formulario.'] });
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        const spinner = btn.querySelector('.spinner-border');
+                        if (spinner) spinner.classList.add('d-none');
+                    }
+                });
         });
     }
 
