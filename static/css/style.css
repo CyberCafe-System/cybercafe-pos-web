@@ -75,9 +75,48 @@ body {
 
 .sidebar-nav li a:hover, 
 .sidebar-nav li a.active {
-    background-color: rgba(176, 107, 5, 0.2);
-    color: var(--clr-cobre);
+    background-color: rgba(176, 107, 5, 0.25);
+    color: #ffffff !important;
     border-left: 4px solid var(--clr-cobre);
+    font-weight: 600;
+}
+
+.sidebar-nav li a.active i,
+.sidebar-nav li a:hover i {
+    color: #ffffff !important;
+}
+
+.badge-modulo-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+
+.modulo-indicador-badge {
+    padding-left: 12px;
+    border-left: 2px solid #e9ecef;
+}
+
+.modulo-breadcrumb {
+    font-size: 0.68rem;
+    letter-spacing: 0.8px;
+    color: #8c857b;
+}
+
+.modulo-nombre {
+    font-size: 0.98rem;
+    line-height: 1.2;
+}
+
+@media (max-width: 576px) {
+    .modulo-indicador-badge {
+        display: none !important;
+    }
 }
 
 /* Contenedor Central y Barra Superior */

@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=5">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=6">
 </head>
 <body>
 
@@ -25,47 +25,67 @@
             </div>
             <ul class="sidebar-nav">
                 <li>
-                    <a href="{% url 'inicio' %}"><i class="bi bi-speedometer2"></i> Panel Principal</a>
+                    <a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}">
+                        <i class="bi bi-speedometer2"></i> Panel Principal
+                    </a>
                 </li>
                 <li>
-                    <a href="{% url 'rentas' %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
+                    <a href="{% url 'rentas' %}" class="{% if 'rentas' in request.path or request.resolver_match.url_name in 'rentas,crear_renta,extender_renta,finalizar_renta,factura_renta,factura_renta_id' %}active{% endif %}">
+                        <i class="bi bi-pc-display"></i> Control de Rentas
+                    </a>
                 </li>
                 {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
-                    <a href="{% url 'pos' %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
+                    <a href="{% url 'pos' %}" class="{% if 'pos' in request.path or request.resolver_match.url_name in 'pos,agregar_carrito,actualizar_cantidad_carrito,quitar_carrito,limpiar_carrito,procesar_venta' %}active{% endif %}">
+                        <i class="bi bi-cart4"></i> Punto de Venta
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin %}
                 <li>
-                    <a href="{% url 'inventario' %}"><i class="bi bi-box-seam"></i> Inventario</a>
+                    <a href="{% url 'inventario' %}" class="{% if 'inventario' in request.path or request.resolver_match.url_name == 'inventario' %}active{% endif %}">
+                        <i class="bi bi-box-seam"></i> Inventario
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin %}
                 <li>
-                    <a href="{% url 'categorias' %}"><i class="bi bi-tags"></i> Categorías</a>
+                    <a href="{% url 'categorias' %}" class="{% if 'categorias' in request.path or request.resolver_match.url_name == 'categorias' %}active{% endif %}">
+                        <i class="bi bi-tags"></i> Categorías
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin %}
                 <li>
-                    <a href="{% url 'equipos' %}"><i class="bi bi-cpu"></i> Equipos</a>
+                    <a href="{% url 'equipos' %}" class="{% if 'equipos' in request.path or request.resolver_match.url_name == 'equipos' %}active{% endif %}">
+                        <i class="bi bi-cpu"></i> Equipos
+                    </a>
                 </li>
                 <li>
-                    <a href="{% url 'componentes' %}"><i class="bi bi-mouse2"></i> Componentes</a>
+                    <a href="{% url 'componentes' %}" class="{% if 'componentes' in request.path or request.resolver_match.url_name == 'componentes' %}active{% endif %}">
+                        <i class="bi bi-mouse2"></i> Componentes
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
-                    <a href="{% url 'clientes' %}"><i class="bi bi-people"></i> Clientes</a>
+                    <a href="{% url 'clientes' %}" class="{% if 'clientes' in request.path or request.resolver_match.url_name == 'clientes' %}active{% endif %}">
+                        <i class="bi bi-people"></i> Clientes
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin %}
                 <li>
-                    <a href="{% url 'usuarios' %}"><i class="bi bi-person-badge"></i> Usuarios</a>
+                    <a href="{% url 'usuarios' %}" class="{% if 'usuarios' in request.path or request.resolver_match.url_name == 'usuarios' %}active{% endif %}">
+                        <i class="bi bi-person-badge"></i> Usuarios
+                    </a>
                 </li>
                 {% endif %}
                 {% if request.user.es_admin %}
                 <li>
-                    <a href="{% url 'reportes' %}"><i class="bi bi-graph-up"></i> Reportes</a>
+                    <a href="{% url 'reportes' %}" class="{% if 'reportes' in request.path or request.resolver_match.url_name in 'reportes,reportes_exportar_csv,reportes_exportar_excel' %}active{% endif %}">
+                        <i class="bi bi-graph-up"></i> Reportes
+                    </a>
                 </li>
                 {% endif %}
             </ul>
@@ -73,9 +93,75 @@
 
         <div id="page-content-wrapper">
             <header class="top-header">
-                <button class="btn-toggle-menu" id="menu-toggle">
-                    <i class="bi bi-list"></i>
-                </button>
+                <div class="top-header-left d-flex align-items-center gap-3">
+                    <button class="btn-toggle-menu" id="menu-toggle" title="Alternar menú lateral">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <!-- Indicador visual de módulo actual -->
+                    <div class="modulo-indicador-badge d-flex align-items-center gap-2">
+                        {% if request.resolver_match.url_name == 'inicio' %}
+                            <span class="badge-modulo-icon bg-secondary bg-opacity-25 text-dark"><i class="bi bi-speedometer2"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Panel Principal</h6>
+                            </div>
+                        {% elif 'rentas' in request.path or request.resolver_match.url_name in 'rentas,crear_renta,extender_renta,finalizar_renta,factura_renta,factura_renta_id' %}
+                            <span class="badge-modulo-icon bg-warning bg-opacity-25 text-warning-emphasis"><i class="bi bi-pc-display"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Control de Rentas</h6>
+                            </div>
+                        {% elif 'pos' in request.path or request.resolver_match.url_name in 'pos,agregar_carrito,actualizar_cantidad_carrito,quitar_carrito,limpiar_carrito,procesar_venta' %}
+                            <span class="badge-modulo-icon bg-success bg-opacity-25 text-success"><i class="bi bi-cart4"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Punto de Venta</h6>
+                            </div>
+                        {% elif 'inventario' in request.path or request.resolver_match.url_name == 'inventario' %}
+                            <span class="badge-modulo-icon bg-primary bg-opacity-25 text-primary"><i class="bi bi-box-seam"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Inventario de Productos</h6>
+                            </div>
+                        {% elif 'categorias' in request.path or request.resolver_match.url_name == 'categorias' %}
+                            <span class="badge-modulo-icon bg-info bg-opacity-25 text-info-emphasis"><i class="bi bi-tags"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Categorías</h6>
+                            </div>
+                        {% elif 'equipos' in request.path or request.resolver_match.url_name == 'equipos' %}
+                            <span class="badge-modulo-icon bg-dark bg-opacity-25 text-dark"><i class="bi bi-cpu"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Equipos</h6>
+                            </div>
+                        {% elif 'componentes' in request.path or request.resolver_match.url_name == 'componentes' %}
+                            <span class="badge-modulo-icon bg-secondary bg-opacity-25 text-secondary"><i class="bi bi-mouse2"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Componentes</h6>
+                            </div>
+                        {% elif 'clientes' in request.path or request.resolver_match.url_name == 'clientes' %}
+                            <span class="badge-modulo-icon bg-success bg-opacity-25 text-success"><i class="bi bi-people"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Clientes</h6>
+                            </div>
+                        {% elif 'usuarios' in request.path or request.resolver_match.url_name == 'usuarios' %}
+                            <span class="badge-modulo-icon bg-primary bg-opacity-25 text-primary"><i class="bi bi-person-badge"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Usuarios</h6>
+                            </div>
+                        {% elif 'reportes' in request.path or request.resolver_match.url_name in 'reportes,reportes_exportar_csv,reportes_exportar_excel' %}
+                            <span class="badge-modulo-icon bg-danger bg-opacity-25 text-danger"><i class="bi bi-graph-up"></i></span>
+                            <div>
+                                <span class="modulo-breadcrumb text-muted small text-uppercase fw-bold d-block">Módulo</span>
+                                <h6 class="modulo-nombre fw-bold mb-0 text-dark">Reportes</h6>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
                 <div class="user-profile dropdown">
                     <a href="#" class="text-decoration-none text-dark dropdown-toggle d-flex align-items-center" data-bs-toggle="dropdown">
                         <i class="bi bi-person-circle"></i>
