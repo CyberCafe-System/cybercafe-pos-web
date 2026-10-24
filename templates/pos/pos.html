@@ -446,6 +446,67 @@
             buscadorPos.addEventListener('input', aplicarFiltros);
         }
 
+        // --- CALCULADORA DE CAMBIO EN MODAL DE VENTA (IDÉNTICA A RENTAS) ---
+        function actualizarVueltoVenta() {
+            const inputPaga = document.getElementById('inputPagaConVenta');
+            const vueltoTexto = document.getElementById('cobroVueltoTextoVenta');
+            const inputTotal = document.getElementById('posTotalAPagar');
+            if (!inputPaga || !vueltoTexto || !inputTotal) return;
+
+            const val = inputPaga.value.trim();
+            if (val === '') {
+                vueltoTexto.textContent = '$0.00';
+                vueltoTexto.className = 'fs-5 font-monospace text-dark';
+                return;
+            }
+
+            const total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
+            const pagaCon = parseFloat(val.replace(',', '.')) || 0;
+            const diff = Math.round((pagaCon - total) * 100) / 100;
+
+            if (diff >= 0) {
+                vueltoTexto.textContent = `$${diff.toFixed(2)}`;
+                vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
+            } else {
+                vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
+                vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+            }
+        }
+
+        const inputPagaVenta = document.getElementById('inputPagaConVenta');
+        if (inputPagaVenta) {
+            inputPagaVenta.addEventListener('input', actualizarVueltoVenta);
+        }
+
+        document.querySelectorAll('.btn-billete-cobro-venta').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const monto = this.dataset.monto;
+                const inputPaga = document.getElementById('inputPagaConVenta');
+                const inputTotal = document.getElementById('posTotalAPagar');
+                if (!inputPaga || !inputTotal) return;
+
+                const total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
+                if (monto === 'exacto') {
+                    inputPaga.value = total.toFixed(2);
+                } else {
+                    inputPaga.value = parseFloat(monto).toFixed(2);
+                }
+                actualizarVueltoVenta();
+            });
+        });
+
+        const modalVentaEl = document.getElementById('modalProcesarVenta');
+        if (modalVentaEl) {
+            modalVentaEl.addEventListener('shown.bs.modal', function () {
+                const inputPaga = document.getElementById('inputPagaConVenta');
+                if (inputPaga) {
+                    inputPaga.value = '';
+                    actualizarVueltoVenta();
+                    inputPaga.focus();
+                }
+            });
+        }
+
         // Al enviar el formulario de venta: abre PDF en pestaña nueva y refresca el POS
         const formVenta = document.getElementById('formProcesarVenta');
         if (formVenta) {
@@ -464,4 +525,5 @@
         }
     });
 </script>
+
 {% endblock %}

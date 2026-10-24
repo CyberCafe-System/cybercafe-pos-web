@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -146,7 +146,7 @@
                             data-equipo-nombre="{{ equipo.nombre }}"
                             data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
                             data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
-                            data-total="{{ equipo.renta_activa.subtotal }}"
+                            data-total="{{ equipo.renta_activa.subtotal|unlocalize }}"
                             title="Finalizar y Cobrar Sesión">
                         <i class="bi bi-cash-stack me-1"></i> Cobrar
                     </button>
@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('cobroClienteNombre').textContent = this.dataset.clienteNombre;
             document.getElementById('cobroTiempoTotal').textContent = this.dataset.tiempo;
 
-            cobroTotalActual = parseFloat(this.dataset.total) || 0;
+            cobroTotalActual = parseFloat((this.dataset.total || '0').replace(',', '.')) || 0;
             document.getElementById('cobroTotalTexto').textContent = `$${cobroTotalActual.toFixed(2)}`;
 
             // Reset calculadora
@@ -673,19 +673,21 @@ document.addEventListener('DOMContentLoaded', function () {
         const vueltoTexto = document.getElementById('cobroVueltoTexto');
         if (!inputPaga || !vueltoTexto) return;
 
-        const pagaCon = parseFloat(inputPaga.value) || 0;
-        if (pagaCon <= 0) {
+        const val = inputPaga.value.trim();
+        if (val === '') {
             vueltoTexto.textContent = '$0.00';
             vueltoTexto.className = 'fs-5 font-monospace text-dark';
             return;
         }
 
-        const vuelto = pagaCon - cobroTotalActual;
-        if (vuelto >= 0) {
-            vueltoTexto.textContent = `$${vuelto.toFixed(2)}`;
+        const pagaCon = parseFloat(val.replace(',', '.')) || 0;
+        const diff = Math.round((pagaCon - cobroTotalActual) * 100) / 100;
+
+        if (diff >= 0) {
+            vueltoTexto.textContent = `$${diff.toFixed(2)}`;
             vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
         } else {
-            vueltoTexto.textContent = `Faltan $${Math.abs(vuelto).toFixed(2)}`;
+            vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
             vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
         }
     }
@@ -707,8 +709,19 @@ document.addEventListener('DOMContentLoaded', function () {
                 inputPaga.value = parseFloat(monto).toFixed(2);
             }
             actualizarVueltoCobro();
+            inputPaga.focus();
         });
     });
+
+    const modalCobroEl = document.getElementById('modalCobroRenta');
+    if (modalCobroEl) {
+        modalCobroEl.addEventListener('shown.bs.modal', function () {
+            const inputPaga = document.getElementById('inputPagaConRenta');
+            if (inputPaga) {
+                inputPaga.focus();
+            }
+        });
+    }
 
     // -------------------------------------------------------------
     // 6. MODAL DE INFO / HARDWARE DE EQUIPO
