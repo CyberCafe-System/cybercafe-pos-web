@@ -159,6 +159,7 @@ LANGUAGE_CODE = env('LANGUAGE_CODE', default='es-sv') #type: ignore
 TIME_ZONE = env('TIME_ZONE', default='America/El_Salvador') #type: ignore
 
 USE_I18N = True
+FORMAT_MODULE_PATH = ['config.formats']
 
 USE_TZ = True
 

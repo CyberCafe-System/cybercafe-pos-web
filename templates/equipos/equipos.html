@@ -47,7 +47,7 @@
                                 {{ equipo.get_tipo_display }}
                             </span>
                         </td>
-                        <td class="fw-bold">${{ equipo.tarifa_por_hora }}</td>
+                        <td class="fw-bold">${{ equipo.tarifa_por_hora|floatformat:2 }}</td>
                         <td>
                             {% with total_comp=equipo.componentes.count %}
                             {% if total_comp > 0 %}
@@ -128,7 +128,7 @@
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-equipo" data-bs-toggle="modal"
                                 data-bs-target="#modalModificarEquipo" data-id="{{ equipo.equipo_id }}"
                                 data-nombre="{{ equipo.nombre }}" data-tipo="{{ equipo.tipo }}"
-                                data-tarifa="{{ equipo.tarifa_por_hora|unlocalize }}" data-estado="{{ equipo.estado }}"
+                                data-tarifa="{{ equipo.tarifa_por_hora|floatformat:2 }}" data-estado="{{ equipo.estado }}"
                                 data-descripcion="{{ equipo.descripcion|default:'' }}"
                                 data-componentes="[{% for c in equipo.componentes.all %}{{ c.componente_id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
                                 title="Editar">
