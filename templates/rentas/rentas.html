@@ -647,15 +647,147 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // -------------------------------------------------------------
-    // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA
+    // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA Y BUSCADOR DE CLIENTE
     // -------------------------------------------------------------
     let cobroTotalActual = 0;
+    let clienteOriginalNombre = '';
+    let clienteOriginalCorreo = '';
+
+    const inputBuscarClienteRenta = document.getElementById('inputBuscarClienteRenta');
+    const listaResultadosClienteRenta = document.getElementById('listaResultadosClienteRenta');
+    const btnLimpiarClienteRenta = document.getElementById('btnLimpiarClienteRenta');
+    const selectClienteCobroRenta = document.getElementById('selectClienteCobroRenta');
+    const badgeClienteCobroRenta = document.getElementById('badgeClienteCobroRenta');
+    const sinResultadosClienteRenta = document.getElementById('sinResultadosClienteRenta');
+    const itemsClienteRenta = document.querySelectorAll('.item-cliente-renta');
+    const checkCorreoRenta = document.getElementById('checkEnviarCorreoRenta');
+    const textoDestinoRenta = document.getElementById('textoCorreoDestinoRenta');
+
+    function actualizarCorreoCobroRenta(correo) {
+        if (!checkCorreoRenta || !textoDestinoRenta) return;
+        correo = (correo || '').trim();
+        if (correo) {
+            checkCorreoRenta.disabled = false;
+            checkCorreoRenta.checked = true;
+            textoDestinoRenta.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+        } else {
+            checkCorreoRenta.checked = false;
+            checkCorreoRenta.disabled = true;
+            textoDestinoRenta.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado.`;
+        }
+    }
+
+    function filtrarClientesRenta(termino) {
+        termino = (termino || '').toLowerCase().trim();
+        let visibles = 0;
+        itemsClienteRenta.forEach(function (item) {
+            const searchStr = item.dataset.search || '';
+            if (!termino || searchStr.includes(termino)) {
+                item.classList.remove('d-none');
+                visibles++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+        if (sinResultadosClienteRenta) {
+            if (visibles === 0) {
+                sinResultadosClienteRenta.classList.remove('d-none');
+            } else {
+                sinResultadosClienteRenta.classList.add('d-none');
+            }
+        }
+    }
+
+    if (inputBuscarClienteRenta && listaResultadosClienteRenta) {
+        inputBuscarClienteRenta.addEventListener('focus', function () {
+            filtrarClientesRenta(this.value);
+            listaResultadosClienteRenta.classList.remove('d-none');
+        });
+
+        inputBuscarClienteRenta.addEventListener('input', function () {
+            filtrarClientesRenta(this.value);
+            listaResultadosClienteRenta.classList.remove('d-none');
+        });
+
+        document.addEventListener('click', function (e) {
+            const cont = document.getElementById('contenedorBuscarClienteRenta');
+            if (cont && !cont.contains(e.target)) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+        });
+    }
+
+    itemsClienteRenta.forEach(function (item) {
+        item.addEventListener('click', function () {
+            const clId = this.dataset.id;
+            const clNombre = this.dataset.nombre;
+            const clCorreo = this.dataset.correo;
+
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = clId;
+            }
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clNombre;
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = '✓ Cambiado';
+                badgeClienteCobroRenta.className = 'badge bg-primary text-white small';
+            }
+            if (btnLimpiarClienteRenta) {
+                btnLimpiarClienteRenta.classList.remove('d-none');
+            }
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+            actualizarCorreoCobroRenta(clCorreo);
+        });
+    });
+
+    if (btnLimpiarClienteRenta) {
+        btnLimpiarClienteRenta.addEventListener('click', function () {
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clienteOriginalNombre;
+            }
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = '';
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = 'Asignado';
+                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+            }
+            this.classList.add('d-none');
+            actualizarCorreoCobroRenta(clienteOriginalCorreo);
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+        });
+    }
+
     document.querySelectorAll('.btn-abrir-cobro').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('cobroDetalleId').value = this.dataset.detalleId;
             document.getElementById('cobroEquipoNombre').textContent = this.dataset.equipoNombre;
-            document.getElementById('cobroClienteNombre').textContent = this.dataset.clienteNombre;
             document.getElementById('cobroTiempoTotal').textContent = this.dataset.tiempo;
+
+            clienteOriginalNombre = this.dataset.clienteNombre || '';
+            clienteOriginalCorreo = (this.dataset.clienteCorreo || '').trim();
+
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clienteOriginalNombre;
+            }
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = '';
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = 'Asignado';
+                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+            }
+            if (btnLimpiarClienteRenta) {
+                btnLimpiarClienteRenta.classList.add('d-none');
+            }
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
 
             cobroTotalActual = parseFloat((this.dataset.total || '0').replace(',', '.')) || 0;
             document.getElementById('cobroTotalTexto').textContent = `$${cobroTotalActual.toFixed(2)}`;
@@ -667,21 +799,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 actualizarVueltoCobro();
             }
 
-            // Gestionar checklist de envío de factura por correo
-            const correo = (this.dataset.clienteCorreo || '').trim();
-            const checkCorreo = document.getElementById('checkEnviarCorreoRenta');
-            const textoDestino = document.getElementById('textoCorreoDestinoRenta');
-            if (checkCorreo && textoDestino) {
-                if (correo) {
-                    checkCorreo.disabled = false;
-                    checkCorreo.checked = true;
-                    textoDestino.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i> Se enviará a: <strong class="text-dark">${correo}</strong>`;
-                } else {
-                    checkCorreo.checked = false;
-                    checkCorreo.disabled = true;
-                    textoDestino.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i> Este cliente no tiene correo registrado.`;
-                }
-            }
+            actualizarCorreoCobroRenta(clienteOriginalCorreo);
         });
     });
 

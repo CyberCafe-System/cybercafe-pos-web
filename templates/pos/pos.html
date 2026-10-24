@@ -498,13 +498,106 @@
         const selectClientePos = document.getElementById('posSelectCliente');
         const checkCorreoVenta = document.getElementById('checkEnviarCorreoVenta');
         const textoCorreoDestino = document.getElementById('textoCorreoDestino');
+        const inputBuscarClientePos = document.getElementById('inputBuscarClientePos');
+        const listaResultadosClientePos = document.getElementById('listaResultadosClientePos');
+        const btnLimpiarClientePos = document.getElementById('btnLimpiarClientePos');
+        const badgeClienteSeleccionado = document.getElementById('badgeClienteSeleccionado');
+        const sinResultadosClientePos = document.getElementById('sinResultadosClientePos');
+        const itemsClientePos = document.querySelectorAll('.item-cliente-pos');
+
+        function filtrarClientesPos(termino) {
+            termino = (termino || '').toLowerCase().trim();
+            let visibles = 0;
+            itemsClientePos.forEach(function (item) {
+                const searchStr = item.dataset.search || '';
+                if (!termino || searchStr.includes(termino)) {
+                    item.classList.remove('d-none');
+                    visibles++;
+                } else {
+                    item.classList.add('d-none');
+                }
+            });
+            if (sinResultadosClientePos) {
+                if (visibles === 0) {
+                    sinResultadosClientePos.classList.remove('d-none');
+                } else {
+                    sinResultadosClientePos.classList.add('d-none');
+                }
+            }
+        }
+
+        if (inputBuscarClientePos && listaResultadosClientePos) {
+            inputBuscarClientePos.addEventListener('focus', function () {
+                filtrarClientesPos(this.value);
+                listaResultadosClientePos.classList.remove('d-none');
+            });
+
+            inputBuscarClientePos.addEventListener('input', function () {
+                filtrarClientesPos(this.value);
+                listaResultadosClientePos.classList.remove('d-none');
+            });
+
+            document.addEventListener('click', function (e) {
+                const cont = document.getElementById('contenedorBuscarClientePos');
+                if (cont && !cont.contains(e.target)) {
+                    listaResultadosClientePos.classList.add('d-none');
+                }
+            });
+        }
+
+        itemsClientePos.forEach(function (item) {
+            item.addEventListener('click', function () {
+                const clienteId = this.dataset.id;
+                const clienteNombre = this.dataset.nombre;
+
+                if (selectClientePos) {
+                    selectClientePos.value = clienteId;
+                    selectClientePos.dispatchEvent(new Event('change'));
+                }
+
+                if (inputBuscarClientePos) {
+                    inputBuscarClientePos.value = clienteNombre;
+                }
+                if (badgeClienteSeleccionado) {
+                    badgeClienteSeleccionado.textContent = '✓ Seleccionado';
+                    badgeClienteSeleccionado.className = 'badge bg-success-subtle text-success border border-success-subtle small';
+                }
+                if (btnLimpiarClientePos) {
+                    btnLimpiarClientePos.classList.remove('d-none');
+                }
+                if (listaResultadosClientePos) {
+                    listaResultadosClientePos.classList.add('d-none');
+                }
+            });
+        });
+
+        if (btnLimpiarClientePos) {
+            btnLimpiarClientePos.addEventListener('click', function () {
+                if (inputBuscarClientePos) {
+                    inputBuscarClientePos.value = '';
+                    inputBuscarClientePos.focus();
+                }
+                if (selectClientePos) {
+                    selectClientePos.value = '';
+                    selectClientePos.dispatchEvent(new Event('change'));
+                }
+                if (badgeClienteSeleccionado) {
+                    badgeClienteSeleccionado.textContent = 'Sin seleccionar';
+                    badgeClienteSeleccionado.className = 'badge bg-light text-muted border small';
+                }
+                this.classList.add('d-none');
+                filtrarClientesPos('');
+                if (listaResultadosClientePos) {
+                    listaResultadosClientePos.classList.remove('d-none');
+                }
+            });
+        }
 
         function actualizarInfoCorreoCliente() {
             if (!selectClientePos || !checkCorreoVenta || !textoCorreoDestino) return;
             const opt = selectClientePos.options[selectClientePos.selectedIndex];
             if (!opt || !opt.value) {
-                textoCorreoDestino.innerHTML = '<i class="bi bi-info-circle me-1"></i>Seleccione un cliente para verificar su correo registrado.';
-                textoCorreoDestino.className = 'text-secondary fst-italic';
+                textoCorreoDestino.innerHTML = '<span class="text-muted">Seleccione un cliente para enviar factura.</span>';
                 checkCorreoVenta.disabled = false;
                 return;
             }
@@ -512,12 +605,10 @@
             const correo = (opt.dataset.correo || '').trim();
             if (correo) {
                 textoCorreoDestino.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
-                textoCorreoDestino.className = 'text-success';
                 checkCorreoVenta.disabled = false;
                 checkCorreoVenta.checked = true;
             } else {
-                textoCorreoDestino.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado en su ficha.';
-                textoCorreoDestino.className = 'text-warning fw-semibold';
+                textoCorreoDestino.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Cliente sin correo registrado.';
                 checkCorreoVenta.checked = false;
                 checkCorreoVenta.disabled = true;
             }

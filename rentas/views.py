@@ -206,8 +206,13 @@ def renta_finalizar(request):
                 detalle.save(update_fields=['estado', 'hora_fin'])
 
                 renta = detalle.renta
+                nuevo_cliente_id = request.POST.get('cliente_id')
+                if nuevo_cliente_id:
+                    nuevo_cl = Cliente.objects.filter(pk=nuevo_cliente_id).first()
+                    if nuevo_cl:
+                        renta.cliente = nuevo_cl
                 renta.estado_de_pago = 'PAGADO'
-                renta.save(update_fields=['estado_de_pago'])
+                renta.save(update_fields=['cliente', 'estado_de_pago'])
 
             # Enviar comprobante por correo si el checklist está activado
             enviar_correo = bool(request.POST.get('enviar_correo'))
