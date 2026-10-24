@@ -5,126 +5,91 @@
 <!-- Encabezado del Dashboard -->
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
     <div>
-        <h3 class="fw-bold mb-1 text-dark"><i class="bi bi-speedometer2 me-2 text-coffee"></i>Panel Principal</h3>
-        <p class="text-muted small mb-0">Monitoreo de ingresos, ocupación de equipos y flujo de ventas en tiempo real.
-        </p>
+        <h3 class="fw-bold mb-0 text-dark">Panel de Operaciones y Estadísticas</h3>
     </div>
     <div class="d-flex align-items-center gap-2">
-        <div class="bg-white border rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
-            <i class="bi bi-calendar3 text-coffee"></i>
-            <span class="text-secondary fw-semibold">{% now "d/m/Y" %}</span>
-        </div>
-        {% if request.user.es_admin or request.user.es_cajero %}
-        <a href="{% url 'pos' %}"
-            class="btn btn-coffee rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small">
-            <i class="bi bi-cart-plus"></i>
-            <span>Nueva Venta</span>
-        </a>
-        <a href="{% url 'rentas' %}"
-            class="btn btn-outline-secondary bg-white rounded-pill px-3 py-2 shadow-sm d-flex align-items-center gap-2 small text-dark">
-            <i class="bi bi-pc-display text-coffee"></i>
-            <span class="fw-medium">Nueva Renta</span>
+        {% if request.user.es_admin %}
+        <a href="{% url 'reportes' %}" class="btn btn-dark rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-2 small fw-semibold">
+            <i class="bi bi-grid-fill"></i>
+            <span>Resumen General</span>
         </a>
         {% endif %}
     </div>
 </div>
 
-<!-- Las 4 Islas Principales (KPI Cards) -->
+<!-- Las 4 Tarjetas de Estadísticas Principales -->
 <div class="row g-3 mb-4">
-    <!-- Isla 1: Ingresos de Hoy -->
+    <!-- Tarjeta 1: Ingresos de Hoy -->
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 kpi-glass-card kpi-glass-espresso h-100">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="kpi-glass-title">Ingresos de Hoy</span>
-                    <div class="kpi-glass-icon-box">
-                        <i class="bi bi-wallet2 fs-5 kpi-icon-gold"></i>
-                    </div>
-                </div>
+        <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1a110b 0%, #452f23 100%); border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
                 <div>
-                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">${{ ingresos_hoy|floatformat:2 }}</h3>
-                    <div class="d-flex align-items-center">
-                        <span class="kpi-glass-pill text-white">
-                            <i class="bi bi-graph-up-arrow me-1 kpi-icon-gold"></i> Ventas POS + Rentas
-                        </span>
-                    </div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        INGRESOS DE HOY
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        ${{ ingresos_hoy|floatformat:2 }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-cash-coin"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Isla 2: Equipos en Uso -->
+    <!-- Tarjeta 2: Equipos en Uso -->
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 kpi-glass-card kpi-glass-amber h-100">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="kpi-glass-title">Equipos en Uso</span>
-                    <div class="kpi-glass-icon-box">
-                        <i class="bi bi-pc-display fs-5 kpi-icon-warm"></i>
-                    </div>
-                </div>
+        <div class="card border-0 shadow-sm h-100" style="background-color: #c57616; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
                 <div>
-                    <div class="d-flex align-items-baseline justify-content-between mb-2">
-                        <h3 class="mb-0 kpi-glass-value text-white font-monospace">{{ equipos_ocupados }} <span
-                                class="kpi-glass-subvalue text-white-50">/ {{ total_equipos }}</span></h3>
-                        <span class="small fw-bold text-white font-monospace">{{ porcentaje_ocupacion }}%</span>
-                    </div>
-                    <div class="progress kpi-glass-progress mb-2" style="height: 8px;">
-                        <div class="progress-bar kpi-glass-progress-bar rounded-pill" role="progressbar"
-                            style="width: {{ porcentaje_ocupacion }}%;" aria-valuenow="{{ porcentaje_ocupacion }}"
-                            aria-valuemin="0" aria-valuemax="100"></div>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <span class="kpi-glass-pill text-white">
-                            <i class="bi bi-display me-1 kpi-icon-warm"></i> {{ equipos_libres }} equipos libres
-                        </span>
-                    </div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        EQUIPOS EN USO
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ equipos_ocupados }} / {{ total_equipos }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-pc-display"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Isla 3: Ventas POS Hoy -->
+    <!-- Tarjeta 3: Ventas POS Hoy -->
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 kpi-glass-card kpi-glass-emerald h-100">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="kpi-glass-title">Ventas POS Hoy</span>
-                    <div class="kpi-glass-icon-box">
-                        <i class="bi bi-bag-check-fill fs-5 kpi-icon-mint"></i>
-                    </div>
-                </div>
+        <div class="card border-0 shadow-sm h-100" style="background-color: #159b59; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
                 <div>
-                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ ventas_hoy }} <span
-                            class="kpi-glass-subvalue text-white-50">tickets</span></h3>
-                    <div class="d-flex align-items-center">
-                        <span class="kpi-glass-pill text-white">
-                            <i class="bi bi-receipt me-1 kpi-icon-mint"></i> Ventas pos + Rentas
-                        </span>
-                    </div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        VENTAS POS HOY
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ ventas_hoy }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-bag"></i>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Isla 4: Clientes Atendidos -->
+    <!-- Tarjeta 4: Clientes Activos -->
     <div class="col-xl-3 col-md-6">
-        <div class="card border-0 kpi-glass-card kpi-glass-sapphire h-100">
-            <div class="card-body p-4 d-flex flex-column justify-content-between">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                    <span class="kpi-glass-title">Clientes Atendidos</span>
-                    <div class="kpi-glass-icon-box">
-                        <i class="bi bi-people-fill fs-5 kpi-icon-sky"></i>
-                    </div>
-                </div>
+        <div class="card border-0 shadow-sm h-100" style="background-color: #0d6efd; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
                 <div>
-                    <h3 class="mb-2 kpi-glass-value text-white font-monospace">{{ total_clientes }} <span
-                            class="kpi-glass-subvalue text-white-50">personas</span></h3>
-                    <div class="d-flex align-items-center">
-                        <span class="kpi-glass-pill text-white">
-                            <i class="bi bi-person-check me-1 kpi-icon-sky"></i> Clientes activos hoy
-                        </span>
-                    </div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        CLIENTES ACTIVOS
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ total_clientes }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-people"></i>
                 </div>
             </div>
         </div>
@@ -140,7 +105,7 @@
                 class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     <h5 class="fw-bold mb-0 text-dark">
-                        <i class="bi bi-bar-chart-fill text-coffee me-2"></i>Ingresos Semanales (Lunes a Domingo)
+                        <i class="bi bi-bar-chart-line text-warning me-2"></i>Ingresos de los Últimos 7 Días
                     </h5>
                     <small class="text-muted">Facturación del Lunes {{ inicio_semana|date:"d/m" }} al Domingo {{ fin_semana|date:"d/m" }}.</small>
                 </div>
@@ -175,18 +140,12 @@
         <div class="card shadow-sm border-0 rounded-4 h-100">
             <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
                 <h5 class="fw-bold mb-0 text-dark">
-                    <i class="bi bi-trophy-fill text-warning me-2"></i>Top 5 Productos de la Semana
+                    <i class="bi bi-trophy text-warning me-2"></i>Top 5 Productos Vendidos
                 </h5>
-                <small class="text-muted">Artículos más vendidos de Lunes a Domingo.</small>
             </div>
             <div class="card-body px-4 pb-4 pt-2 d-flex flex-column align-items-center justify-content-center">
-                <div style="position: relative; height: 220px; width: 220px;" class="mb-3">
+                <div style="position: relative; height: 300px; width: 100%; max-width: 320px;" class="my-auto">
                     <canvas id="graficaTopProductos"></canvas>
-                </div>
-                <div class="w-100 mt-auto">
-                    <div id="leyendaTopProductos" class="small">
-                        <!-- Leyenda interactiva poblada por JS -->
-                    </div>
                 </div>
             </div>
         </div>
@@ -375,10 +334,10 @@
         });
     }
 
-    // 2. Gráfica Donut: Top 5 Productos de la Semana
+    // 2. Gráfica Donut: Top Productos Vendidos
     const ctxTop = document.getElementById('graficaTopProductos');
     if (ctxTop) {
-        const paletaColores = ['#b06b05', '#2c1e16', '#198754', '#0d6efd', '#6f42c1'];
+        const paletaColores = ['#241e1b', '#c57616', '#159b59', '#0d6efd', '#6c757d'];
         const colores = tieneDatosTop ? paletaColores.slice(0, topLabels.length) : ['#e9ecef'];
 
         new Chart(ctxTop.getContext('2d'), {
@@ -396,10 +355,23 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '72%',
+                cutout: '52%',
                 plugins: {
                     legend: {
-                        display: false
+                        display: tieneDatosTop,
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 20,
+                            boxHeight: 12,
+                            usePointStyle: false,
+                            padding: 16,
+                            font: {
+                                size: 13,
+                                weight: '600',
+                                family: "'Poppins', sans-serif"
+                            },
+                            color: '#2b2521'
+                        }
                     },
                     tooltip: {
                         backgroundColor: '#1f1b18',
@@ -415,29 +387,6 @@
                 }
             }
         });
-
-        // Generar lista estilizada de leyenda debajo de la gráfica
-        const contenedorLeyenda = document.getElementById('leyendaTopProductos');
-        if (contenedorLeyenda && tieneDatosTop) {
-            let htmlLeyenda = '<div class="d-flex flex-column gap-1">';
-            topLabels.forEach((label, idx) => {
-                const color = paletaColores[idx % paletaColores.length];
-                const cantidad = topData[idx];
-                htmlLeyenda += `
-                    <div class="d-flex justify-content-between align-items-center py-1 border-bottom border-light">
-                        <div class="d-flex align-items-center gap-2 text-truncate" style="max-width: 170px;">
-                            <span class="rounded-circle flex-shrink-0" style="width: 8px; height: 8px; background-color: ${color};"></span>
-                            <span class="text-truncate fw-medium text-dark">${label}</span>
-                        </div>
-                        <span class="badge bg-light text-dark border font-monospace">${cantidad} uds</span>
-                    </div>
-                `;
-            });
-            htmlLeyenda += '</div>';
-            contenedorLeyenda.innerHTML = htmlLeyenda;
-        } else if (contenedorLeyenda) {
-            contenedorLeyenda.innerHTML = '<p class="text-center text-muted mb-0 py-2">Registra ventas en el POS para ver el ranking aquí.</p>';
-        }
     }
 </script>
 {% endblock %}
