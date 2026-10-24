@@ -14,3 +14,17 @@ class EquipoForm(forms.ModelForm):
             'estado': forms.Select(attrs={'class': 'form-select'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Detalles técnicos o ubicación'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        if args and hasattr(args[0], 'copy'):
+            data = args[0].copy()
+            if 'tarifa_por_hora' in data:
+                data['tarifa_por_hora'] = str(data['tarifa_por_hora']).replace(',', '.')
+            args = (data,) + args[1:]
+        elif args and isinstance(args[0], dict):
+            data = dict(args[0])
+            if 'tarifa_por_hora' in data:
+                data['tarifa_por_hora'] = str(data['tarifa_por_hora']).replace(',', '.')
+            args = (data,) + args[1:]
+        super().__init__(*args, **kwargs)
+

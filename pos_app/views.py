@@ -1,4 +1,5 @@
 import csv
+import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import groupby
 
@@ -27,12 +28,39 @@ IVA = Decimal('0.13')
 CENTAVOS = Decimal('0.01')
 
 
+def _rango_fecha_local(dia):
+    tz = timezone.get_current_timezone()
+    inicio = timezone.make_aware(datetime.datetime.combine(dia, datetime.time.min), tz)
+    fin = timezone.make_aware(datetime.datetime.combine(dia, datetime.time.max), tz)
+    return inicio, fin
+
+
+def _filtrar_por_fechas(qs, fecha_inicio_str, fecha_fin_str):
+    tz = timezone.get_current_timezone()
+    if fecha_inicio_str:
+        try:
+            d_ini = datetime.date.fromisoformat(fecha_inicio_str)
+            dt_ini = timezone.make_aware(datetime.datetime.combine(d_ini, datetime.time.min), tz)
+            qs = qs.filter(fecha__gte=dt_ini)
+        except (ValueError, TypeError):
+            pass
+    if fecha_fin_str:
+        try:
+            d_fin = datetime.date.fromisoformat(fecha_fin_str)
+            dt_fin = timezone.make_aware(datetime.datetime.combine(d_fin, datetime.time.max), tz)
+            qs = qs.filter(fecha__lte=dt_fin)
+        except (ValueError, TypeError):
+            pass
+    return qs
+
+
 @login_required
 def inicio(request):
     hoy = timezone.localdate()
+    inicio_hoy, fin_hoy = _rango_fecha_local(hoy)
 
-    ventas_hoy_qs = Venta.objects.filter(fecha__date=hoy)
-    rentas_hoy_qs = Renta.objects.filter(fecha__date=hoy)
+    ventas_hoy_qs = Venta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
+    rentas_hoy_qs = Renta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
 
     # Ingresos totales de hoy (POS + Rentas)
     subtotal_ventas = sum((v.subtotal + v.iva) for v in ventas_hoy_qs) or Decimal('0.00')
@@ -107,6 +135,8 @@ def inicio(request):
     # Configuración de semana actual (Lunes a Domingo)
     inicio_semana = hoy - timezone.timedelta(days=hoy.weekday())  # Lunes
     fin_semana = inicio_semana + timezone.timedelta(days=6)       # Domingo
+    inicio_semana_dt, _ = _rango_fecha_local(inicio_semana)
+    _, fin_semana_dt = _rango_fecha_local(fin_semana)
 
     # Gráfica 1: Ingresos de la Semana (Lunes a Domingo)
     dias_semana_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -119,19 +149,21 @@ def inicio(request):
         etiqueta = dias_semana_es[i]
         chart_dias_labels.append(etiqueta)
 
-        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__date=dia)) or Decimal('0.00')
-        r_sub = sum(r.total for r in Renta.objects.filter(fecha__date=dia)) or Decimal('0.00')
+        inicio_dia_dt, fin_dia_dt = _rango_fecha_local(dia)
+        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
+        r_sub = sum(r.total for r in Renta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
 
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
 
     # Gráfica 2: Top 5 Productos Más Vendidos de la Semana (Lunes a Domingo)
     top_vendidos_qs = list(
-        DetalleVenta.objects.filter(venta__fecha__date__range=(inicio_semana, fin_semana))
+        DetalleVenta.objects.filter(venta__fecha__range=(inicio_semana_dt, fin_semana_dt))
         .values('producto__nombre')
         .annotate(total_unidades=Sum('cantidad'))
         .order_by('-total_unidades')[:5]
     )
+
     chart_top_labels = []
     chart_top_data = []
     for item in top_vendidos_qs:
@@ -390,12 +422,8 @@ def reportes(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
@@ -482,12 +510,8 @@ def reportes_exportar_csv(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
@@ -551,12 +575,8 @@ def reportes_exportar_excel(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)

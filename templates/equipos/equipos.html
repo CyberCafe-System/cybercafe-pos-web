@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load l10n %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -47,22 +48,58 @@
                         </td>
                         <td class="fw-bold">${{ equipo.tarifa_por_hora }}</td>
                         <td>
-                            {% if equipo.componentes.all %}
-                                <div class="d-flex flex-wrap gap-1">
-                                    {% for c in equipo.componentes.all %}
-                                        <span class="badge bg-light text-dark border d-inline-flex align-items-center" style="font-size: 0.72rem;" title="{{ c.nombre }}">
-                                            {% if c.tipo == 'TECLADO' %}<i class="bi bi-keyboard text-coffee me-1"></i>
-                                            {% elif c.tipo == 'MOUSE' %}<i class="bi bi-mouse text-coffee me-1"></i>
-                                            {% elif c.tipo == 'MONITOR' %}<i class="bi bi-display text-coffee me-1"></i>
-                                            {% elif c.tipo == 'CONTROL' %}<i class="bi bi-controller text-coffee me-1"></i>
-                                            {% else %}<i class="bi bi-plugin text-coffee me-1"></i>{% endif %}
-                                            {{ c.nombre|truncatechars:14 }}
+                            {% with total_comp=equipo.componentes.count %}
+                                {% if total_comp > 0 %}
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                            <i class="bi bi-motherboard me-1"></i>{{ total_comp }} asignado{{ total_comp|pluralize:"s" }}
                                         </span>
-                                    {% endfor %}
-                                </div>
-                            {% else %}
-                                <span class="badge bg-light text-muted border" style="font-size: 0.72rem;">Sin componentes</span>
-                            {% endif %}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0 btn-ver-componentes"
+                                                data-bs-toggle="modal" data-bs-target="#modalVerComponentes"
+                                                data-equipo="{{ equipo.nombre }}"
+                                                data-target-list="#compListEquipo{{ equipo.equipo_id }}"
+                                                title="Ver componentes asignados">
+                                            <i class="bi bi-eye"></i> Ver
+                                        </button>
+                                    </div>
+                                    <!-- Contenedor oculto con los datos para el modal -->
+                                    <div id="compListEquipo{{ equipo.equipo_id }}" class="d-none">
+                                        {% for c in equipo.componentes.all %}
+                                        <div class="d-flex align-items-center justify-content-between p-3 mb-2 bg-white rounded-3 border shadow-sm">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <div class="rounded-circle p-2 bg-light text-coffee d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                    {% if c.tipo == 'TECLADO' %}<i class="bi bi-keyboard fs-5"></i>
+                                                    {% elif c.tipo == 'MOUSE' %}<i class="bi bi-mouse fs-5"></i>
+                                                    {% elif c.tipo == 'MONITOR' %}<i class="bi bi-display fs-5"></i>
+                                                    {% elif c.tipo == 'CONTROL' %}<i class="bi bi-controller fs-5"></i>
+                                                    {% else %}<i class="bi bi-plugin fs-5"></i>{% endif %}
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold text-dark">{{ c.nombre }}</div>
+                                                    <div class="text-muted small">
+                                                        <span class="badge bg-light text-dark border me-1">{{ c.get_tipo_display }}</span>
+                                                        {% if c.numero_serie %}<span class="text-secondary">S/N: <code>{{ c.numero_serie }}</code></span>{% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                {% if c.estado == 'DISPONIBLE' %}
+                                                    <span class="badge bg-success-subtle text-success border border-success-subtle">Operativo</span>
+                                                {% elif c.estado == 'DANIOS_MENORES' %}
+                                                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle">Daños Menores</span>
+                                                {% else %}
+                                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ c.get_estado_display }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <span class="badge bg-light text-muted border px-2 py-1">
+                                        <i class="bi bi-slash-circle me-1"></i>0 componentes
+                                    </span>
+                                {% endif %}
+                            {% endwith %}
                         </td>
                         <td>
                             {% if equipo.estado == 'DISPONIBLE' %}
@@ -81,7 +118,7 @@
                                 data-id="{{ equipo.equipo_id }}"
                                 data-nombre="{{ equipo.nombre }}"
                                 data-tipo="{{ equipo.tipo }}"
-                                data-tarifa="{{ equipo.tarifa_por_hora }}"
+                                data-tarifa="{{ equipo.tarifa_por_hora|unlocalize }}"
                                 data-estado="{{ equipo.estado }}"
                                 data-descripcion="{{ equipo.descripcion|default:'' }}"
                                 data-componentes="[{% for c in equipo.componentes.all %}{{ c.componente_id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
@@ -114,6 +151,30 @@
 {% include 'equipos/crear.html' %}
 {% include 'equipos/modificar.html' %}
 {% include 'equipos/eliminar.html' %}
+
+<!-- Modal Visualizar Componentes Asignados -->
+<div class="modal fade" id="modalVerComponentes" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold" id="modalVerComponentesTitulo">
+                    <i class="bi bi-motherboard me-2"></i>Componentes Asignados
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted small mb-3">Lista de periféricos y piezas instaladas en este equipo:</p>
+                <div id="modalVerComponentesCuerpo">
+                    <!-- Inyectado dinámicamente con JS -->
+                </div>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
 // Buscador
@@ -168,7 +229,8 @@ document.querySelectorAll('.btn-editar-equipo').forEach(btn => {
         document.getElementById('editEquipoId').value = eqId;
         document.getElementById('editEquipoNombre').value = this.dataset.nombre;
         document.getElementById('editEquipoTipo').value = this.dataset.tipo;
-        document.getElementById('editEquipoTarifa').value = this.dataset.tarifa;
+        const tarifaRaw = (this.dataset.tarifa || '').replace(',', '.');
+        document.getElementById('editEquipoTarifa').value = tarifaRaw;
         document.getElementById('editEquipoEstado').value = this.dataset.estado;
         document.getElementById('editEquipoDescripcion').value = this.dataset.descripcion;
 
@@ -221,6 +283,24 @@ document.querySelectorAll('.btn-editar-equipo').forEach(btn => {
     });
 });
 
+// Ver componentes asignados en modal
+document.querySelectorAll('.btn-ver-componentes').forEach(btn => {
+    btn.addEventListener('click', function () {
+        const equipoNom = this.dataset.equipo;
+        const targetListSelector = this.dataset.targetList;
+        const targetList = document.querySelector(targetListSelector);
+        const modalTitulo = document.getElementById('modalVerComponentesTitulo');
+        const modalCuerpo = document.getElementById('modalVerComponentesCuerpo');
+
+        if (modalTitulo) {
+            modalTitulo.innerHTML = `<i class="bi bi-motherboard me-2"></i>Componentes de ${equipoNom}`;
+        }
+        if (modalCuerpo && targetList) {
+            modalCuerpo.innerHTML = targetList.innerHTML;
+        }
+    });
+});
+
 // Pre-rellenar modal de eliminación
 document.querySelectorAll('.btn-eliminar-equipo').forEach(btn => {
     btn.addEventListener('click', function () {
@@ -228,5 +308,6 @@ document.querySelectorAll('.btn-eliminar-equipo').forEach(btn => {
         document.getElementById('eliminarEquipoNombre').textContent = this.dataset.nombre;
     });
 });
+
 </script>
 {% endblock %}
