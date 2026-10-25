@@ -221,13 +221,13 @@ thecoffeelan@gmail.com
         msg.send(fail_silently=False)
 
         if es_simulado:
-            return False, "Falta configurar la contraseña de aplicación de Gmail (EMAIL_HOST_PASSWORD) en el archivo .env para enviar correos reales a la bandeja del cliente."
+            return False, "La configuración de correo no está activa. No se pudo enviar el mensaje."
         
         return True, f"Factura enviada exitosamente a {email_destino}."
 
     except Exception as e:
         logger.exception("Error al enviar factura por correo: %s", e)
-        return False, f"No se pudo enviar el correo: {str(e)}"
+        return False, "Ocurrió un error al enviar el correo. Inténtalo de nuevo más tarde."
 
 
 def enviar_factura_renta_correo(renta, destinatario_email=None):
@@ -380,10 +380,10 @@ thecoffeelan@gmail.com
         msg.send(fail_silently=False)
 
         if es_simulado:
-            return False, "Falta configurar la contraseña de aplicación de Gmail (EMAIL_HOST_PASSWORD) en el archivo .env para enviar comprobantes reales a la bandeja del cliente."
+            return False, "La configuración de correo no está activa. No se pudo enviar el mensaje."
         
         return True, f"Comprobante enviado exitosamente a {email_destino}."
 
     except Exception as e:
         logger.exception("Error al enviar comprobante de renta por correo: %s", e)
-        return False, f"No se pudo enviar el correo: {str(e)}"
+        return False, "Ocurrió un error al enviar el correo. Inténtalo de nuevo más tarde."

@@ -90,11 +90,11 @@ def equipo_delete(request):
             # Desvincular componentes asignados
             equipo.componentes.update(equipo=None)
             equipo.delete()
-        messages.success(request, f'Equipo {equipo.nombre} eliminado correctamente.')
-    except ProtectedError:
-        messages.error(request, 'No se puede eliminar el equipo porque tiene rentas o registros asociados.')
-    except Exception:
-        logger.exception('Error al eliminar el equipo')
-        messages.error(request, 'Ocurrió un error al eliminar el equipo. Intenta nuevamente.')
+            messages.success(request, f'Equipo {equipo.nombre} eliminado correctamente.')
+        except ProtectedError:
+            messages.error(request, 'No se puede eliminar el equipo porque tiene rentas o registros asociados.')
+        except Exception:
+            logger.exception('Error al eliminar el equipo')
+            messages.error(request, 'Ocurrió un error al eliminar el equipo. Intenta nuevamente.')
     return redirect('equipos')
 

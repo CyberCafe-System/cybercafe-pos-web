@@ -803,6 +803,10 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
+    function redondearCentavos(valor) {
+        return Math.round((valor + Number.EPSILON) * 100) / 100;
+    }
+
     function actualizarVueltoCobro() {
         const inputPaga = document.getElementById('inputPagaConRenta');
         const vueltoTexto = document.getElementById('cobroVueltoTexto');
@@ -815,8 +819,18 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        const pagaCon = parseFloat(val.replace(',', '.')) || 0;
-        const diff = Math.round((pagaCon - cobroTotalActual) * 100) / 100;
+        let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+        let total = redondearCentavos(cobroTotalActual);
+        pagaCon = redondearCentavos(pagaCon);
+        if (pagaCon > 99999.99) {
+            pagaCon = 99999.99;
+            inputPaga.value = pagaCon.toFixed(2);
+        }
+        if (pagaCon < 0) {
+            pagaCon = 0;
+            inputPaga.value = pagaCon.toFixed(2);
+        }
+        const diff = redondearCentavos(pagaCon - total);
 
         if (diff >= 0) {
             vueltoTexto.textContent = `$${diff.toFixed(2)}`;
@@ -839,9 +853,15 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!inputPaga) return;
 
             if (monto === 'exacto') {
-                inputPaga.value = cobroTotalActual.toFixed(2);
+                let m = Math.round((cobroTotalActual + Number.EPSILON) * 100) / 100;
+                if (m > 99999.99) m = 99999.99;
+                if (m < 0) m = 0;
+                inputPaga.value = m.toFixed(2);
             } else {
-                inputPaga.value = parseFloat(monto).toFixed(2);
+                let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
+                if (m > 99999.99) m = 99999.99;
+                if (m < 0) m = 0;
+                inputPaga.value = m.toFixed(2);
             }
             actualizarVueltoCobro();
             inputPaga.focus();

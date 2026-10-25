@@ -1,11 +1,14 @@
 import os
 
+from decimal import Decimal, ROUND_HALF_UP
+
 from django import forms
-from django.conf import settings
 
 from categorias.models import Categoria
 from .models import Producto
 from .utils import procesar_imagen_a_webp
+
+MONTO_MAXIMO = Decimal('99999.99')
 
 
 class ProductoForm(forms.ModelForm):
@@ -21,9 +24,9 @@ class ProductoForm(forms.ModelForm):
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control'}),
             'categoria': forms.Select(attrs={'class': 'form-select'}),
-            'precio_compra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'precio_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-            'cantidad': forms.NumberInput(attrs={'class': 'form-control'}),
+            'precio_compra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '99999.99'}),
+            'precio_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '99999.99'}),
+            'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '0'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -33,15 +36,23 @@ class ProductoForm(forms.ModelForm):
 
     def clean_precio_compra(self):
         precio = self.cleaned_data.get('precio_compra')
-        if precio is not None and precio < 0:
+        if precio is None:
+            return precio
+        if precio < 0:
             raise forms.ValidationError("El precio de compra no puede ser negativo.")
-        return precio
+        if precio > MONTO_MAXIMO:
+            raise forms.ValidationError("El precio de compra no puede ser mayor a $99,999.99.")
+        return precio.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def clean_precio_venta(self):
         precio = self.cleaned_data.get('precio_venta')
-        if precio is not None and precio < 0:
+        if precio is None:
+            return precio
+        if precio < 0:
             raise forms.ValidationError("El precio de venta no puede ser negativo.")
-        return precio
+        if precio > MONTO_MAXIMO:
+            raise forms.ValidationError("El precio de venta no puede ser mayor a $99,999.99.")
+        return precio.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     def clean_cantidad(self):
         cantidad = self.cleaned_data.get('cantidad')

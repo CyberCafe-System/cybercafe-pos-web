@@ -446,7 +446,11 @@
             buscadorPos.addEventListener('input', aplicarFiltros);
         }
 
-        // --- CALCULADORA DE CAMBIO EN MODAL DE VENTA (IDÉNTICA A RENTAS) ---
+        // --- CALCULADORA DE CAMBIO EN MODAL DE VENTA ---
+        function redondearCentavos(valor) {
+            return Math.round((valor + Number.EPSILON) * 100) / 100;
+        }
+
         function actualizarVueltoVenta() {
             const inputPaga = document.getElementById('inputPagaConVenta');
             const vueltoTexto = document.getElementById('cobroVueltoTextoVenta');
@@ -460,9 +464,19 @@
                 return;
             }
 
-            const total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
-            const pagaCon = parseFloat(val.replace(',', '.')) || 0;
-            const diff = Math.round((pagaCon - total) * 100) / 100;
+            let total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
+            let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+            total = redondearCentavos(total);
+            pagaCon = redondearCentavos(pagaCon);
+            if (pagaCon > 99999.99) {
+                pagaCon = 99999.99;
+                inputPaga.value = pagaCon.toFixed(2);
+            }
+            if (pagaCon < 0) {
+                pagaCon = 0;
+                inputPaga.value = pagaCon.toFixed(2);
+            }
+            const diff = redondearCentavos(pagaCon - total);
 
             if (diff >= 0) {
                 vueltoTexto.textContent = `$${diff.toFixed(2)}`;
@@ -487,9 +501,13 @@
 
                 const total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
                 if (monto === 'exacto') {
-                    inputPaga.value = total.toFixed(2);
+                    inputPaga.value = Math.round((total + Number.EPSILON) * 100) / 100;
+                    inputPaga.value = Number(inputPaga.value).toFixed(2);
                 } else {
-                    inputPaga.value = parseFloat(monto).toFixed(2);
+                    let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
+                    if (m > 99999.99) m = 99999.99;
+                    if (m < 0) m = 0;
+                    inputPaga.value = m.toFixed(2);
                 }
                 actualizarVueltoVenta();
             });

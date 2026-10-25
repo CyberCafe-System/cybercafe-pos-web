@@ -99,11 +99,11 @@ def renta_extender(request):
                 costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                 detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
-                detalle.subtotal += costo_extra
+                detalle.subtotal = (detalle.subtotal + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 detalle.save(update_fields=['tiempo_agregado', 'subtotal'])
 
                 renta = detalle.renta
-                renta.total += costo_extra
+                renta.total = (renta.total + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 renta.save(update_fields=['total'])
 
             messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Nuevo total: ${detalle.subtotal}')
@@ -154,6 +154,7 @@ def renta_create(request):
                 horas = Decimal(tiempo) / Decimal('60')
                 subtotal = (tarifa * horas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+                subtotal = subtotal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 renta = Renta.objects.create(
                     usuario=request.user,
                     cliente=cliente,
