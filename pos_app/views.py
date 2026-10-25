@@ -467,6 +467,7 @@ def reportes(request):
                 'tipo': 'Venta POS',
                 'es_venta': True,
                 'venta_id': v.venta_id,
+                'renta_id': None,
             })
 
     if tipo_filtro in ['todos', 'rentas']:
@@ -493,6 +494,7 @@ def reportes(request):
                 'tipo': 'Renta de Equipo',
                 'es_venta': False,
                 'venta_id': None,
+                'renta_id': r.renta_id,
             })
 
     transacciones.sort(key=lambda x: x['fecha'], reverse=True)

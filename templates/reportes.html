@@ -335,8 +335,13 @@
                                 class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Ticket PDF">
                                 <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
                             </a>
+                            {% elif t.renta_id %}
+                            <a href="{% url 'factura_renta_id' renta_id=t.renta_id %}" target="_blank"
+                                class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Factura de Renta PDF">
+                                <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
+                            </a>
                             {% else %}
-                            <span class="badge bg-light text-muted border small">Renta</span>
+                            <span class="badge bg-light text-muted border small">Sin comprobante</span>
                             {% endif %}
                         </td>
                     </tr>
