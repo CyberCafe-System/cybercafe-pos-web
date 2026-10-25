@@ -1,14 +1,18 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.shortcuts import get_object_or_404, redirect, render
-
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404, redirect, render
 
 from categorias.models import Categoria
 from usuarios.decorators import admin_required
 
 from .forms import ProductoForm
 from .models import Producto
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -38,8 +42,9 @@ def producto_create(request):
             try:
                 producto = form.save()
                 messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente con imagen optimizada.')
-            except Exception as e:
-                messages.error(request, f'Error al registrar el producto: {e}')
+            except Exception:
+                logger.exception('Error al registrar el producto')
+                messages.error(request, 'Ocurrió un error al registrar el producto. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))
@@ -56,8 +61,9 @@ def producto_edit(request):
             try:
                 producto = form.save()
                 messages.success(request, f'Producto "{producto.nombre}" actualizado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al actualizar el producto: {e}')
+            except Exception:
+                logger.exception('Error al actualizar el producto')
+                messages.error(request, 'Ocurrió un error al actualizar el producto. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))

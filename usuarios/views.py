@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
@@ -8,6 +10,8 @@ from .decorators import admin_required
 from .forms import UsuarioCreateForm, UsuarioEditForm
 from .models import Rol, Usuario
 from .validators import validar_password_intermedia
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -37,8 +41,9 @@ def usuario_create(request):
             try:
                 form.save()
                 messages.success(request, 'Usuario creado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al crear el usuario: {e}')
+            except Exception:
+                logger.exception('Error al crear el usuario')
+                messages.error(request, 'Ocurrió un error al crear el usuario. Intenta nuevamente.')
         else:
             for field, error_list in form.errors.items():
                 for err in error_list:
@@ -67,8 +72,9 @@ def usuario_edit(request):
                         return redirect('usuarios')
                 usuario_guardado.save()
                 messages.success(request, 'Usuario actualizado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al actualizar el usuario: {e}')
+            except Exception:
+                logger.exception('Error al actualizar el usuario')
+                messages.error(request, 'Ocurrió un error al actualizar el usuario. Intenta nuevamente.')
         else:
             for field, error_list in form.errors.items():
                 for err in error_list:

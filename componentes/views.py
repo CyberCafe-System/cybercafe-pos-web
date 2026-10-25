@@ -1,5 +1,8 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -8,6 +11,8 @@ from usuarios.decorators import admin_required
 
 from .forms import ComponenteForm
 from .models import Componente
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -37,8 +42,9 @@ def componente_create(request):
             try:
                 form.save()
                 messages.success(request, 'Componente registrado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al guardar el componente: {e}')
+            except Exception:
+                logger.exception('Error al guardar el componente')
+                messages.error(request, 'Ocurrió un error al guardar el componente. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))
@@ -55,8 +61,9 @@ def componente_edit(request):
             try:
                 form.save()
                 messages.success(request, 'Componente actualizado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al actualizar el componente: {e}')
+            except Exception:
+                logger.exception('Error al actualizar el componente')
+                messages.error(request, 'Ocurrió un error al actualizar el componente. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))
