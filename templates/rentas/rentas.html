@@ -104,9 +104,13 @@
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-success timer-progress-bar"
                              id="progress-bar-{{ equipo.equipo_id }}" style="width: 100%;"></div>
                     </div>
-                    <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.72rem;">
+                    <div class="d-flex justify-content-between align-items-center text-muted mt-1" style="font-size: 0.72rem;">
                         <span>Inicio: {{ equipo.renta_activa.hora_inicio|date:"h:i A" }}</span>
-                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong></span>
+                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" style="font-size: 0.65rem;">
+                                <i class="bi bi-check-circle-fill"></i> Pagado
+                            </span>
+                        </span>
                     </div>
                 </div>
 
@@ -127,6 +131,12 @@
                         <i class="bi bi-info-circle"></i>
                     </button>
 
+                    <!-- Factura / Comprobante PDF -->
+                    <a href="{% url 'factura_renta_id' equipo.renta_activa.renta.renta_id %}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Ver Factura PDF Pagada">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+
                     {% if request.user.es_admin or request.user.es_cajero %}
                     <!-- Botón Extender Tiempo -->
                     <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
@@ -139,27 +149,14 @@
                         <i class="bi bi-clock-history"></i> + Tiempo
                     </button>
 
-                    <!-- Botón Enviar a Revisión (Revisar primero -> Pagar después) -->
-                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline" onsubmit="return confirm('¿Enviar el puesto de {{ equipo.nombre }} a Revisión Técnica? El cobro quedará como Pendiente.');">
+                    <!-- Botón Finalizar y Enviar a Revisión (Cobro ya realizado al inicio) -->
+                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1" onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar el puesto a Revisión Técnica?');">
                         {% csrf_token %}
                         <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
-                        <button type="submit" class="btn btn-sm btn-outline-info rounded-pill py-1 px-2" title="Finalizar tiempo y revisar el puesto antes de cobrar">
-                            <i class="bi bi-clipboard-check"></i> A Revisión
+                        <button type="submit" class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold" title="Finalizar tiempo y enviar el equipo a revisión técnica">
+                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
                         </button>
                     </form>
-
-                    <!-- Botón Cobrar con Modal y Calculadora (Pagar primero -> Revisar después) -->
-                    <button type="button" class="btn btn-sm btn-danger rounded-pill flex-grow-1 py-1 shadow-sm btn-abrir-cobro"
-                            data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
-                            data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
-                            data-equipo-nombre="{{ equipo.nombre }}"
-                            data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
-                            data-cliente-correo="{{ equipo.renta_activa.renta.cliente.correo|default:'' }}"
-                            data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
-                            data-total="{{ equipo.renta_activa.subtotal|unlocalize }}"
-                            title="Finalizar y Cobrar Sesión">
-                        <i class="bi bi-cash-stack me-1"></i> Cobrar
-                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -217,8 +214,8 @@
                         <i class="bi bi-info-circle"></i> Info
                     </button>
 
-                    {% if request.user.es_admin %}
-                    <!-- Botón Revisar Ahora (Exclusivo Administrador) -->
+                    {% if request.user.es_admin or request.user.es_asistente %}
+                    <!-- Botón Revisar Ahora (Administrador o Asistente) -->
                     <a href="{% url 'revisiones' %}?detalle_id={{ equipo.revision_pendiente.detalle_renta_id }}&equipo_id={{ equipo.equipo_id }}"
                        class="btn btn-sm btn-info text-dark rounded-pill px-3 py-1 shadow-sm fw-semibold"
                        title="Realizar inspección física in situ">
@@ -934,6 +931,30 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalCobroEl && window.bootstrap) {
                 setTimeout(function () {
                     const modalInstance = bootstrap.Modal.getInstance(modalCobroEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 600);
+            }
+            setTimeout(function () {
+                window.location.reload();
+            }, 1800);
+        });
+    }
+
+    // Al confirmar extensión de renta: abrir factura actualizada PDF en pestaña nueva y refrescar rentas
+    const formExtenderRenta = document.getElementById('formExtenderRenta');
+    const btnConfirmarExtenderRenta = document.getElementById('btnConfirmarExtenderRenta');
+    const modalExtenderEl = document.getElementById('modalExtenderRenta');
+    if (formExtenderRenta) {
+        formExtenderRenta.addEventListener('submit', function () {
+            if (btnConfirmarExtenderRenta) {
+                btnConfirmarExtenderRenta.disabled = true;
+                btnConfirmarExtenderRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando extensión...';
+            }
+            if (modalExtenderEl && window.bootstrap) {
+                setTimeout(function () {
+                    const modalInstance = bootstrap.Modal.getInstance(modalExtenderEl);
                     if (modalInstance) {
                         modalInstance.hide();
                     }

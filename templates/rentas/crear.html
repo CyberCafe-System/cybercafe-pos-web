@@ -1,109 +1,199 @@
-<!-- Modal Nueva Renta -->
+<!-- Modal Nueva Renta Horizontal (Gestión de Renta y Cobro) -->
+<style>
+    @media (min-width: 768px) {
+        .border-end-md {
+            border-right: 1px solid #e9ecef !important;
+        }
+    }
+</style>
 <div class="modal fade" id="modalNuevaRenta" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="{% url 'crear_renta' %}">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <form method="POST" action="{% url 'crear_renta' %}" target="_blank" id="formNuevaRenta">
                 {% csrf_token %}
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-play-circle me-2 text-coffee"></i>Iniciar Renta de Equipo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-                </div>
-                <div class="modal-body px-4 pt-3 pb-4">
-                    <!-- Banner de Asignación Directa -->
-                    <div class="alert alert-info py-2 px-3 rounded-3 d-none mb-3 align-items-center justify-content-between" id="alertaEquipoDirecto">
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-pc-display-horizontal text-warning fs-5"></i>
                         <div>
-                            <span class="small text-muted d-block">Asignación directa:</span>
-                            <strong class="text-dark" id="alertaEquipoDirectoNombre">--</strong>
+                            <h6 class="modal-title fw-bold mb-0">Iniciar y Cobrar Renta de Equipo</h6>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Configura la sesión y procesa el cobro inmediato</small>
                         </div>
-                        <span class="badge bg-primary rounded-pill">Selección rápida</span>
                     </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
-                            Equipo <span class="text-danger">*</span>
-                        </label>
-                        <select name="equipo_id" id="selectEquipoRenta" class="form-select rounded-3" required>
-                            <option value="" data-tarifa="0">Seleccione un equipo disponible</option>
-                            {% for eq in equipos_rentables %}
-                            <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{ eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
-                            {% endfor %}
-                        </select>
-                    </div>
+                <div class="modal-body p-4">
+                    <div class="row g-4">
 
-                    <!-- Buscador de Cliente en Nueva Renta -->
-                    <div class="mb-3 position-relative" id="contenedorBuscarClienteCrearRenta">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label class="form-label fw-semibold small text-muted text-uppercase mb-0">
-                                Cliente <span class="text-danger">*</span>
-                            </label>
-                            <span class="badge bg-light text-muted border small" id="badgeClienteCrearRenta">Sin seleccionar</span>
-                        </div>
+                        <!-- SECCIÓN 1: GESTIÓN DE RENTA -->
+                        <div class="col-12 col-md-6 border-end-md pe-md-4">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                                    <i class="bi bi-pc-display text-coffee me-1"></i> 1. Gestión de Renta
+                                </span>
+                                <span class="badge bg-coffee-subtle text-coffee border border-coffee-subtle rounded-pill small">Sesión</span>
+                            </div>
 
-                        <div class="input-group shadow-xs">
-                            <span class="input-group-text bg-white border-end-0 text-muted">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" id="inputBuscarClienteCrearRenta" class="form-control border-start-0 ps-0" 
-                                   placeholder="Buscar cliente por nombre o DUI..." autocomplete="off">
-                            <button class="btn btn-outline-secondary border-start-0 d-none" type="button" id="btnLimpiarClienteCrearRenta" title="Limpiar selección">
-                                <i class="bi bi-x-lg"></i>
-                            </button>
-                        </div>
-
-                        <select name="cliente_id" id="selectClienteRenta" class="d-none" required>
-                            <option value="" selected disabled>Seleccione el cliente</option>
-                            {% for cl in clientes %}
-                            <option value="{{ cl.cliente_id }}" 
-                                    data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
-                                    data-correo="{{ cl.correo|default:'' }}">
-                                {{ cl.nombre }} {{ cl.apellido }} (DUI: {{ cl.dui }})
-                            </option>
-                            {% endfor %}
-                        </select>
-
-                        <!-- Menú de resultados de cliente -->
-                        <div id="listaResultadosClienteCrearRenta" class="list-group position-absolute w-100 shadow rounded-3 border mt-1 overflow-auto d-none" 
-                             style="max-height: 180px; z-index: 1060; background: #ffffff;">
-                            {% for cl in clientes %}
-                            <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 item-cliente-crear-renta"
-                                    data-id="{{ cl.cliente_id }}"
-                                    data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
-                                    data-correo="{{ cl.correo|default:'' }}"
-                                    data-search="{{ cl.nombre|lower }} {{ cl.apellido|lower }} {{ cl.dui|default:'' }} {{ cl.correo|default:''|lower }}">
+                            <!-- Banner de Asignación Directa -->
+                            <div class="alert alert-info py-2 px-3 rounded-3 d-none mb-3 align-items-center justify-content-between" id="alertaEquipoDirecto">
                                 <div>
-                                    <strong class="d-block text-dark small">{{ cl.nombre }} {{ cl.apellido }}</strong>
-                                    <small class="text-muted">DUI: {{ cl.dui|default:"N/A" }} {% if cl.correo %}· {{ cl.correo }}{% endif %}</small>
+                                    <span class="small text-muted d-block" style="font-size: 0.72rem;">Equipo pre-seleccionado:</span>
+                                    <strong class="text-dark small" id="alertaEquipoDirectoNombre">--</strong>
                                 </div>
-                                <i class="bi bi-chevron-right text-muted small"></i>
-                            </button>
-                            {% endfor %}
-                            <div id="sinResultadosClienteCrearRenta" class="p-3 text-center text-muted small d-none">
-                                No se encontraron clientes.
+                                <span class="badge bg-primary rounded-pill">Rápido</span>
+                            </div>
+
+                            <!-- 1.1 Equipo -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                                    Equipo <span class="text-danger">*</span>
+                                </label>
+                                <select name="equipo_id" id="selectEquipoRenta" class="form-select rounded-3 shadow-xs" required>
+                                    <option value="" data-tarifa="0">Seleccione un equipo disponible</option>
+                                    {% for eq in equipos_rentables %}
+                                    <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{ eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- 1.2 Cliente con Buscador -->
+                            <div class="mb-3 position-relative" id="contenedorBuscarClienteCrearRenta">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label fw-semibold small text-muted text-uppercase mb-0">
+                                        Cliente <span class="text-danger">*</span>
+                                    </label>
+                                    <span class="badge bg-light text-muted border small" id="badgeClienteCrearRenta">Sin seleccionar</span>
+                                </div>
+
+                                <div class="input-group input-group-sm shadow-xs">
+                                    <span class="input-group-text bg-white border-end-0 text-muted">
+                                        <i class="bi bi-search"></i>
+                                    </span>
+                                    <input type="text" id="inputBuscarClienteCrearRenta" class="form-control border-start-0 ps-0" 
+                                           placeholder="Buscar por nombre o DUI..." autocomplete="off">
+                                    <button class="btn btn-outline-secondary border-start-0 d-none" type="button" id="btnLimpiarClienteCrearRenta" title="Limpiar selección">
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+
+                                <select name="cliente_id" id="selectClienteRenta" class="d-none" required>
+                                    <option value="" selected disabled>Seleccione el cliente</option>
+                                    {% for cl in clientes %}
+                                    <option value="{{ cl.cliente_id }}" 
+                                            data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
+                                            data-correo="{{ cl.correo|default:'' }}">
+                                        {{ cl.nombre }} {{ cl.apellido }} (DUI: {{ cl.dui }})
+                                    </option>
+                                    {% endfor %}
+                                </select>
+
+                                <!-- Menú flotante de resultados -->
+                                <div id="listaResultadosClienteCrearRenta" class="list-group position-absolute w-100 shadow rounded-3 border mt-1 overflow-auto d-none" 
+                                     style="max-height: 170px; z-index: 1060; background: #ffffff;">
+                                    {% for cl in clientes %}
+                                    <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 item-cliente-crear-renta"
+                                            data-id="{{ cl.cliente_id }}"
+                                            data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
+                                            data-correo="{{ cl.correo|default:'' }}"
+                                            data-search="{{ cl.nombre|lower }} {{ cl.apellido|lower }} {{ cl.dui|default:'' }} {{ cl.correo|default:''|lower }}">
+                                        <div>
+                                            <strong class="d-block text-dark small">{{ cl.nombre }} {{ cl.apellido }}</strong>
+                                            <small class="text-muted">DUI: {{ cl.dui|default:"N/A" }} {% if cl.correo %}· {{ cl.correo }}{% endif %}</small>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted small"></i>
+                                    </button>
+                                    {% endfor %}
+                                    <div id="sinResultadosClienteCrearRenta" class="p-3 text-center text-muted small d-none">
+                                        No se encontraron clientes.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 1.3 Tiempo de Renta -->
+                            <div class="mb-1">
+                                <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                                    Tiempo de Renta <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-sm mb-2 shadow-xs">
+                                    <input type="number" name="tiempo_de_renta" id="inputTiempoRenta" class="form-control rounded-start-3 font-monospace fw-bold" min="15" step="15" value="60" required>
+                                    <span class="input-group-text bg-white text-muted">minutos</span>
+                                </div>
+                                <div class="d-flex gap-1 flex-wrap">
+                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="30">30 min</button>
+                                    <button type="button" class="btn btn-xs btn-coffee rounded-pill btn-quick-time active px-2 py-1" data-min="60">1 hora</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="120">2 horas</button>
+                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="180">3 horas</button>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Tiempo de Renta (Minutos) <span class="text-danger fw-bold">*</span></label>
-                        <input type="number" name="tiempo_de_renta" id="inputTiempoRenta" class="form-control rounded-3" min="15" step="15" value="60" required>
-                        <div class="d-flex gap-2 mt-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-quick-time" data-min="30">30 min</button>
-                            <button type="button" class="btn btn-sm btn-coffee rounded-pill btn-quick-time active" data-min="60">1 hora</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-quick-time" data-min="120">2 horas</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill btn-quick-time" data-min="180">3 horas</button>
+                        <!-- SECCIÓN 2: PROCESO DE COBRO -->
+                        <div class="col-12 col-md-6 ps-md-4 d-flex flex-column">
+                            <div class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom">
+                                <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                                    <i class="bi bi-cash-stack text-success me-1"></i> 2. Proceso de Cobro
+                                </span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">Inmediato</span>
+                            </div>
+
+                            <!-- 2.1 Resumen Total y Vuelto -->
+                            <div class="row g-2 mb-3">
+                                <div class="col-6">
+                                    <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Total a Cobrar</span>
+                                        <div class="fs-4 fw-bold text-success font-monospace" id="crearRentaTotalTexto">$0.00</div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Cambio / Vuelto</span>
+                                        <strong class="fs-4 font-monospace text-dark" id="crearRentaVueltoTexto">$0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2.2 Efectivo Recibido y Billetes Rápidos -->
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                                    Efectivo Recibido
+                                </label>
+                                <div class="input-group input-group-sm mb-2 shadow-xs">
+                                    <span class="input-group-text bg-white fw-bold text-muted">$</span>
+                                    <input type="number" step="0.01" min="0" max="99999.99" id="inputPagaConCrearRenta" class="form-control font-monospace fs-6 fw-bold" placeholder="0.00" inputmode="decimal">
+                                </div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="exacto">Exacto</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="1">$1</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="2">$2</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="5">$5</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="10">$10</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="20">$20</button>
+                                </div>
+                            </div>
+
+                            <!-- 2.3 Factura por Correo -->
+                            <div class="card border rounded-3 p-3 bg-light shadow-xs mt-auto mb-1">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoCrearRenta" value="1" disabled style="cursor: pointer;">
+                                    </div>
+                                    <label class="form-check-label fw-semibold text-dark small mb-0" for="checkEnviarCorreoCrearRenta" style="cursor: pointer;">
+                                        <i class="bi bi-envelope-at text-primary me-1"></i>Enviar factura por correo
+                                    </label>
+                                </div>
+                                <div id="infoCorreoClienteCrearContainer" class="small ps-1" style="font-size: 0.78rem;">
+                                    <span id="textoCorreoDestinoCrear" class="text-muted fst-italic">Seleccione un cliente para habilitar el envío</span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Estimado en vivo -->
-                    <div class="d-flex justify-content-between align-items-center p-3 rounded-3 bg-light border">
-                        <span class="small text-muted fw-semibold">Total Estimado de la Sesión:</span>
-                        <strong class="fs-4 text-success font-monospace" id="estimadoTotalRenta">$0.00</strong>
                     </div>
                 </div>
-                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 bg-light bg-opacity-50">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">
-                        <i class="bi bi-play-fill me-1"></i> Iniciar Renta
+                    <button type="submit" id="btnConfirmarCrearRenta" class="btn btn-coffee rounded-pill px-4 shadow">
+                        <i class="bi bi-cash-stack me-1"></i> Cobrar e Iniciar Renta
                     </button>
                 </div>
             </form>
@@ -112,19 +202,78 @@
 </div>
 
 <script>
+    let crearRentaTotalActual = 0;
+
+    function redondearCentavosCrear(valor) {
+        return Math.round((valor + Number.EPSILON) * 100) / 100;
+    }
+
+    function actualizarVueltoCrearRenta() {
+        const inputPaga = document.getElementById('inputPagaConCrearRenta');
+        const vueltoTexto = document.getElementById('crearRentaVueltoTexto');
+        const btnConfirmar = document.getElementById('btnConfirmarCrearRenta');
+        if (!inputPaga || !vueltoTexto) return;
+
+        const rawVal = (inputPaga.value || '').trim();
+        if (rawVal === '') {
+            vueltoTexto.textContent = '$0.00';
+            vueltoTexto.className = 'fs-4 font-monospace text-dark';
+            if (btnConfirmar) btnConfirmar.disabled = false;
+            return;
+        }
+
+        const pagaCon = parseFloat(rawVal) || 0;
+        const total = crearRentaTotalActual;
+        const diferencia = redondearCentavosCrear(pagaCon - total);
+
+        if (diferencia >= 0) {
+            vueltoTexto.textContent = `$${diferencia.toFixed(2)}`;
+            vueltoTexto.className = 'fs-4 font-monospace text-success';
+            if (btnConfirmar) btnConfirmar.disabled = false;
+        } else {
+            vueltoTexto.textContent = `Faltan $${Math.abs(diferencia).toFixed(2)}`;
+            vueltoTexto.className = 'fs-4 font-monospace text-danger';
+            if (btnConfirmar) btnConfirmar.disabled = true;
+        }
+    }
+
     function recalcularEstimadoRenta() {
         const selectEq = document.getElementById('selectEquipoRenta');
         const inputMin = document.getElementById('inputTiempoRenta');
-        const display = document.getElementById('estimadoTotalRenta');
-        if (!selectEq || !inputMin || !display) return;
+        const displayTotal = document.getElementById('crearRentaTotalTexto');
+        if (!selectEq || !inputMin || !displayTotal) return;
 
         const opt = selectEq.options[selectEq.selectedIndex];
         const tarifa = parseFloat(opt ? opt.dataset.tarifa : 0) || 0;
         const minutos = parseInt(inputMin.value) || 0;
-        const total = (tarifa * (minutos / 60)).toFixed(2);
-        display.textContent = `$${total}`;
+        crearRentaTotalActual = redondearCentavosCrear(tarifa * (minutos / 60));
+        displayTotal.textContent = `$${crearRentaTotalActual.toFixed(2)}`;
+        actualizarVueltoCrearRenta();
     }
 
+    // Billetes rápidos
+    document.querySelectorAll('.btn-billete-crear').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const monto = this.dataset.monto;
+            const inputPaga = document.getElementById('inputPagaConCrearRenta');
+            if (!inputPaga) return;
+
+            if (monto === 'exacto') {
+                inputPaga.value = crearRentaTotalActual.toFixed(2);
+            } else {
+                inputPaga.value = parseFloat(monto).toFixed(2);
+            }
+            actualizarVueltoCrearRenta();
+            inputPaga.focus();
+        });
+    });
+
+    const inputPagaCrear = document.getElementById('inputPagaConCrearRenta');
+    if (inputPagaCrear) {
+        inputPagaCrear.addEventListener('input', actualizarVueltoCrearRenta);
+    }
+
+    // Botones de tiempo rápido
     document.querySelectorAll('.btn-quick-time').forEach(function(btn) {
         btn.addEventListener('click', function() {
             document.querySelectorAll('.btn-quick-time').forEach(b => {
@@ -143,6 +292,24 @@
 
     const selectEq = document.getElementById('selectEquipoRenta');
     if (selectEq) selectEq.addEventListener('change', recalcularEstimadoRenta);
+
+    // Correo cliente
+    const checkCorreoCrear = document.getElementById('checkEnviarCorreoCrearRenta');
+    const textoDestinoCrear = document.getElementById('textoCorreoDestinoCrear');
+
+    function actualizarCorreoClienteCrear(correo) {
+        if (!checkCorreoCrear || !textoDestinoCrear) return;
+        correo = (correo || '').trim();
+        if (correo) {
+            checkCorreoCrear.disabled = false;
+            checkCorreoCrear.checked = true;
+            textoDestinoCrear.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+        } else {
+            checkCorreoCrear.checked = false;
+            checkCorreoCrear.disabled = true;
+            textoDestinoCrear.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado.`;
+        }
+    }
 
     // Buscador interactivo de clientes en Nueva Renta
     const inputBuscarClienteCrearRenta = document.getElementById('inputBuscarClienteCrearRenta');
@@ -166,11 +333,7 @@
             }
         });
         if (sinResultadosClienteCrearRenta) {
-            if (visibles === 0) {
-                sinResultadosClienteCrearRenta.classList.remove('d-none');
-            } else {
-                sinResultadosClienteCrearRenta.classList.add('d-none');
-            }
+            sinResultadosClienteCrearRenta.classList.toggle('d-none', visibles > 0);
         }
     }
 
@@ -197,6 +360,7 @@
         item.addEventListener('click', function () {
             const clienteId = this.dataset.id;
             const clienteNombre = this.dataset.nombre;
+            const clienteCorreo = this.dataset.correo;
 
             if (selectClienteRenta) {
                 selectClienteRenta.value = clienteId;
@@ -215,6 +379,7 @@
             if (listaResultadosClienteCrearRenta) {
                 listaResultadosClienteCrearRenta.classList.add('d-none');
             }
+            actualizarCorreoClienteCrear(clienteCorreo);
         });
     });
 
@@ -233,10 +398,41 @@
                 badgeClienteCrearRenta.className = 'badge bg-light text-muted border small';
             }
             this.classList.add('d-none');
+            actualizarCorreoClienteCrear('');
             filtrarClientesCrearRenta('');
             if (listaResultadosClienteCrearRenta) {
                 listaResultadosClienteCrearRenta.classList.remove('d-none');
             }
         });
     }
+
+    // Al enviar el formulario de Nueva Renta:
+    // 1) Abre la factura PDF en la nueva pestaña gracias a target="_blank"
+    // 2) En la ventana principal cierra el modal y recarga tras 1.6 segundos para mostrar el contador corriendo
+    const formNuevaRenta = document.getElementById('formNuevaRenta');
+    const btnConfirmarCrearRenta = document.getElementById('btnConfirmarCrearRenta');
+    const modalNuevaRentaEl = document.getElementById('modalNuevaRenta');
+
+    if (formNuevaRenta) {
+        formNuevaRenta.addEventListener('submit', function () {
+            if (btnConfirmarCrearRenta) {
+                btnConfirmarCrearRenta.disabled = true;
+                btnConfirmarCrearRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando e Iniciando...';
+            }
+            if (modalNuevaRentaEl && window.bootstrap) {
+                setTimeout(function () {
+                    const modalInstance = bootstrap.Modal.getInstance(modalNuevaRentaEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 600);
+            }
+            setTimeout(function () {
+                window.location.reload();
+            }, 1800);
+        });
+    }
+
+    // Inicializar cálculo inicial
+    recalcularEstimadoRenta();
 </script>

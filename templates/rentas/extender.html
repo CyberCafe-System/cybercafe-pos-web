@@ -2,7 +2,7 @@
 <div class="modal fade" id="modalExtenderRenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="{% url 'extender_renta' %}" target="_blank">
+            <form method="POST" action="{% url 'extender_renta' %}" target="_blank" id="formExtenderRenta">
                 {% csrf_token %}
                 <input type="hidden" name="detalle_renta_id" id="extenderDetalleId">
                 <input type="hidden" name="minutos_extra" id="extenderMinutosExtra" value="30">
@@ -64,8 +64,8 @@
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">
-                        <i class="bi bi-plus-circle me-1"></i> Confirmar Extensión
+                    <button type="submit" id="btnConfirmarExtenderRenta" class="btn btn-coffee rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Cobrar y Confirmar Extensión
                     </button>
                 </div>
             </form>
