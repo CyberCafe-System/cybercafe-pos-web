@@ -74,6 +74,17 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
+                            {% if comp.observaciones %}
+                            <button type="button" class="btn btn-sm btn-outline-info me-1 btn-ver-revisiones-comp"
+                                data-bs-toggle="modal" data-bs-target="#modalHistorialRevisionesComp"
+                                data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
+                                data-serie="{{ comp.numero_serie|default:'' }}" data-tipo="{{ comp.get_tipo_display }}"
+                                data-estado="{{ comp.get_estado_display }}"
+                                data-historial="{{ comp.observaciones }}"
+                                title="Ver Historial de Revisiones / Daños">
+                                <i class="bi bi-journal-text"></i>
+                            </button>
+                            {% endif %}
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-componente"
                                 data-bs-toggle="modal" data-bs-target="#modalModificarComponente"
                                 data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
@@ -111,6 +122,7 @@
 
 {% include 'componentes/crear.html' %}
 {% include 'componentes/editar.html' %}
+{% include 'componentes/historial_revisiones.html' %}
 
 <script>
     const buscadorComp = document.getElementById('buscadorComponentes');

@@ -37,16 +37,7 @@ def cajero_o_admin_required(view_func):
 
 def asistente_o_admin_required(view_func):
     """
-    Permite el acceso a Asistentes y Administradores (por ejemplo, para el Módulo de Revisiones).
+    Las consultas y gestión de revisiones en el sistema web están reservadas
+    exclusivamente para el Administrador. El Asistente opera únicamente vía app móvil.
     """
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        es_admin = getattr(request.user, 'es_admin', False)
-        es_asistente = getattr(request.user, 'es_asistente', False)
-        if not (es_admin or es_asistente):
-            messages.error(request, 'No tienes permisos de Asistente o Administrador para acceder a este módulo.')
-            return redirect('inicio')
-        return view_func(request, *args, **kwargs)
-    return _wrapped_view
+    return admin_required(view_func)

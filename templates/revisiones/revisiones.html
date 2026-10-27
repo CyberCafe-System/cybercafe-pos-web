@@ -15,15 +15,17 @@
             </p>
         </div>
 
-        {% if count_pendientes > 0 %}
         <div>
-            <button class="btn btn-warning text-dark rounded-pill shadow-sm px-3 fw-semibold"
-                    data-bs-toggle="modal" data-bs-target="#modalNuevaRevision">
-                <i class="bi bi-clipboard2-pulse me-1"></i> Inspeccionar Puesto Pendiente
-                <span class="badge bg-danger text-white rounded-pill ms-1">{{ count_pendientes }}</span>
-            </button>
+            {% if count_pendientes > 0 %}
+            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill small">
+                <i class="bi bi-hourglass-split me-1"></i> {{ count_pendientes }} puesto(s) esperando inspección móvil
+            </span>
+            {% else %}
+            <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small">
+                <i class="bi bi-phone me-1 text-primary"></i> Inspecciones registradas desde App Móvil
+            </span>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
 
     <!-- Barra de Filtros y Buscador por Nombre de Equipo -->
@@ -91,6 +93,7 @@
                     <div class="item-revision tarjeta-pendiente p-3 mb-2 rounded-4 border border-warning-subtle shadow-xs cursor-pointer transition-all"
                          id="item-pendiente-{{ p.detalle_renta_id }}"
                          data-tipo="pendiente"
+                         data-renta-id="{{ p.renta.renta_id }}"
                          data-equipo="{{ p.equipo.nombre|lower }}"
                          data-equipo-id="{{ p.equipo_id }}"
                          data-detalle-id="{{ p.detalle_renta_id }}"
@@ -123,10 +126,9 @@
                             <span class="badge {% if p.renta.estado_de_pago == 'PAGADO' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% endif %} rounded-pill small">
                                 Pago: {{ p.renta.get_estado_de_pago_display }}
                             </span>
-                            <button type="button" class="btn btn-xs btn-outline-warning text-dark rounded-pill px-2 py-0 fw-semibold"
-                                    onclick="event.stopPropagation(); abrirModalInspeccionDirecta('{{ p.detalle_renta_id }}', '{{ p.equipo.nombre }}', '{{ p.equipo.tipo }}');">
-                                Inspeccionar <i class="bi bi-arrow-right-short"></i>
-                            </button>
+                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill small">
+                                <i class="bi bi-phone me-1"></i> Esperando App Móvil
+                            </span>
                         </div>
                     </div>
                     {% endfor %}
@@ -156,9 +158,14 @@
                          data-componentes="{% for c in r.detalle_renta.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}"
                          onclick="seleccionarItem(this)">
                         <div class="d-flex justify-content-between align-items-start mb-1">
-                            <span class="fw-bold text-dark">
-                                <i class="bi bi-display me-1 text-coffee"></i>{{ r.detalle_renta.equipo.nombre }}
-                            </span>
+                            <div class="d-flex align-items-center gap-1">
+                                <span class="fw-bold text-dark">
+                                    <i class="bi bi-display me-1 text-coffee"></i>{{ r.detalle_renta.equipo.nombre }}
+                                </span>
+                                <span class="badge bg-dark text-white rounded-pill px-2 py-0 font-monospace" style="font-size: 0.7rem;">
+                                    #REV-{{ r.revision_equipo_id }}
+                                </span>
+                            </div>
                             {% if r.inspeccion_pasada %}
                             <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
                                 <i class="bi bi-check-circle-fill me-1"></i>Aprobada
@@ -170,10 +177,9 @@
                             {% endif %}
                         </div>
 
-                        <div class="text-muted small mb-1 text-truncate">
-                            <i class="bi bi-person-badge me-1"></i>{{ r.usuario.nombre }}
-                            <span class="mx-1">•</span>
-                            <i class="bi bi-clock me-1"></i>{{ r.fecha_revision|date:"d/m/y h:i A" }}
+                        <div class="text-muted small mb-1 d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-receipt me-1"></i>Renta #RN-{{ r.detalle_renta.renta.renta_id }} ({{ r.detalle_renta.tiempo_de_renta|add:r.detalle_renta.tiempo_agregado }} min)</span>
+                            <span><i class="bi bi-clock me-1"></i>{{ r.fecha_revision|date:"d/m/y h:i A" }}</span>
                         </div>
 
                         {% if r.observaciones %}
@@ -243,10 +249,16 @@
                 <!-- Detalle Dinámico Renderizado con JS -->
                 <div id="vistaContenidoDetalle" class="card-body p-4 d-none">
 
-                    <!-- Cabecera de Estado y Acciones Rápidas -->
+                    <!-- Cabecera de Estado, Identificadores y Acciones -->
                     <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-3 border-bottom gap-2">
-                        <div class="d-flex align-items-center gap-2">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
                             <span id="badgeResultadoDetalle" class="badge px-3 py-2 rounded-pill fs-6">
+                                <!-- JS -->
+                            </span>
+                            <span id="badgeIdRevisionDetalle" class="badge bg-dark text-white rounded-pill px-3 py-2 font-monospace small">
+                                <!-- JS -->
+                            </span>
+                            <span id="badgeIdRentaDetalle" class="badge bg-secondary-subtle text-dark border rounded-pill px-3 py-2 font-monospace small">
                                 <!-- JS -->
                             </span>
                             <span id="badgeTipoEquipoDetalle" class="badge bg-light text-dark border rounded-pill">
@@ -256,30 +268,22 @@
 
                         <div class="d-flex gap-2">
                             {% if request.user.es_admin %}
-                            <!-- Botón Reiniciar Revisión (Exclusivo Administrador) -->
+                            <!-- Botón Editar Revisión (Exclusivo Administrador) -->
+                            <button type="button" id="btnEditarRevision"
+                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-xs d-none"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditarRevision">
+                                <i class="bi bi-pencil-square me-1"></i> Editar Revisión
+                            </button>
+
+                            <!-- Botón Reiniciar/Anular Revisión (Exclusivo Administrador) -->
                             <button type="button" id="btnReiniciarRevision"
                                     class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-xs d-none"
                                     data-bs-toggle="modal" data-bs-target="#modalConfirmarReinicio">
-                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reiniciar Revisión
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> Reiniciar
                             </button>
                             {% endif %}
 
-                            <!-- Botón Inspeccionar si es pendiente -->
-                            <button type="button" id="btnInspeccionarDesdeDetalle"
-                                    class="btn btn-sm btn-warning text-dark rounded-pill px-3 shadow-xs d-none fw-semibold">
-                                <i class="bi bi-clipboard2-check me-1"></i> Realizar Inspección
-                            </button>
-
-                            <!-- Botón Cobrar Renta si el pago está pendiente -->
-                            {% if request.user.es_admin or request.user.es_cajero %}
-                            <button type="button" id="btnCobrarDesdeDetalle"
-                                    class="btn btn-sm btn-danger rounded-pill px-3 shadow-xs d-none"
-                                    data-bs-toggle="modal" data-bs-target="#modalCobroRenta">
-                                <i class="bi bi-cash-stack me-1"></i> Cobrar Renta
-                            </button>
-                            {% endif %}
-
-                            <!-- Factura PDF si ya fue cobrado -->
+                            <!-- Factura PDF de la renta pagada -->
                             <a id="btnFacturaPdfDetalle" href="#" target="_blank" rel="noopener"
                                class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-xs d-none">
                                 <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Factura PDF
@@ -371,54 +375,33 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- MODAL: REALIZAR INSPECCIÓN FÍSICA IN SITU                                  -->
+<!-- MODAL: EDITAR REVISIÓN (EXCLUSIVO ADMINISTRADOR)                          -->
 <!-- ========================================================================= -->
-<div class="modal fade" id="modalNuevaRevision" tabindex="-1" aria-labelledby="modalNuevaRevisionLabel" aria-hidden="true">
+{% if request.user.es_admin %}
+<div class="modal fade" id="modalEditarRevision" tabindex="-1" aria-labelledby="modalEditarRevisionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <div class="modal-header border-0 pb-0 px-4 pt-4">
                 <div>
-                    <h5 class="modal-title fw-bold text-dark" id="modalNuevaRevisionLabel">
-                        <i class="bi bi-clipboard2-check text-coffee me-2"></i>Inspección Física de Equipo
+                    <h5 class="modal-title fw-bold text-dark" id="modalEditarRevisionLabel">
+                        <i class="bi bi-pencil-square text-coffee me-2"></i>Editar Auditoría de Revisión
                     </h5>
-                    <p class="text-muted small mb-0">Evalúa el estado del puesto, periféricos y libera o reporta novedades.</p>
+                    <p class="text-muted small mb-0">Modificación administrativa de resultados, diagnóstico y estado del equipo.</p>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
 
-            <form method="post" action="{% url 'crear_revision' %}" id="formCrearRevision">
+            <form method="post" action="" id="formEditarRevision">
                 {% csrf_token %}
                 <div class="modal-body px-4 py-3">
 
-                    <!-- Selector de Equipo Pendiente -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small text-uppercase">
-                            Puesto / Equipo a Inspeccionar:
-                        </label>
-                        <select name="detalle_renta_id" id="modalSelectDetalle" class="form-select rounded-3 shadow-xs" required onchange="actualizarInfoModalInspeccion(this)">
-                            {% for p in detalles_pendientes %}
-                            <option value="{{ p.detalle_renta_id }}"
-                                    data-nombre="{{ p.equipo.nombre }}"
-                                    data-tipo="{{ p.equipo.tipo }}"
-                                    data-cliente="{{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}"
-                                    data-componentes="{% for c in p.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}">
-                                {{ p.equipo.nombre }} ({{ p.equipo.tipo }}) — Cliente: {{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}
-                            </option>
-                            {% empty %}
-                            <option value="" disabled selected>No hay equipos esperando revisión</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <!-- Lista de Periféricos del Puesto a Verificar -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small text-uppercase d-flex justify-content-between">
-                            <span>Periféricos Asignados a la Estación:</span>
-                            <span class="text-muted fw-normal">Verificar presencia y estado</span>
-                        </label>
-                        <div class="list-group rounded-3 border-0 bg-light p-2" id="modalListaPerifericos" style="max-height: 180px; overflow-y: auto;">
-                            <!-- Inyectado dinámicamente -->
+                    <!-- Info de la Revisión / Equipo -->
+                    <div class="p-3 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="badge bg-dark text-white rounded-pill px-3 py-1 font-monospace me-2" id="modalEditRevisionBadge">#REV-0</span>
+                            <strong class="text-dark" id="modalEditEquipoNombre">Equipo</strong>
                         </div>
+                        <span class="text-muted small" id="modalEditCliente">Cliente</span>
                     </div>
 
                     <!-- Selector de Resultado: Aprobar vs Reportar Daños -->
@@ -428,80 +411,56 @@
                         </label>
                         <div class="row g-2">
                             <div class="col-6">
-                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioAprobar" value="true" checked onchange="toggleFormularioDanio(true)">
-                                <label class="btn btn-outline-success w-100 rounded-3 py-2 fw-semibold" for="radioAprobar">
-                                    <i class="bi bi-check-circle-fill me-1"></i> Aprobar Puesto (OK)
+                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioEditAprobar" value="true" onchange="toggleFormularioEditDanio(true)">
+                                <label class="btn btn-outline-success w-100 rounded-3 py-2 fw-semibold" for="radioEditAprobar">
+                                    <i class="bi bi-check-circle-fill me-1"></i> Inspección Aprobada (OK)
                                 </label>
                             </div>
                             <div class="col-6">
-                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioReprobar" value="false" onchange="toggleFormularioDanio(false)">
-                                <label class="btn btn-outline-danger w-100 rounded-3 py-2 fw-semibold" for="radioReprobar">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Reportar Daño / Faltante
+                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioEditReprobar" value="false" onchange="toggleFormularioEditDanio(false)">
+                                <label class="btn btn-outline-danger w-100 rounded-3 py-2 fw-semibold" for="radioEditReprobar">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Con Daños / Novedades
                                 </label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Campos Condicionales de Daño -->
-                    <div id="seccionDanio" class="d-none p-3 rounded-4 mb-3 border border-danger-subtle bg-danger-subtle bg-opacity-10">
-                        <div class="mb-3">
+                    <!-- Campos Condicionales de Daño para Edición -->
+                    <div id="seccionEditDanio" class="d-none p-3 rounded-4 mb-3 border border-danger-subtle bg-danger-subtle bg-opacity-10">
+                        <div class="mb-0">
                             <label class="form-label fw-bold text-danger small text-uppercase">
                                 Asignar Estado al Equipo:
                             </label>
-                            <select name="estado_si_daniado" class="form-select rounded-3">
-                                <option value="DANIOS_MENORES" selected>Daños Menores (Desperfecto estético o periférico menor)</option>
+                            <select name="estado_si_daniado" id="modalEditEstadoDaniado" class="form-select rounded-3">
+                                <option value="DANIOS_MENORES">Daños Menores (Desperfecto estético o periférico menor)</option>
                                 <option value="EN_MANTENIMIENTO">En Mantenimiento (Fuera de servicio para reparación)</option>
                                 <option value="DEFECTUOSO">Defectuoso (Falla crítica)</option>
                             </select>
-                        </div>
-
-                        <!-- Componente(s) Afectado(s) -->
-                        <div class="mb-3">
-                            <label class="form-label fw-bold text-danger small text-uppercase d-flex justify-content-between">
-                                <span><i class="bi bi-tools me-1"></i> Componente(s) Afectado(s):</span>
-                                <span class="badge bg-danger text-white rounded-pill small">Seleccionar</span>
-                            </label>
-                            <div id="contenedorCheckboxesAfectados" class="bg-white p-2 rounded-3 border border-danger-subtle mb-2" style="max-height: 140px; overflow-y: auto;">
-                                <!-- Inyectado dinámicamente con los componentes del equipo -->
-                            </div>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-text bg-white text-muted border-danger-subtle"><i class="bi bi-plus-circle"></i></span>
-                                <input type="text" name="otro_componente" id="txtOtroComponente" class="form-control border-danger-subtle"
-                                       placeholder="Otro componente o accesorio (ej. Cable HDMI, Control 2, etc.)...">
-                            </div>
-                        </div>
-
-                        <div class="small text-danger">
-                            <i class="bi bi-info-circle-fill me-1"></i>
-                            El equipo quedará bloqueado para rentas y no podrá alquilarse hasta ser reparado.
                         </div>
                     </div>
 
                     <!-- Campo de Descripción / Observaciones -->
                     <div class="mb-2">
-                        <label class="form-label fw-bold text-dark small text-uppercase d-flex justify-content-between" id="lblObservaciones">
-                            <span>Observaciones y Diagnóstico:</span>
-                            <span id="badgeObligatorio" class="badge bg-secondary rounded-pill small">Opcional</span>
+                        <label class="form-label fw-bold text-dark small text-uppercase d-flex justify-content-between">
+                            <span>Observaciones y Diagnóstico Técnico:</span>
                         </label>
-                        <textarea name="observaciones" id="txtObservaciones" rows="3" class="form-control rounded-3"
-                                  placeholder="Describe el estado de los periféricos, limpieza o detalla el daño encontrado..."></textarea>
-                        <div class="invalid-feedback" id="feedbackObservaciones">
-                            Debes ingresar una descripción detallada al reportar daños o faltantes.
-                        </div>
+                        <textarea name="observaciones" id="modalEditObservaciones" rows="4" class="form-control rounded-3"
+                                  placeholder="Detalle de observaciones, diagnóstico técnico o notas de auditoría..."></textarea>
                     </div>
 
                 </div>
 
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-coffee rounded-pill px-4" id="btnGuardarRevision">
-                        <i class="bi bi-check-circle me-1"></i> Confirmar Inspección
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4">
+                        <i class="bi bi-check-circle me-1"></i> Guardar Cambios
                     </button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+{% endif %}
 
 <!-- ========================================================================= -->
 <!-- MODAL: CONFIRMAR REINICIO DE REVISIÓN (SOLO ADMIN)                         -->
@@ -722,6 +681,26 @@ document.addEventListener('DOMContentLoaded', function () {
         const d = el.dataset;
         const esPendiente = (d.tipo === 'pendiente');
 
+        // Identificadores #REV y #RN
+        const badgeIdRev = document.getElementById('badgeIdRevisionDetalle');
+        const badgeIdRen = document.getElementById('badgeIdRentaDetalle');
+        if (badgeIdRev) {
+            if (!esPendiente && d.revisionId) {
+                badgeIdRev.textContent = '#REV-' + d.revisionId;
+                badgeIdRev.classList.remove('d-none');
+            } else {
+                badgeIdRev.classList.add('d-none');
+            }
+        }
+        if (badgeIdRen) {
+            if (d.rentaId) {
+                badgeIdRen.textContent = 'Renta #RN-' + d.rentaId + (d.detalleId ? ' (Sesión #DR-' + d.detalleId + ')' : '');
+                badgeIdRen.classList.remove('d-none');
+            } else {
+                badgeIdRen.classList.add('d-none');
+            }
+        }
+
         // Badge de resultado
         const badgeResultado = document.getElementById('badgeResultadoDetalle');
         if (badgeResultado) {
@@ -747,7 +726,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const lblEstado = document.getElementById('estadoEquipoDetalle');
         if (lblEstado) {
-            lblEstado.textContent = esPendiente ? 'Estado: Esperando verificación física' : ('Estado actual: ' + (d.equipoEstado || 'Normal'));
+            lblEstado.textContent = esPendiente ? 'Estado: Esperando verificación física (App Móvil)' : ('Estado actual: ' + (d.equipoEstado || 'Normal'));
         }
 
         // Ficha Cliente y Renta
@@ -810,19 +789,56 @@ document.addEventListener('DOMContentLoaded', function () {
             } else {
                 if (bannerAfectados) bannerAfectados.classList.add('d-none');
                 lblObs.textContent = esPendiente
-                    ? 'El equipo aún no ha sido evaluado in situ. Acude al puesto para verificar los periféricos asignados y confirmar la liberación.'
+                    ? 'El equipo aún no ha sido evaluado in situ. El Asistente Técnico realizará la inspección desde la aplicación móvil.'
                     : (rawObs || 'Sin observaciones adicionales registradas.');
             }
         }
 
         // Auditoría
         const lblInspector = document.getElementById('inspectorDetalle');
-        if (lblInspector) lblInspector.textContent = esPendiente ? 'Pendiente' : (d.inspector || '--');
+        if (lblInspector) lblInspector.textContent = esPendiente ? 'Esperando App Móvil' : (d.inspector || '--');
 
         const lblFecha = document.getElementById('fechaDetalle');
         if (lblFecha) lblFecha.textContent = esPendiente ? (d.horaFin || 'En espera') : (d.fecha || '--');
 
-        // Botones de acción dinámicos en detalle
+        // Botón Editar Revisión (Exclusivo Administrador)
+        const btnEditar = document.getElementById('btnEditarRevision');
+        if (btnEditar) {
+            if (!esPendiente && d.revisionId) {
+                btnEditar.classList.remove('d-none');
+                btnEditar.onclick = function () {
+                    const form = document.getElementById('formEditarRevision');
+                    if (form) form.action = '/revisiones/editar/' + d.revisionId + '/';
+
+                    const bRev = document.getElementById('modalEditRevisionBadge');
+                    if (bRev) bRev.textContent = '#REV-' + d.revisionId;
+
+                    const eqNom = document.getElementById('modalEditEquipoNombre');
+                    if (eqNom) eqNom.textContent = d.equipoNombre || 'Equipo';
+
+                    const cli = document.getElementById('modalEditCliente');
+                    if (cli) cli.textContent = 'Cliente: ' + (d.cliente || '--');
+
+                    const txtObs = document.getElementById('modalEditObservaciones');
+                    if (txtObs) txtObs.value = d.observaciones || '';
+
+                    const isPasa = (d.inspeccionPasada === 'true');
+                    const radioAprobar = document.getElementById('radioEditAprobar');
+                    const radioReprobar = document.getElementById('radioEditReprobar');
+                    if (isPasa && radioAprobar) {
+                        radioAprobar.checked = true;
+                        toggleFormularioEditDanio(true);
+                    } else if (radioReprobar) {
+                        radioReprobar.checked = true;
+                        toggleFormularioEditDanio(false);
+                    }
+                };
+            } else {
+                btnEditar.classList.add('d-none');
+            }
+        }
+
+        // Botón Reiniciar/Anular Revisión (Exclusivo Administrador)
         const btnReiniciar = document.getElementById('btnReiniciarRevision');
         if (btnReiniciar) {
             if (!esPendiente && d.revisionId) {
@@ -837,18 +853,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
             } else {
                 btnReiniciar.classList.add('d-none');
-            }
-        }
-
-        const btnInspeccionar = document.getElementById('btnInspeccionarDesdeDetalle');
-        if (btnInspeccionar) {
-            if (esPendiente) {
-                btnInspeccionar.classList.remove('d-none');
-                btnInspeccionar.onclick = function () {
-                    abrirModalInspeccionDirecta(d.detalleId, d.equipoNombre, d.equipoTipo);
-                };
-            } else {
-                btnInspeccionar.classList.add('d-none');
             }
         }
 
@@ -879,118 +883,13 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // -------------------------------------------------------------
-    // 3. MODAL DE INSPECCIÓN: CHECKLIST Y VALIDACIÓN ESTRICTA
+    // 3. CONTROL FORMULARIO DE EDICIÓN
     // -------------------------------------------------------------
-    window.toggleFormularioDanio = function (pasa) {
-        const seccionDanio = document.getElementById('seccionDanio');
-        const badgeObligatorio = document.getElementById('badgeObligatorio');
-        const txtObs = document.getElementById('txtObservaciones');
-
-        if (pasa) {
-            if (seccionDanio) seccionDanio.classList.add('d-none');
-            if (badgeObligatorio) {
-                badgeObligatorio.className = 'badge bg-secondary rounded-pill small';
-                badgeObligatorio.textContent = 'Opcional';
-            }
-            if (txtObs) {
-                txtObs.required = false;
-                txtObs.classList.remove('is-invalid');
-            }
-        } else {
-            if (seccionDanio) seccionDanio.classList.remove('d-none');
-            if (badgeObligatorio) {
-                badgeObligatorio.className = 'badge bg-danger rounded-pill small';
-                badgeObligatorio.textContent = 'Obligatorio';
-            }
-            if (txtObs) {
-                txtObs.required = true;
-                txtObs.focus();
-            }
-        }
-    };
-
-    const formRevision = document.getElementById('formCrearRevision');
-    if (formRevision) {
-        formRevision.addEventListener('submit', function (e) {
-            const radioReprobar = document.getElementById('radioReprobar');
-            const txtObs = document.getElementById('txtObservaciones');
-            if (radioReprobar && radioReprobar.checked) {
-                if (!txtObs || !txtObs.value.trim()) {
-                    e.preventDefault();
-                    if (txtObs) {
-                        txtObs.classList.add('is-invalid');
-                        txtObs.focus();
-                    }
-                    return false;
-                }
-            }
-        });
-    }
-
-    window.actualizarInfoModalInspeccion = function (select) {
-        if (!select || !select.selectedOptions || !select.selectedOptions[0]) return;
-        const opt = select.selectedOptions[0];
-        const rawComp = opt.dataset.componentes || '';
-        const cont = document.getElementById('modalListaPerifericos');
-        const contAfectados = document.getElementById('contenedorCheckboxesAfectados');
-
-        const partes = rawComp ? rawComp.split(';;') : [];
-
-        // 1. Lista general de verificación
-        if (cont) {
-            cont.innerHTML = '';
-            if (partes.length === 0 || !rawComp.trim()) {
-                cont.innerHTML = '<div class="text-muted small py-1 px-2">Sin periféricos asignados en el catálogo.</div>';
-            } else {
-                partes.forEach(function (c) {
-                    if (c.trim()) {
-                        const row = document.createElement('div');
-                        row.className = 'form-check d-flex justify-content-between align-items-center py-1 px-2 mb-1 bg-white rounded-2 border';
-                        row.innerHTML = `
-                            <label class="form-check-label small mb-0 fw-semibold text-dark">
-                                <i class="bi bi-display me-2 text-coffee"></i>${c.trim()}
-                            </label>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-lg"></i> Asignado</span>
-                        `;
-                        cont.appendChild(row);
-                    }
-                });
-            }
-        }
-
-        // 2. Checkboxes de componentes afectados para reporte de daños
-        if (contAfectados) {
-            contAfectados.innerHTML = '';
-            if (partes.length === 0 || !rawComp.trim()) {
-                contAfectados.innerHTML = '<div class="text-muted small p-1">No hay periféricos asignados al puesto. Puedes escribir el accesorio abajo.</div>';
-            } else {
-                partes.forEach(function (c, idx) {
-                    if (c.trim()) {
-                        const row = document.createElement('div');
-                        row.className = 'form-check py-1';
-                        row.innerHTML = `
-                            <input class="form-check-input border-danger" type="checkbox" name="componentes_afectados" value="${c.trim()}" id="chkAfectado_${idx}">
-                            <label class="form-check-label small fw-semibold text-dark cursor-pointer" for="chkAfectado_${idx}">
-                                ${c.trim()}
-                            </label>
-                        `;
-                        contAfectados.appendChild(row);
-                    }
-                });
-            }
-        }
-    };
-
-    window.abrirModalInspeccionDirecta = function (detalleId, equipoNombre, equipoTipo) {
-        const select = document.getElementById('modalSelectDetalle');
-        if (select) {
-            select.value = detalleId;
-            actualizarInfoModalInspeccion(select);
-        }
-        const modalEl = document.getElementById('modalNuevaRevision');
-        if (modalEl) {
-            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
-            modal.show();
+    window.toggleFormularioEditDanio = function (pasa) {
+        const seccionDanio = document.getElementById('seccionEditDanio');
+        if (seccionDanio) {
+            if (pasa) seccionDanio.classList.add('d-none');
+            else seccionDanio.classList.remove('d-none');
         }
     };
 
@@ -1017,17 +916,6 @@ document.addEventListener('DOMContentLoaded', function () {
             renderizarPagina();
         }
         seleccionarItem(elementoInicial);
-    }
-
-    // Inicializar checklist del modal al cargar
-    const selInicial = document.getElementById('modalSelectDetalle');
-    if (selInicial) {
-        actualizarInfoModalInspeccion(selInicial);
-    }
-
-    // Si viene con detalle_id en la URL y está pendiente, abrir automáticamente el modal para conveniencia del usuario
-    if (detalleUrl && elementoInicial && elementoInicial.dataset.tipo === 'pendiente') {
-        abrirModalInspeccionDirecta(detalleUrl, elementoInicial.dataset.equipoNombre, elementoInicial.dataset.equipoTipo);
     }
 
 });

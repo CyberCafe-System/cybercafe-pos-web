@@ -10,7 +10,7 @@ from .models import RevisionEquipo
 
 
 @login_required
-@asistente_o_admin_required
+@admin_required
 def revisiones_list(request):
     """
     Vista principal Master-Detail del Módulo de Revisiones.
@@ -135,16 +135,7 @@ def crear_revision(request):
                         prefijo_afectados = f"[Componentes Afectados]: {', '.join(lista_afectados)}"
                         observaciones_final = f"{prefijo_afectados}\n\n[Diagnóstico]: {observaciones}"
 
-                    # Actualizar estado de los componentes del equipo si fueron seleccionados
-                    from componentes.models import Componente
-                    for comp_nombre in lista_afectados:
-                        # Buscar si coincide con algún componente asignado a este equipo
-                        c_obj = Componente.objects.filter(equipo=equipo, nombre__iexact=comp_nombre.split(' (')[0]).first()
-                        if c_obj:
-                            c_obj.estado = 'DANIOS_MENORES' if estado_si_daniado == 'DANIOS_MENORES' else 'REQUIERE_REEMPLAZO'
-                            c_obj.save(update_fields=['estado'])
-
-                # Registrar la auditoría de revisión
+                # 1. Registrar primero la auditoría de revisión para obtener su ID
                 revision = RevisionEquipo.objects.create(
                     detalle_renta=detalle,
                     usuario=request.user,
@@ -152,6 +143,27 @@ def crear_revision(request):
                     observaciones=observaciones_final or None,
                     fecha_revision=timezone.now(),
                 )
+
+                # 2. Si no pasó la inspección, registrar historial acumulativo en cada componente afectado
+                if not inspeccion_pasada and lista_afectados:
+                    from componentes.models import Componente
+                    fecha_str = timezone.localtime(revision.fecha_revision).strftime('%d/%m/%Y %I:%M %p')
+                    for comp_nombre in lista_afectados:
+                        c_obj = Componente.objects.filter(equipo=equipo, nombre__iexact=comp_nombre.split(' (')[0]).first()
+                        if c_obj:
+                            nuevo_estado = 'DANIOS_MENORES' if estado_si_daniado == 'DANIOS_MENORES' else 'REQUIERE_REEMPLAZO'
+                            c_obj.estado = nuevo_estado
+                            estado_label = c_obj.get_estado_display()
+                            bloque_revision = (
+                                f"[REVISIÓN #{revision.revision_equipo_id} | {fecha_str} | ESTADO: {estado_label}]\n"
+                                f"Daño / Falla: {observaciones or 'Reportado con novedades en inspección técnica'}\n"
+                                f"--------------------------------------------------"
+                            )
+                            if c_obj.observaciones:
+                                c_obj.observaciones = f"{bloque_revision}\n{c_obj.observaciones}"
+                            else:
+                                c_obj.observaciones = bloque_revision
+                            c_obj.save(update_fields=['estado', 'observaciones'])
 
             if inspeccion_pasada:
                 messages.success(
@@ -205,5 +217,40 @@ def reiniciar_revision(request, revision_id):
             )
         except Exception as e:
             messages.error(request, f'Error al anular la revisión: {str(e)}')
+
+    return redirect('revisiones')
+
+
+@login_required
+@admin_required
+def editar_revision(request, revision_id):
+    """
+    Opción exclusiva para el Administrador:
+    Permite editar las observaciones, diagnóstico y resultado de una revisión existente.
+    """
+    if request.method == 'POST':
+        revision = get_object_or_404(RevisionEquipo, pk=revision_id)
+        observaciones = (request.POST.get('observaciones') or '').strip()
+        inspeccion_pasada_raw = request.POST.get('inspeccion_pasada', 'true')
+        inspeccion_pasada = (inspeccion_pasada_raw.lower() in ('true', '1', 'on', 'si'))
+
+        try:
+            with transaction.atomic():
+                revision.observaciones = observaciones or None
+                revision.inspeccion_pasada = inspeccion_pasada
+                revision.save(update_fields=['observaciones', 'inspeccion_pasada'])
+
+                # Si cambia el resultado de la inspección, actualizamos el estado del equipo
+                equipo = revision.detalle_renta.equipo
+                if inspeccion_pasada:
+                    equipo.estado = 'DISPONIBLE'
+                else:
+                    estado_daniado = request.POST.get('estado_si_daniado', 'DANIOS_MENORES')
+                    equipo.estado = estado_daniado
+                equipo.save(update_fields=['estado'])
+
+            messages.success(request, f'Revisión #{revision_id} actualizada correctamente por el Administrador.')
+        except Exception as e:
+            messages.error(request, f'No se pudo actualizar la revisión: {str(e)}')
 
     return redirect('revisiones')

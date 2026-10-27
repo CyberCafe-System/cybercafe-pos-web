@@ -1,0 +1,124 @@
+<!-- Modal Visor de Historial de Revisiones del Componente -->
+<div class="modal fade" id="modalHistorialRevisionesComp" tabindex="-1" aria-labelledby="modalHistorialRevisionesCompLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white rounded-top-4 py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-journal-text text-warning fs-5"></i>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0" id="modalHistorialRevisionesCompLabel">Historial de Revisiones y Novedades</h6>
+                        <small class="text-white-50" id="subtituloHistorialComp" style="font-size: 0.78rem;">Registro histórico de auditorías del componente</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4 bg-light bg-opacity-50">
+                <!-- Ficha del Componente -->
+                <div class="card border-0 shadow-xs rounded-3 p-3 mb-3 bg-white">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <span class="text-muted small text-uppercase tracking-wider fw-semibold d-block" style="font-size: 0.72rem;">Componente</span>
+                            <h5 class="fw-bold mb-0 text-dark" id="historialCompNombre">--</h5>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill small" id="historialCompTipo">--</span>
+                            <span class="badge px-3 py-2 rounded-pill small" id="historialCompEstado">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenedor del Historial Renderizado -->
+                <div class="card border rounded-3 p-3 bg-white shadow-xs">
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
+                        <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                            <i class="bi bi-clock-history text-coffee me-1"></i> Auditorías Registradas
+                        </span>
+                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle rounded-pill small" id="badgeTotalRevisionesComp">0 registradas</span>
+                    </div>
+
+                    <div id="contenedorListaRevisionesComp" class="d-flex flex-column gap-3 mt-2" style="max-height: 400px; overflow-y: auto;">
+                        <!-- Se llena dinámicamente con JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0 px-4 pb-3 bg-light bg-opacity-50">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                    <i class="bi bi-x-lg me-1"></i> Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btnsVerRevisiones = document.querySelectorAll('.btn-ver-revisiones-comp');
+    const modalNombre = document.getElementById('historialCompNombre');
+    const modalTipo = document.getElementById('historialCompTipo');
+    const modalEstado = document.getElementById('historialCompEstado');
+    const contenedor = document.getElementById('contenedorListaRevisionesComp');
+    const badgeTotal = document.getElementById('badgeTotalRevisionesComp');
+
+    btnsVerRevisiones.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const nombre = this.dataset.nombre || 'Componente';
+            const serie = this.dataset.serie || '';
+            const tipo = this.dataset.tipo || '';
+            const estado = this.dataset.estado || '';
+            const historialRaw = (this.dataset.historial || '').trim();
+
+            if (modalNombre) modalNombre.textContent = nombre + (serie ? ` (S/N: ${serie})` : '');
+            if (modalTipo) modalTipo.textContent = tipo;
+            if (modalEstado) {
+                modalEstado.textContent = estado;
+                if (estado.toLowerCase().includes('disponible')) {
+                    modalEstado.className = 'badge bg-success-subtle text-success border border-success-subtle px-3 py-2 rounded-pill small';
+                } else if (estado.toLowerCase().includes('reemplazo')) {
+                    modalEstado.className = 'badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2 rounded-pill small';
+                } else {
+                    modalEstado.className = 'badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill small';
+                }
+            }
+
+            if (!contenedor) return;
+            contenedor.innerHTML = '';
+
+            if (!historialRaw) {
+                contenedor.innerHTML = '<div class="text-center text-muted py-4 small">Sin observaciones o revisiones registradas.</div>';
+                if (badgeTotal) badgeTotal.textContent = '0 registros';
+                return;
+            }
+
+            // Separar bloques por línea divisoria "----" o doble salto de línea
+            const bloques = historialRaw.split(/[-]{4,}/).map(b => b.trim()).filter(Boolean);
+            if (badgeTotal) badgeTotal.textContent = `${bloques.length} registro(s)`;
+
+            bloques.forEach(function (bloque, idx) {
+                const cardBloque = document.createElement('div');
+                cardBloque.className = 'p-3 rounded-3 border bg-light border-light-subtle shadow-2xs position-relative';
+                
+                // Formatear texto
+                const lineas = bloque.split('\n');
+                let titulo = `Entrada de Auditoría #${idx + 1}`;
+                let cuerpo = bloque;
+
+                if (lineas.length > 0 && lineas[0].startsWith('[')) {
+                    titulo = lineas[0].replace(/[\[\]]/g, '');
+                    cuerpo = lineas.slice(1).join('\n').trim();
+                }
+
+                cardBloque.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
+                        <span class="fw-bold text-dark font-monospace small"><i class="bi bi-tag-fill text-warning me-1"></i>${titulo}</span>
+                        <span class="badge bg-secondary rounded-pill" style="font-size: 0.68rem;">Registro</span>
+                    </div>
+                    <p class="mb-0 text-secondary font-monospace small" style="white-space: pre-wrap; font-size: 0.85rem;">${cuerpo || 'Sin detalle adicional'}</p>
+                `;
+                contenedor.appendChild(cardBloque);
+            });
+        });
+    });
+});
+</script>

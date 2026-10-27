@@ -57,6 +57,16 @@ def _filtrar_por_fechas(qs, fecha_inicio_str, fecha_fin_str):
 
 @login_required
 def inicio(request):
+    if getattr(request.user, 'es_asistente', False):
+        from django.contrib.auth import logout
+        logout(request)
+        messages.error(
+            request,
+            'El rol de Asistente Técnico no tiene acceso al sistema web. '
+            'Por favor, utiliza la aplicación móvil oficial.'
+        )
+        return redirect('login')
+
     hoy = timezone.localdate()
     inicio_hoy, fin_hoy = _rango_fecha_local(hoy)
 
