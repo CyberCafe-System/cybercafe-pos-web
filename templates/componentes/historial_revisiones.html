@@ -93,28 +93,78 @@ document.addEventListener('DOMContentLoaded', function () {
 
             // Separar bloques por línea divisoria "----" o doble salto de línea
             const bloques = historialRaw.split(/[-]{4,}/).map(b => b.trim()).filter(Boolean);
-            if (badgeTotal) badgeTotal.textContent = `${bloques.length} registro(s)`;
+            if (badgeTotal) badgeTotal.textContent = `${bloques.length} reporte(s)`;
 
             bloques.forEach(function (bloque, idx) {
                 const cardBloque = document.createElement('div');
-                cardBloque.className = 'p-3 rounded-3 border bg-light border-light-subtle shadow-2xs position-relative';
-                
-                // Formatear texto
-                const lineas = bloque.split('\n');
-                let titulo = `Entrada de Auditoría #${idx + 1}`;
-                let cuerpo = bloque;
+                cardBloque.className = 'p-3 rounded-4 border bg-white shadow-xs';
 
-                if (lineas.length > 0 && lineas[0].startsWith('[')) {
-                    titulo = lineas[0].replace(/[\[\]]/g, '');
-                    cuerpo = lineas.slice(1).join('\n').trim();
+                let idRevision = `Revisión #${idx + 1}`;
+                let fechaStr = 'Fecha no especificada';
+                let descripcionStr = bloque;
+
+                // 1. Caso Formato Estándar Nuevo: [REVISIÓN: #REV-X | FECHA: DD/MM/AAAA HH:MM]\nDescripción: ...
+                if (bloque.includes('[REVISIÓN') || bloque.includes('[REVISION')) {
+                    const lineas = bloque.split('\n');
+                    const cabecera = lineas[0].replace(/[\[\]]/g, '');
+                    const partesCabecera = cabecera.split('|');
+
+                    partesCabecera.forEach(function (part) {
+                        const pTrim = part.trim();
+                        if (pTrim.startsWith('REVISIÓN:') || pTrim.startsWith('REVISION:')) {
+                            idRevision = pTrim.replace(/REVISI[OÓ]N:\s*/i, '').trim();
+                        } else if (pTrim.startsWith('REVISIÓN') || pTrim.startsWith('REVISION')) {
+                            idRevision = pTrim.replace(/REVISI[OÓ]N\s*/i, '').trim();
+                        } else if (pTrim.startsWith('FECHA:')) {
+                            fechaStr = pTrim.replace('FECHA:', '').trim();
+                        }
+                    });
+
+                    const restoTexto = lineas.slice(1).join('\n').trim();
+                    if (restoTexto.startsWith('Descripción:')) {
+                        descripcionStr = restoTexto.replace('Descripción:', '').trim();
+                    } else if (restoTexto.startsWith('Daño / Falla:')) {
+                        descripcionStr = restoTexto.replace('Daño / Falla:', '').trim();
+                    } else {
+                        descripcionStr = restoTexto;
+                    }
+                }
+                // 2. Caso Formato Antiguo con guiones: Descripción --- Fecha/Registro --- ID
+                else if (bloque.includes('---')) {
+                    const partesGuion = bloque.split('---').map(p => p.trim()).filter(Boolean);
+                    if (partesGuion.length >= 1) {
+                        descripcionStr = partesGuion[0];
+                    }
+                    if (partesGuion.length >= 2) {
+                        fechaStr = `Registro: ${partesGuion[1]}`;
+                    }
+                    if (partesGuion.length >= 3) {
+                        idRevision = `#REV-${partesGuion[2]}`;
+                    }
                 }
 
                 cardBloque.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-center mb-2 pb-1 border-bottom">
-                        <span class="fw-bold text-dark font-monospace small"><i class="bi bi-tag-fill text-warning me-1"></i>${titulo}</span>
-                        <span class="badge bg-secondary rounded-pill" style="font-size: 0.68rem;">Registro</span>
+                    <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom flex-wrap gap-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark text-white rounded-pill px-3 py-1 font-monospace">
+                                <i class="bi bi-tag-fill text-warning me-1"></i>${idRevision}
+                            </span>
+                            <span class="text-muted small">
+                                <i class="bi bi-calendar3 me-1"></i>${fechaStr}
+                            </span>
+                        </div>
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">
+                            <i class="bi bi-tools me-1"></i>Reporte de Componente
+                        </span>
                     </div>
-                    <p class="mb-0 text-secondary font-monospace small" style="white-space: pre-wrap; font-size: 0.85rem;">${cuerpo || 'Sin detalle adicional'}</p>
+                    <div class="mt-2">
+                        <span class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-1" style="font-size: 0.72rem;">
+                            Descripción del Daño:
+                        </span>
+                        <p class="mb-0 text-dark fw-semibold small bg-light p-3 rounded-3 border-start border-4 border-danger" style="white-space: pre-wrap;">
+                            ${descripcionStr || 'Sin detalles registrados.'}
+                        </p>
+                    </div>
                 `;
                 contenedor.appendChild(cardBloque);
             });

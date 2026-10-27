@@ -48,17 +48,63 @@ def revisiones_list(request):
     count_reprobadas = sum(1 for r in revisiones if not r.inspeccion_pasada)
     count_total = len(revisiones)
 
-    # 4. Equipo pre-seleccionado por parámetro GET (ej. ?equipo_id=X o ?detalle_id=Y)
+    # 4. Obtener componentes para el apartado de Revisiones de Componentes
+    from componentes.models import Componente
+    componentes_revisiones = list(
+        Componente.objects
+        .select_related('equipo')
+        .filter(activo=True)
+        .order_by('equipo__nombre', 'tipo')
+    )
+
+    for c in componentes_revisiones:
+        c.ultima_rev_id = None
+        c.ultima_fecha = None
+        c.ultima_descripcion = None
+        if c.observaciones:
+            bloques = [b.strip() for b in c.observaciones.split('--------------------------------------------------') if b.strip()]
+            primer_bloque = bloques[0] if bloques else c.observaciones
+
+            if '[REVISI' in primer_bloque:
+                lineas = primer_bloque.split('\n')
+                cabecera = lineas[0].replace('[', '').replace(']', '')
+                for part in cabecera.split('|'):
+                    p = part.strip()
+                    if 'REVISI' in p:
+                        c.ultima_rev_id = p.split(':')[-1].strip()
+                    elif 'FECHA' in p:
+                        c.ultima_fecha = p.split('FECHA:')[-1].strip()
+                if len(lineas) > 1:
+                    c.ultima_descripcion = lineas[1].replace('Descripción:', '').replace('Daño / Falla:', '').strip()
+                else:
+                    c.ultima_descripcion = primer_bloque
+            elif '---' in primer_bloque:
+                # Soporte para registros con formato separado por guiones
+                partes = [p.strip() for p in primer_bloque.split('---') if p.strip()]
+                if len(partes) >= 1:
+                    c.ultima_descripcion = partes[0]
+                if len(partes) >= 3:
+                    c.ultima_rev_id = f"#{partes[2]}"
+                if len(partes) >= 2:
+                    c.ultima_fecha = partes[1]
+            else:
+                c.ultima_descripcion = primer_bloque
+
+    count_componentes_con_novedad = sum(1 for c in componentes_revisiones if c.observaciones or c.estado != 'DISPONIBLE')
+
+    # 5. Equipo pre-seleccionado por parámetro GET (ej. ?equipo_id=X o ?detalle_id=Y)
     equipo_id_param = request.GET.get('equipo_id')
     detalle_id_param = request.GET.get('detalle_id')
 
     return render(request, 'revisiones/revisiones.html', {
         'revisiones': revisiones,
         'detalles_pendientes': detalles_pendientes,
+        'componentes_revisiones': componentes_revisiones,
         'count_pendientes': count_pendientes,
         'count_aprobadas': count_aprobadas,
         'count_reprobadas': count_reprobadas,
         'count_total': count_total,
+        'count_componentes_con_novedad': count_componentes_con_novedad,
         'equipo_id_param': equipo_id_param,
         'detalle_id_param': detalle_id_param,
     })
@@ -155,8 +201,8 @@ def crear_revision(request):
                             c_obj.estado = nuevo_estado
                             estado_label = c_obj.get_estado_display()
                             bloque_revision = (
-                                f"[REVISIÓN #{revision.revision_equipo_id} | {fecha_str} | ESTADO: {estado_label}]\n"
-                                f"Daño / Falla: {observaciones or 'Reportado con novedades en inspección técnica'}\n"
+                                f"[REVISIÓN: #{revision.revision_equipo_id} | FECHA: {fecha_str}]\n"
+                                f"Descripción: {observaciones or 'Novedad reportada en inspección técnica'}\n"
                                 f"--------------------------------------------------"
                             )
                             if c_obj.observaciones:
