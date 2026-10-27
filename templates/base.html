@@ -31,8 +31,15 @@
                     <a href="{% url 'inicio' %}" class="{% if request.resolver_match.url_name == 'inicio' %}active{% endif %}"><i class="bi bi-speedometer2"></i> Panel Principal</a>
                 </li>
                 <li>
-                    <a href="{% url 'rentas' %}" class="{% if request.resolver_match.url_name == 'rentas' or request.resolver_match.url_name == 'crear_renta' or request.resolver_match.url_name == 'extender_renta' or request.resolver_match.url_name == 'finalizar_renta' or request.resolver_match.url_name == 'factura_renta' or request.resolver_match.url_name == 'factura_renta_id' %}active{% endif %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
+                    <a href="{% url 'rentas' %}" class="{% if request.resolver_match.url_name == 'rentas' or request.resolver_match.url_name == 'crear_renta' or request.resolver_match.url_name == 'extender_renta' or request.resolver_match.url_name == 'finalizar_renta' or request.resolver_match.url_name == 'enviar_revision' or request.resolver_match.url_name == 'factura_renta' or request.resolver_match.url_name == 'factura_renta_id' %}active{% endif %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
                 </li>
+                {% if request.user.es_admin or request.user.es_asistente %}
+                <li>
+                    <a href="{% url 'revisiones' %}" class="{% if 'revision' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-clipboard-check"></i> Revisiones
+                    </a>
+                </li>
+                {% endif %}
                 {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     <a href="{% url 'pos' %}" class="{% if request.resolver_match.url_name == 'pos' or request.resolver_match.url_name == 'procesar_venta' or request.resolver_match.url_name == 'ticket_pdf' or request.resolver_match.url_name == 'ticket_pdf_venta' %}active{% endif %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
@@ -85,9 +92,12 @@
                         {% if request.resolver_match.url_name == 'inicio' %}
                             <i class="bi bi-speedometer2 text-coffee fs-5"></i>
                             <span class="fw-bold text-dark fs-6">Panel Principal</span>
-                        {% elif request.resolver_match.url_name == 'rentas' or request.resolver_match.url_name == 'crear_renta' or request.resolver_match.url_name == 'extender_renta' or request.resolver_match.url_name == 'finalizar_renta' or request.resolver_match.url_name == 'factura_renta' or request.resolver_match.url_name == 'factura_renta_id' %}
+                        {% elif request.resolver_match.url_name == 'rentas' or request.resolver_match.url_name == 'crear_renta' or request.resolver_match.url_name == 'extender_renta' or request.resolver_match.url_name == 'finalizar_renta' or request.resolver_match.url_name == 'enviar_revision' or request.resolver_match.url_name == 'factura_renta' or request.resolver_match.url_name == 'factura_renta_id' %}
                             <i class="bi bi-pc-display text-coffee fs-5"></i>
                             <span class="fw-bold text-dark fs-6">Control de Rentas</span>
+                        {% elif 'revision' in request.resolver_match.url_name %}
+                            <i class="bi bi-clipboard-check text-coffee fs-5"></i>
+                            <span class="fw-bold text-dark fs-6">Revisiones de Equipos</span>
                         {% elif request.resolver_match.url_name == 'pos' or request.resolver_match.url_name == 'procesar_venta' or request.resolver_match.url_name == 'ticket_pdf' or request.resolver_match.url_name == 'ticket_pdf_venta' %}
                             <i class="bi bi-cart4 text-coffee fs-5"></i>
                             <span class="fw-bold text-dark fs-6">Punto de Venta</span>

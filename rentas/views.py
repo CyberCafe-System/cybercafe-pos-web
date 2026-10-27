@@ -186,7 +186,48 @@ def renta_create(request):
 
 @login_required
 @cajero_o_admin_required
+def renta_enviar_revision(request):
+    """
+    Finaliza el tiempo de uso del equipo y lo envía directamente a revisión física in situ,
+    manteniendo el pago como PENDIENTE para ser cobrado después de la inspección.
+    """
+    if request.method == 'POST':
+        detalle_id = request.POST.get('detalle_renta_id')
+        try:
+            with transaction.atomic():
+                detalle = get_object_or_404(
+                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    pk=detalle_id,
+                )
+                if detalle.estado != 'ACTIVA':
+                    raise ValueError(
+                        f"La renta de {detalle.equipo.nombre} no está activa "
+                        f"(estado actual: {detalle.get_estado_display()})."
+                    )
+                detalle.estado = 'PENDIENTE_REVISION'
+                detalle.hora_fin = timezone.now()
+                detalle.save(update_fields=['estado', 'hora_fin'])
+
+            messages.info(
+                request,
+                f'Sesión de {detalle.equipo.nombre} finalizada. El equipo ha pasado a '
+                f'Revisión Técnica y el cobro queda registrado como Pendiente.'
+            )
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            messages.error(request, 'No se pudo enviar el equipo a revisión. Inténtalo de nuevo.')
+
+    return redirect('rentas')
+
+
+@login_required
+@cajero_o_admin_required
 def renta_finalizar(request):
+    """
+    Cobra la renta (PAGADO). Soporta cobrar antes de la revisión (el equipo pasa a PENDIENTE_REVISION)
+    o cobrar después de la revisión (el equipo ya fue o está en PENDIENTE_REVISION).
+    """
     if request.method == 'POST':
         detalle_id = request.POST.get('detalle_renta_id')
         try:
@@ -196,15 +237,11 @@ def renta_finalizar(request):
                     pk=detalle_id,
                 )
 
-                if detalle.estado != 'ACTIVA':
-                    raise ValueError(
-                        f"La renta de {detalle.equipo.nombre} no está activa "
-                        f"(estado actual: {detalle.get_estado_display()})."
-                    )
-
-                detalle.estado = 'PENDIENTE_REVISION'
-                detalle.hora_fin = timezone.now()
-                detalle.save(update_fields=['estado', 'hora_fin'])
+                # Si estaba activa, finalizamos el tiempo y enviamos a revisión
+                if detalle.estado == 'ACTIVA':
+                    detalle.estado = 'PENDIENTE_REVISION'
+                    detalle.hora_fin = timezone.now()
+                    detalle.save(update_fields=['estado', 'hora_fin'])
 
                 renta = detalle.renta
                 nuevo_cliente_id = request.POST.get('cliente_id')
@@ -239,8 +276,7 @@ def renta_finalizar(request):
             else:
                 messages.success(
                     request,
-                    f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
-                    f'pendiente de revisión antes de volver a estar disponible.'
+                    f'Renta de {detalle.equipo.nombre} cobrada exitosamente.'
                 )
 
             request.session['ultima_renta_id'] = renta.renta_id
@@ -248,7 +284,7 @@ def renta_finalizar(request):
         except ValueError as e:
             messages.error(request, str(e))
         except Exception:
-            messages.error(request, 'No se pudo finalizar la renta. Inténtalo de nuevo.')
+            messages.error(request, 'No se pudo cobrar la renta. Inténtalo de nuevo.')
 
     return redirect('rentas')
 
