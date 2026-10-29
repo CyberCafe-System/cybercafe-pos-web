@@ -214,7 +214,7 @@ def renta_create(request):
 @cajero_o_admin_required
 def renta_enviar_revision(request):
     """
-    Finaliza el tiempo de uso del equipo y lo envía directamente a revisión física in situ.
+    Finaliza el tiempo de uso del equipo y lo envía directamente a revisión técnica.
     La renta ya fue cobrada previamente al momento de su inicio.
     """
     if request.method == 'POST':

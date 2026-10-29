@@ -11,39 +11,103 @@
                 <i class="bi bi-clipboard-check text-coffee me-2"></i>Módulo de Revisiones Técnicas
             </h3>
             <p class="text-muted small mb-0">
-                Auditoría e inspección física in situ de puestos y periféricos tras sesiones de renta.
+                Auditoría e inspección técnica de puestos y periféricos tras sesiones de renta.
             </p>
         </div>
 
-        <div>
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <!-- Botón Actualizar (Recarga sin usar el del navegador) -->
+            <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center gap-2 small fw-semibold"
+                onclick="window.location.reload();" title="Actualizar datos de revisiones">
+                <i class="bi bi-arrow-clockwise"></i>
+                <span>Actualizar</span>
+            </button>
+
+            <!-- Botón de Filtros Generales (Estilo Módulo de Reportes) -->
+            <button type="button" class="btn btn-coffee rounded-3 px-3 py-2 shadow-xs d-flex align-items-center gap-2 small fw-semibold"
+                data-bs-toggle="modal" data-bs-target="#modalFiltrosRevisiones" title="Filtros generales de revisión">
+                <i class="bi bi-funnel-fill"></i>
+                <span>Filtrar</span>
+                <span class="badge bg-white text-coffee rounded-pill ms-1 d-none" id="badgeFiltrosActivosCount">0</span>
+            </button>
+
+            <!-- Indicador Clicable de Puestos Pendientes -->
             {% if count_pendientes > 0 %}
-            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill small">
-                <i class="bi bi-hourglass-split me-1"></i> {{ count_pendientes }} puesto(s) esperando inspección móvil
-            </span>
+            <button type="button" id="btnAccesoPendientes" class="btn p-0 border-0 text-decoration-none shadow-none"
+                title="Ver puestos pendientes de revisión">
+                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill small cursor-pointer d-flex align-items-center gap-1">
+                    <i class="bi bi-hourglass-split"></i>
+                    <span><strong>{{ count_pendientes }}</strong> puesto(s) esperando inspección móvil</span>
+                </span>
+            </button>
             {% else %}
             <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small">
-                <i class="bi bi-phone me-1 text-primary"></i> Inspecciones registradas desde App Móvil
+                <i class="bi bi-check-circle me-1 text-success"></i> Sin inspecciones pendientes
             </span>
             {% endif %}
         </div>
     </div>
 
-    <!-- Selector de Apartados: Revisiones de Equipos vs Componentes -->
-    <ul class="nav nav-pills p-1 bg-white rounded-pill mb-4 shadow-xs border d-inline-flex" id="pills-tab-revisiones" role="tablist">
+    <!-- Métricas Rápidas Generales del Módulo -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-primary-subtle text-primary p-3 rounded-4">
+                        <i class="bi bi-cpu fs-3"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small text-uppercase fw-bold">Total Componentes</span>
+                        <h3 class="fw-bold mb-0 text-dark">{{ componentes_revisiones|length }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-success-subtle text-success p-3 rounded-4">
+                        <i class="bi bi-check-circle-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small text-uppercase fw-bold">En Buen Estado</span>
+                        <h3 class="fw-bold mb-0 text-success">
+                            {{ count_equipos_disponibles }} <small class="text-muted fs-6 fw-normal">equipos disponibles</small>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="bg-danger-subtle text-danger p-3 rounded-4">
+                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
+                    </div>
+                    <div>
+                        <span class="text-muted small text-uppercase fw-bold">Daños reportados esta semana</span>
+                        <h3 class="fw-bold mb-0 text-danger">{{ count_danios_semana }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Selector de Apartados: Revisiones de Equipos vs Componentes (Sin contadores, icono celeste/blanco) -->
+    <ul class="nav nav-pills p-1 bg-white rounded-pill mb-4 shadow-xs border d-inline-flex" id="pills-tab-revisiones"
+        role="tablist">
         <li class="nav-item" role="presentation">
-            <button class="nav-link active rounded-pill px-4 py-2 fw-semibold" id="tab-equipos-btn" data-bs-toggle="pill" data-bs-target="#tab-revisiones-equipos" type="button" role="tab" aria-controls="tab-revisiones-equipos" aria-selected="true">
-                <i class="bi bi-pc-display me-2 text-coffee"></i>Revisiones de Equipos
-                <span class="badge bg-dark text-white rounded-pill ms-2">{{ count_total|add:count_pendientes }}</span>
+            <button class="nav-link active rounded-pill px-4 py-2 fw-semibold" id="tab-equipos-btn"
+                data-bs-toggle="pill" data-bs-target="#tab-revisiones-equipos" type="button" role="tab"
+                aria-controls="tab-revisiones-equipos" aria-selected="true">
+                <i class="bi bi-pc-display me-2"></i>Revisiones de Equipos
             </button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link rounded-pill px-4 py-2 fw-semibold" id="tab-componentes-btn" data-bs-toggle="pill" data-bs-target="#tab-revisiones-componentes" type="button" role="tab" aria-controls="tab-revisiones-componentes" aria-selected="false">
-                <i class="bi bi-tools me-2 text-primary"></i>Revisiones de Componentes
-                {% if count_componentes_con_novedad > 0 %}
-                <span class="badge bg-danger text-white rounded-pill ms-2">{{ count_componentes_con_novedad }} con novedad</span>
-                {% else %}
-                <span class="badge bg-secondary text-white rounded-pill ms-2">{{ componentes_revisiones|length }}</span>
-                {% endif %}
+            <button class="nav-link rounded-pill px-4 py-2 fw-semibold" id="tab-componentes-btn" data-bs-toggle="pill"
+                data-bs-target="#tab-revisiones-componentes" type="button" role="tab"
+                aria-controls="tab-revisiones-componentes" aria-selected="false">
+                <i class="bi bi-tools me-2"></i>Revisiones de Componentes
             </button>
         </li>
     </ul>
@@ -53,1125 +117,1424 @@
         <!-- ========================================================================= -->
         <!-- APARTADO 1: REVISIONES DE EQUIPOS (PC / CONSOLAS)                         -->
         <!-- ========================================================================= -->
-        <div class="tab-pane fade show active" id="tab-revisiones-equipos" role="tabpanel" aria-labelledby="tab-equipos-btn">
+        <div class="tab-pane fade show active" id="tab-revisiones-equipos" role="tabpanel"
+            aria-labelledby="tab-equipos-btn">
 
-            <!-- Barra de Filtros y Buscador por Nombre de Equipo -->
+            <!-- Barra de Búsqueda y Filtro Activo de Equipos -->
             <div class="card shadow-sm border-0 rounded-4 mb-4">
-        <div class="card-body p-3">
-            <div class="row g-3 align-items-center">
-                <!-- Buscador por nombre de equipo -->
-                <div class="col-12 col-md-5">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0 text-muted">
-                            <i class="bi bi-search"></i>
-                        </span>
-                        <input type="text" id="buscadorEquipo" class="form-control border-start-0"
-                               placeholder="Buscar por nombre de equipo (ej. PC-01, PS5)..."
-                               autocomplete="off">
-                    </div>
-                </div>
-
-                <!-- Botones de Filtro Rápido -->
-                <div class="col-12 col-md-7">
-                    <div class="d-flex flex-wrap gap-2 justify-content-md-end" id="grupoFiltros">
-                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 active btn-filtro"
-                                data-filtro="todos">
-                            <i class="bi bi-grid-fill me-1"></i> Todos
-                            <span class="badge bg-secondary text-white rounded-pill ms-1">{{ count_total|add:count_pendientes }}</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 btn-filtro"
-                                data-filtro="pendientes">
-                            <i class="bi bi-hourglass-split me-1"></i> Pendientes
-                            <span class="badge bg-warning text-dark rounded-pill ms-1">{{ count_pendientes }}</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 btn-filtro"
-                                data-filtro="aprobadas">
-                            <i class="bi bi-check-circle-fill me-1"></i> Aprobadas
-                            <span class="badge bg-success text-white rounded-pill ms-1">{{ count_aprobadas }}</span>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-filtro"
-                                data-filtro="reprobadas">
-                            <i class="bi bi-x-circle-fill me-1"></i> Reprobadas / Daños
-                            <span class="badge bg-danger text-white rounded-pill ms-1">{{ count_reprobadas }}</span>
-                        </button>
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" id="buscadorEquipo" class="form-control border-start-0"
+                                    placeholder="Buscar por nombre de equipo (ej. PC-01, PS5)..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 d-flex justify-content-md-end align-items-center gap-2">
+                            <span class="text-muted small">Filtro:</span>
+                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-2" id="badgeFiltroEqActivo">
+                                <span id="textoFiltroEqActivo">Todos</span>
+                                <button type="button" class="btn-close btn-close-sm d-none" id="btnLimpiarFiltroEq" style="font-size: 0.65rem;" aria-label="Restablecer filtro"></button>
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Estructura Master-Detail -->
-    <div class="row g-4">
+            <!-- Estructura Master-Detail -->
+            <div class="row g-4">
 
-        <!-- COLUMNA IZQUIERDA (Master): Lista de Revisiones y Pendientes -->
-        <div class="col-12 col-lg-5">
-            <div class="card shadow-sm border-0 rounded-4 h-100">
-                <div class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
-                    <span class="fw-bold text-dark small text-uppercase tracking-wider">
-                        <i class="bi bi-list-ul me-1 text-coffee"></i> Registros de Inspección
-                    </span>
-                    <span class="text-muted small" id="indicadorConteo">Mostrando registros</span>
+                <!-- COLUMNA IZQUIERDA (Master): Lista de Revisiones y Pendientes -->
+                <div class="col-12 col-lg-5">
+                    <div class="card shadow-sm border-0 rounded-4 h-100">
+                        <div
+                            class="card-header bg-white border-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                                <i class="bi bi-list-ul me-1 text-coffee"></i> Registros de Inspección
+                            </span>
+                            <span class="text-muted small" id="indicadorConteo">Mostrando registros</span>
+                        </div>
+
+                        <div class="card-body p-2" style="max-height: 720px; overflow-y: auto;"
+                            id="contenedorListaRevisiones">
+
+                            <!-- SECCIÓN: Equipos en Espera de Revisión (Pendientes) -->
+                            {% for p in detalles_pendientes %}
+                            <div class="item-revision tarjeta-pendiente p-3 mb-2 rounded-4 border border-warning-subtle shadow-xs cursor-pointer transition-all"
+                                id="item-pendiente-{{ p.detalle_renta_id }}" data-tipo="pendiente"
+                                data-renta-id="{{ p.renta.renta_id }}" data-equipo="{{ p.equipo.nombre|lower }}"
+                                data-equipo-id="{{ p.equipo_id }}" data-detalle-id="{{ p.detalle_renta_id }}"
+                                data-equipo-nombre="{{ p.equipo.nombre }}" data-equipo-tipo="{{ p.equipo.tipo }}"
+                                data-equipo-tarifa="${{ p.equipo.tarifa_por_hora }}/hr"
+                                data-cliente="{{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}"
+                                data-cliente-correo="{{ p.renta.cliente.correo|default:'' }}"
+                                data-tiempo="{{ p.tiempo_de_renta|add:p.tiempo_agregado }} min"
+                                data-subtotal="${{ p.subtotal }}" data-subtotal-raw="{{ p.subtotal|unlocalize }}"
+                                data-pago-estado="{{ p.renta.estado_de_pago }}"
+                                data-hora-inicio="{{ p.hora_inicio|date:'d/m/Y h:i A' }}"
+                                data-hora-fin="{% if p.hora_fin %}{{ p.hora_fin|date:'d/m/Y h:i A' }}{% else %}En espera{% endif %}"
+                                data-componentes="{% for c in p.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}"
+                                onclick="seleccionarItem(this)">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="fw-bold text-dark">
+                                        <i class="bi bi-display me-1 text-coffee"></i>{{ p.equipo.nombre }}
+                                    </span>
+                                    <span class="badge bg-warning text-dark rounded-pill small">
+                                        <i class="bi bi-hourglass-split me-1"></i>Pendiente
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between text-muted small mb-2">
+                                    <span><i class="bi bi-person me-1"></i>{{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}</span>
+                                    <span class="fw-semibold text-dark">${{ p.subtotal }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span
+                                        class="badge {% if p.renta.estado_de_pago == 'PAGADO' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% endif %} rounded-pill small">
+                                        Pago: {{ p.renta.get_estado_de_pago_display }}
+                                    </span>
+                                    <span
+                                        class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill small">
+                                        <i class="bi bi-phone me-1"></i> Esperando App Móvil
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+
+                            <!-- SECCIÓN: Historial de Revisiones Concluidas -->
+                            {% for r in revisiones %}
+                            <div class="item-revision tarjeta-historial p-3 mb-2 rounded-4 border shadow-xs cursor-pointer transition-all {% if r.inspeccion_pasada %}border-success-subtle{% else %}border-danger-subtle{% endif %}"
+                                id="item-revision-{{ r.revision_equipo_id }}"
+                                data-tipo="{% if r.inspeccion_pasada %}aprobada{% else %}reprobada{% endif %}"
+                                data-equipo="{{ r.detalle_renta.equipo.nombre|lower }}"
+                                data-revision-id="{{ r.revision_equipo_id }}"
+                                data-equipo-nombre="{{ r.detalle_renta.equipo.nombre }}"
+                                data-equipo-tipo="{{ r.detalle_renta.equipo.tipo }}"
+                                data-equipo-estado="{{ r.detalle_renta.equipo.get_estado_display }}"
+                                data-inspeccion-pasada="{% if r.inspeccion_pasada %}true{% else %}false{% endif %}"
+                                data-cliente="{{ r.detalle_renta.renta.cliente.nombre }} {{ r.detalle_renta.renta.cliente.apellido }}"
+                                data-cliente-correo="{{ r.detalle_renta.renta.cliente.correo|default:'' }}"
+                                data-inspector="{{ r.usuario.nombre }} ({{ r.usuario.rol.nombre|default:'Personal' }})"
+                                data-fecha="{{ r.fecha_revision|date:'d/m/Y h:i A' }}"
+                                data-tiempo="{{ r.detalle_renta.tiempo_de_renta|add:r.detalle_renta.tiempo_agregado }} min"
+                                data-subtotal="${{ r.detalle_renta.subtotal }}"
+                                data-subtotal-raw="{{ r.detalle_renta.subtotal|unlocalize }}"
+                                data-pago-estado="{{ r.detalle_renta.renta.estado_de_pago }}"
+                                data-renta-id="{{ r.detalle_renta.renta.renta_id }}"
+                                data-detalle-id="{{ r.detalle_renta.detalle_renta_id }}"
+                                data-observaciones="{{ r.observaciones|default:'Sin observaciones adicionales registradas.' }}"
+                                data-componentes="{% for c in r.detalle_renta.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}"
+                                data-puede-revocar="{% if r.puede_revocarse %}true{% else %}false{% endif %}"
+                                onclick="seleccionarItem(this)">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="fw-bold text-dark">
+                                            <i class="bi bi-display me-1 text-coffee"></i>{{ r.detalle_renta.equipo.nombre }}
+                                        </span>
+                                        <span class="badge bg-dark text-white rounded-pill px-2 py-0 font-monospace"
+                                            style="font-size: 0.7rem;">
+                                            #REV-{{ r.revision_equipo_id }}
+                                        </span>
+                                    </div>
+                                    {% if r.inspeccion_pasada %}
+                                    <span
+                                        class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Aprobada
+                                    </span>
+                                    {% else %}
+                                    <span
+                                        class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">
+                                        <i class="bi bi-exclamation-triangle-fill me-1"></i>Con Daños
+                                    </span>
+                                    {% endif %}
+                                </div>
+
+                                <div class="text-muted small mb-1 d-flex justify-content-between align-items-center">
+                                    <span><i class="bi bi-receipt me-1"></i>Renta #RN-{{ r.detalle_renta.renta.renta_id }} ({{ r.detalle_renta.tiempo_de_renta|add:r.detalle_renta.tiempo_agregado }} min)</span>
+                                    <span><i class="bi bi-clock me-1"></i>{{ r.fecha_revision|date:"d/m/y h:i A" }}</span>
+                                </div>
+
+                                {% if r.observaciones %}
+                                <p class="text-secondary small mb-0 text-truncate font-monospace"
+                                    style="font-size: 0.8rem;">
+                                    "{{ r.observaciones }}"
+                                </p>
+                                {% endif %}
+                            </div>
+                            {% empty %}
+                            {% if count_pendientes == 0 %}
+                            <div class="text-center py-5 text-muted" id="sinRegistrosHistorial">
+                                <i class="bi bi-clipboard-x display-5 text-muted opacity-50 mb-3 d-block"></i>
+                                <p class="mb-0">No hay revisiones registradas en el sistema.</p>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+
+                            <div id="sinCoincidenciasBusqueda" class="text-center py-5 text-muted d-none">
+                                <i class="bi bi-search display-6 text-muted opacity-50 mb-2 d-block"></i>
+                                <p class="mb-0">No se encontraron equipos o revisiones que coincidan con la búsqueda.
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <!-- Paginación de la Lista (Más de 4 registros) -->
+                        <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center rounded-bottom-4 d-none"
+                            id="contenedorPaginacion">
+                            <small class="text-muted" id="infoPaginacion">
+                                Mostrando <strong class="text-dark" id="pagInicio">1</strong>-<strong class="text-dark"
+                                    id="pagFin">4</strong> de <strong class="text-dark" id="pagTotal">0</strong>
+                            </small>
+                            <nav aria-label="Paginación de revisiones">
+                                <ul class="pagination pagination-sm mb-0 align-items-center gap-1">
+                                    <li class="page-item" id="itemBtnAnt">
+                                        <button type="button"
+                                            class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark"
+                                            id="btnPaginaAnt" title="Página anterior">
+                                            <i class="bi bi-chevron-left"></i> Ant
+                                        </button>
+                                    </li>
+                                    <li class="page-item disabled">
+                                        <span
+                                            class="page-link rounded-pill px-3 py-1 bg-coffee border-0 text-white fw-bold shadow-xs small"
+                                            id="indicadorPaginaActual">
+                                            1 / 1
+                                        </span>
+                                    </li>
+                                    <li class="page-item" id="itemBtnSig">
+                                        <button type="button"
+                                            class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark"
+                                            id="btnPaginaSig" title="Página siguiente">
+                                            Sig <i class="bi bi-chevron-right"></i>
+                                        </button>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+
+                    </div>
                 </div>
 
-                <div class="card-body p-2" style="max-height: 720px; overflow-y: auto;" id="contenedorListaRevisiones">
+                <!-- COLUMNA DERECHA (Detail): Visor Dinámico de la Revisión Seleccionada -->
+                <div class="col-12 col-lg-7">
+                    <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 85px;"
+                        id="panelDetalleContainer">
 
-                    <!-- SECCIÓN: Equipos en Espera de Revisión (Pendientes) -->
-                    {% for p in detalles_pendientes %}
-                    <div class="item-revision tarjeta-pendiente p-3 mb-2 rounded-4 border border-warning-subtle shadow-xs cursor-pointer transition-all"
-                         id="item-pendiente-{{ p.detalle_renta_id }}"
-                         data-tipo="pendiente"
-                         data-renta-id="{{ p.renta.renta_id }}"
-                         data-equipo="{{ p.equipo.nombre|lower }}"
-                         data-equipo-id="{{ p.equipo_id }}"
-                         data-detalle-id="{{ p.detalle_renta_id }}"
-                         data-equipo-nombre="{{ p.equipo.nombre }}"
-                         data-equipo-tipo="{{ p.equipo.tipo }}"
-                         data-equipo-tarifa="${{ p.equipo.tarifa_por_hora }}/hr"
-                         data-cliente="{{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}"
-                         data-cliente-correo="{{ p.renta.cliente.correo|default:'' }}"
-                         data-tiempo="{{ p.tiempo_de_renta|add:p.tiempo_agregado }} min"
-                         data-subtotal="${{ p.subtotal }}"
-                         data-subtotal-raw="{{ p.subtotal|unlocalize }}"
-                         data-pago-estado="{{ p.renta.estado_de_pago }}"
-                         data-hora-inicio="{{ p.hora_inicio|date:'d/m/Y h:i A' }}"
-                         data-hora-fin="{% if p.hora_fin %}{{ p.hora_fin|date:'d/m/Y h:i A' }}{% else %}En espera{% endif %}"
-                         data-componentes="{% for c in p.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}"
-                         onclick="seleccionarItem(this)">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <span class="fw-bold text-dark">
-                                <i class="bi bi-display me-1 text-coffee"></i>{{ p.equipo.nombre }}
-                            </span>
-                            <span class="badge bg-warning text-dark rounded-pill small">
-                                <i class="bi bi-hourglass-split me-1"></i>Pendiente
-                            </span>
+                        <!-- Estado Inicial: Ningún elemento seleccionado -->
+                        <div id="vistaVaciaDetalle" class="card-body p-5 text-center text-muted">
+                            <i class="bi bi-layout-text-window-reverse text-coffee opacity-50"
+                                style="font-size: 4rem;"></i>
+                            <h5 class="fw-bold mt-3 text-dark">Visor de Detalle de Revisión</h5>
+                            <p class="small text-muted mx-auto" style="max-width: 380px;">
+                                Selecciona cualquier revisión o puesto pendiente en la lista de la izquierda para
+                                examinar sus componentes, auditoría, datos de renta y observaciones técnicas.
+                            </p>
                         </div>
-                        <div class="d-flex justify-content-between text-muted small mb-2">
-                            <span><i class="bi bi-person me-1"></i>{{ p.renta.cliente.nombre }} {{ p.renta.cliente.apellido }}</span>
-                            <span class="fw-semibold text-dark">${{ p.subtotal }}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="badge {% if p.renta.estado_de_pago == 'PAGADO' %}bg-success-subtle text-success border border-success-subtle{% else %}bg-warning-subtle text-warning-emphasis border border-warning-subtle{% endif %} rounded-pill small">
-                                Pago: {{ p.renta.get_estado_de_pago_display }}
-                            </span>
-                            <span class="badge bg-warning-subtle text-dark border border-warning-subtle rounded-pill small">
-                                <i class="bi bi-phone me-1"></i> Esperando App Móvil
-                            </span>
-                        </div>
-                    </div>
-                    {% endfor %}
 
-                    <!-- SECCIÓN: Historial de Revisiones Concluidas -->
-                    {% for r in revisiones %}
-                    <div class="item-revision tarjeta-historial p-3 mb-2 rounded-4 border shadow-xs cursor-pointer transition-all {% if r.inspeccion_pasada %}border-success-subtle{% else %}border-danger-subtle{% endif %}"
-                         id="item-revision-{{ r.revision_equipo_id }}"
-                         data-tipo="{% if r.inspeccion_pasada %}aprobada{% else %}reprobada{% endif %}"
-                         data-equipo="{{ r.detalle_renta.equipo.nombre|lower }}"
-                         data-revision-id="{{ r.revision_equipo_id }}"
-                         data-equipo-nombre="{{ r.detalle_renta.equipo.nombre }}"
-                         data-equipo-tipo="{{ r.detalle_renta.equipo.tipo }}"
-                         data-equipo-estado="{{ r.detalle_renta.equipo.get_estado_display }}"
-                         data-inspeccion-pasada="{% if r.inspeccion_pasada %}true{% else %}false{% endif %}"
-                         data-cliente="{{ r.detalle_renta.renta.cliente.nombre }} {{ r.detalle_renta.renta.cliente.apellido }}"
-                         data-cliente-correo="{{ r.detalle_renta.renta.cliente.correo|default:'' }}"
-                         data-inspector="{{ r.usuario.nombre }} ({{ r.usuario.rol.nombre|default:'Personal' }})"
-                         data-fecha="{{ r.fecha_revision|date:'d/m/Y h:i A' }}"
-                         data-tiempo="{{ r.detalle_renta.tiempo_de_renta|add:r.detalle_renta.tiempo_agregado }} min"
-                         data-subtotal="${{ r.detalle_renta.subtotal }}"
-                         data-subtotal-raw="{{ r.detalle_renta.subtotal|unlocalize }}"
-                         data-pago-estado="{{ r.detalle_renta.renta.estado_de_pago }}"
-                         data-renta-id="{{ r.detalle_renta.renta.renta_id }}"
-                         data-detalle-id="{{ r.detalle_renta.detalle_renta_id }}"
-                         data-observaciones="{{ r.observaciones|default:'Sin observaciones adicionales registradas.' }}"
-                         data-componentes="{% for c in r.detalle_renta.equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos registrados{% endfor %}"
-                         onclick="seleccionarItem(this)">
-                        <div class="d-flex justify-content-between align-items-start mb-1">
-                            <div class="d-flex align-items-center gap-1">
-                                <span class="fw-bold text-dark">
-                                    <i class="bi bi-display me-1 text-coffee"></i>{{ r.detalle_renta.equipo.nombre }}
+                        <!-- Detalle Dinámico Renderizado con JS -->
+                        <div id="vistaContenidoDetalle" class="card-body p-4 d-none">
+
+                            <!-- Cabecera de Estado, Identificadores y Acciones -->
+                            <div
+                                class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-3 border-bottom gap-2">
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span id="badgeResultadoDetalle" class="badge px-3 py-2 rounded-pill fs-6">
+                                        <!-- JS -->
+                                    </span>
+                                    <span id="badgeIdRevisionDetalle"
+                                        class="badge bg-dark text-white rounded-pill px-3 py-2 font-monospace small">
+                                        <!-- JS -->
+                                    </span>
+                                    <span id="badgeIdRentaDetalle"
+                                        class="badge bg-secondary-subtle text-dark border rounded-pill px-3 py-2 font-monospace small">
+                                        <!-- JS -->
+                                    </span>
+                                    <span id="badgeTipoEquipoDetalle"
+                                        class="badge bg-light text-dark border rounded-pill">
+                                        <!-- JS -->
+                                    </span>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    {% if request.user.es_admin %}
+                                    <!-- Botón Revocar Revisión (Exclusivo Administrador) -->
+                                    <button type="button" id="btnRevocarRevision"
+                                        class="btn btn-sm btn-outline-danger rounded-pill px-3 shadow-xs d-none"
+                                        data-bs-toggle="modal" data-bs-target="#modalRevocarRevision"
+                                        title="Revocar esta revisión técnica">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Revocar Revisión
+                                    </button>
+                                    {% endif %}
+
+                                    <!-- Factura PDF de la renta pagada -->
+                                    <a id="btnFacturaPdfDetalle" href="#" target="_blank" rel="noopener"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-xs d-none">
+                                        <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Factura PDF
+                                    </a>
+                                </div>
+                            </div>
+
+                            <!-- Ficha 1: Equipo y Cliente/Sesión -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    <div class="bg-light p-3 rounded-4 h-100">
+                                        <span
+                                            class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-1">
+                                            <i class="bi bi-pc-display me-1 text-coffee"></i> Estación / Puesto
+                                        </span>
+                                        <h4 class="fw-bold text-dark mb-1" id="nombreEquipoDetalle">--</h4>
+                                        <div class="small text-muted" id="estadoEquipoDetalle">--</div>
+                                    </div>
+                                </div>
+
+                                <div class="col-12 col-md-6">
+                                    <div class="bg-light p-3 rounded-4 h-100">
+                                        <span
+                                            class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-1">
+                                            <i class="bi bi-person me-1 text-coffee"></i> Cliente y Sesión
+                                        </span>
+                                        <h5 class="fw-bold text-dark mb-1" id="clienteDetalle">--</h5>
+                                        <div class="small d-flex justify-content-between text-muted">
+                                            <span>Tiempo: <strong id="tiempoDetalle"
+                                                    class="text-dark">--</strong></span>
+                                            <span>Importe: <strong id="subtotalDetalle"
+                                                    class="text-success">--</strong></span>
+                                        </div>
+                                        <div class="mt-1" id="estadoPagoDetalleContainer">
+                                            <!-- JS: badge pago -->
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Alerta de Componentes Afectados (Si hubo daños) -->
+                            <div id="bannerComponentesAfectados"
+                                class="alert alert-danger rounded-4 p-3 mb-3 d-none border-0 shadow-xs">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="bi bi-exclamation-octagon-fill fs-5 text-danger"></i>
+                                    <strong class="text-danger small text-uppercase tracking-wider">Componente(s)
+                                        Afectado(s) por la Revisión:</strong>
+                                </div>
+                                <div class="fw-semibold text-dark ps-4 small" id="textoComponentesAfectados">
+                                    <!-- Inyectado por JS -->
+                                </div>
+                            </div>
+
+                            <!-- Ficha 3: Observaciones y Diagnóstico Registrado -->
+                            <div class="mb-3">
+                                <span class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-2">
+                                    <i class="bi bi-card-text me-1 text-coffee"></i> Observaciones y Diagnóstico Técnico
                                 </span>
-                                <span class="badge bg-dark text-white rounded-pill px-2 py-0 font-monospace" style="font-size: 0.7rem;">
-                                    #REV-{{ r.revision_equipo_id }}
+                                <div class="p-3 rounded-4 bg-light border border-light-subtle">
+                                    <p class="mb-0 text-dark font-monospace small" id="observacionesDetalle"
+                                        style="white-space: pre-wrap;">
+                                        --
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Ficha 4: Auditoría Técnica -->
+                            <div
+                                class="pt-2 border-top d-flex justify-content-between align-items-center text-muted small">
+                                <span>
+                                    <i class="bi bi-person-badge text-primary me-1"></i>
+                                    Inspector: <strong id="inspectorDetalle" class="text-dark">--</strong>
+                                </span>
+                                <span>
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    Fecha: <span id="fechaDetalle">--</span>
                                 </span>
                             </div>
-                            {% if r.inspeccion_pasada %}
-                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">
-                                <i class="bi bi-check-circle-fill me-1"></i>Aprobada
-                            </span>
-                            {% else %}
-                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill small">
-                                <i class="bi bi-exclamation-triangle-fill me-1"></i>Con Daños
-                            </span>
-                            {% endif %}
+
                         </div>
 
-                        <div class="text-muted small mb-1 d-flex justify-content-between align-items-center">
-                            <span><i class="bi bi-receipt me-1"></i>Renta #RN-{{ r.detalle_renta.renta.renta_id }} ({{ r.detalle_renta.tiempo_de_renta|add:r.detalle_renta.tiempo_agregado }} min)</span>
-                            <span><i class="bi bi-clock me-1"></i>{{ r.fecha_revision|date:"d/m/y h:i A" }}</span>
-                        </div>
-
-                        {% if r.observaciones %}
-                        <p class="text-secondary small mb-0 text-truncate font-monospace" style="font-size: 0.8rem;">
-                            "{{ r.observaciones }}"
-                        </p>
-                        {% endif %}
                     </div>
-                    {% empty %}
-                    {% if count_pendientes == 0 %}
-                    <div class="text-center py-5 text-muted" id="sinRegistrosHistorial">
-                        <i class="bi bi-clipboard-x display-5 text-muted opacity-50 mb-3 d-block"></i>
-                        <p class="mb-0">No hay revisiones registradas en el sistema.</p>
-                    </div>
-                    {% endif %}
-                    {% endfor %}
-
-                    <div id="sinCoincidenciasBusqueda" class="text-center py-5 text-muted d-none">
-                        <i class="bi bi-search display-6 text-muted opacity-50 mb-2 d-block"></i>
-                        <p class="mb-0">No se encontraron equipos o revisiones que coincidan con la búsqueda.</p>
-                    </div>
-
                 </div>
 
-                <!-- Paginación de la Lista (Más de 4 registros) -->
-                <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center rounded-bottom-4 d-none" id="contenedorPaginacion">
-                    <small class="text-muted" id="infoPaginacion">
-                        Mostrando <strong class="text-dark" id="pagInicio">1</strong>-<strong class="text-dark" id="pagFin">4</strong> de <strong class="text-dark" id="pagTotal">0</strong>
+            </div>
+            <!-- FIN ROW MASTER-DETAIL EQUIPOS -->
+
+        </div>
+        <!-- FIN APARTADO 1: REVISIONES DE EQUIPOS -->
+
+        <!-- ========================================================================= -->
+        <!-- APARTADO 2: REVISIONES DE COMPONENTES (PERIFÉRICOS)                       -->
+        <!-- ========================================================================= -->
+        <div class="tab-pane fade" id="tab-revisiones-componentes" role="tabpanel"
+            aria-labelledby="tab-componentes-btn">
+
+            <!-- Barra de Búsqueda y Filtro Activo de Componentes -->
+            <div class="card shadow-sm border-0 rounded-4 mb-4">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-12 col-md-8">
+                            <div class="input-group">
+                                <span class="input-group-text bg-white border-end-0 text-muted">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" id="buscadorCompRev" class="form-control border-start-0"
+                                    placeholder="Buscar por componente, número de serie o equipo..." autocomplete="off">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4 d-flex justify-content-md-end align-items-center gap-2">
+                            <span class="text-muted small">Filtro:</span>
+                            <span class="badge bg-light text-dark border rounded-pill px-3 py-2 small d-inline-flex align-items-center gap-2" id="badgeFiltroCompActivo">
+                                <span id="textoFiltroCompActivo">Todos</span>
+                                <button type="button" class="btn-close btn-close-sm d-none" id="btnLimpiarFiltroComp" style="font-size: 0.65rem;" aria-label="Restablecer filtro"></button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabla de Revisiones de Componentes -->
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tablaRevisionesComponentes">
+                            <thead class="table-light">
+                                <tr class="text-secondary small text-uppercase">
+                                    <th class="ps-4">Componente</th>
+                                    <th>Equipo Asignado</th>
+                                    <th>N° Serie</th>
+                                    <th>Estado Actual</th>
+                                    <th>Último Reporte Técnico</th>
+                                    <th class="text-end pe-4">Historial de Revisiones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for comp in componentes_revisiones %}
+                                <tr class="fila-comp-revision" data-nombre="{{ comp.nombre|lower }}"
+                                    data-tipo="{{ comp.tipo|lower }}"
+                                    data-serie="{{ comp.numero_serie|default:''|lower }}"
+                                    data-equipo="{{ comp.equipo.nombre|default:'sin puesto'|lower }}"
+                                    data-tiene-reporte="{% if comp.observaciones or comp.estado != 'DISPONIBLE' %}true{% else %}false{% endif %}">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center">
+                                            <div class="me-3 p-2 bg-light rounded-3 text-coffee">
+                                                {% if comp.tipo == 'Teclado' %}
+                                                <i class="bi bi-keyboard fs-5"></i>
+                                                {% elif comp.tipo == 'Mouse' %}
+                                                <i class="bi bi-mouse fs-5"></i>
+                                                {% elif comp.tipo == 'Monitor' %}
+                                                <i class="bi bi-display fs-5"></i>
+                                                {% elif comp.tipo == 'Control' %}
+                                                <i class="bi bi-controller fs-5"></i>
+                                                {% else %}
+                                                <i class="bi bi-cpu fs-5"></i>
+                                                {% endif %}
+                                            </div>
+                                            <div>
+                                                <span class="fw-bold text-dark d-block">{{ comp.nombre }}</span>
+                                                <span class="text-muted small">{{ comp.get_tipo_display }}</span>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if comp.equipo %}
+                                        <span class="badge bg-light text-dark border rounded-pill">
+                                            <i class="bi bi-pc me-1 text-coffee"></i>{{ comp.equipo.nombre }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted small fst-italic">Sin puesto asignado</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="font-monospace small text-muted">
+                                            {{ comp.numero_serie|default:"--" }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if comp.estado == 'DISPONIBLE' %}
+                                        <span
+                                            class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                            <i class="bi bi-check-circle me-1"></i>{{ comp.get_estado_display }}
+                                        </span>
+                                        {% elif comp.estado == 'DANIOS_MENORES' %}
+                                        <span
+                                            class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ comp.get_estado_display }}
+                                        </span>
+                                        {% else %}
+                                        <span
+                                            class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
+                                            <i class="bi bi-x-circle me-1"></i>{{ comp.get_estado_display }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td style="max-width: 340px;">
+                                        {% if comp.observaciones %}
+                                        <div class="d-flex align-items-center gap-1 mb-1">
+                                            {% if comp.ultima_rev_id %}
+                                            <span class="badge bg-dark text-white rounded-pill px-2 py-0 font-monospace"
+                                                style="font-size: 0.7rem;">
+                                                {{ comp.ultima_rev_id }}
+                                            </span>
+                                            {% endif %}
+                                            {% if comp.ultima_fecha %}
+                                            <small class="text-muted" style="font-size: 0.75rem;">
+                                                <i class="bi bi-calendar3 me-1"></i>{{ comp.ultima_fecha }}
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                        <span class="small text-truncate d-block text-dark fw-semibold"
+                                            title="{{ comp.ultima_descripcion }}">
+                                            {{ comp.ultima_descripcion|truncatechars:65 }}
+                                        </span>
+                                        {% else %}
+                                        <span class="text-muted small">
+                                            <i class="bi bi-check2 text-success me-1"></i>Sin daños reportados
+                                        </span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        {% if comp.observaciones %}
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-xs btn-ver-revisiones-comp"
+                                            data-bs-toggle="modal" data-bs-target="#modalHistorialRevisionesComp"
+                                            data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
+                                            data-serie="{{ comp.numero_serie|default:'' }}"
+                                            data-tipo="{{ comp.get_tipo_display }}"
+                                            data-estado="{{ comp.get_estado_display }}"
+                                            data-historial="{{ comp.observaciones }}">
+                                            <i class="bi bi-journal-text me-1"></i> Ver Revisiones
+                                        </button>
+                                        {% else %}
+                                        <button type="button" class="btn btn-sm btn-light text-muted rounded-pill px-3"
+                                            disabled>
+                                            <i class="bi bi-check2 me-1"></i> Al 100%
+                                        </button>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-tools display-6 text-muted opacity-50 mb-2 d-block"></i>
+                                        No hay componentes registrados en el sistema.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                <tr id="sinCoincidenciasComp" class="d-none">
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-search display-6 text-muted opacity-50 mb-2 d-block"></i>
+                                        No se encontraron componentes que coincidan con la búsqueda o filtro.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Paginación de la Tabla de Componentes -->
+                <div class="card-footer bg-white border-top py-2 px-3 d-flex justify-content-between align-items-center rounded-bottom-4 d-none"
+                    id="contenedorPaginacionComp">
+                    <small class="text-muted" id="infoPaginacionComp">
+                        Mostrando <strong class="text-dark" id="pagInicioComp">1</strong>-<strong class="text-dark" id="pagFinComp">8</strong> de <strong class="text-dark" id="pagTotalComp">0</strong>
                     </small>
-                    <nav aria-label="Paginación de revisiones">
+                    <nav aria-label="Paginación de componentes">
                         <ul class="pagination pagination-sm mb-0 align-items-center gap-1">
-                            <li class="page-item" id="itemBtnAnt">
-                                <button type="button" class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark" id="btnPaginaAnt" title="Página anterior">
+                            <li class="page-item" id="itemBtnAntComp">
+                                <button type="button"
+                                    class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark"
+                                    id="btnPaginaAntComp" title="Página anterior">
                                     <i class="bi bi-chevron-left"></i> Ant
                                 </button>
                             </li>
                             <li class="page-item disabled">
-                                <span class="page-link rounded-pill px-3 py-1 bg-coffee border-0 text-white fw-bold shadow-xs small" id="indicadorPaginaActual">
+                                <span
+                                    class="page-link rounded-pill px-3 py-1 bg-coffee border-0 text-white fw-bold shadow-xs small"
+                                    id="indicadorPaginaActualComp">
                                     1 / 1
                                 </span>
                             </li>
-                            <li class="page-item" id="itemBtnSig">
-                                <button type="button" class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark" id="btnPaginaSig" title="Página siguiente">
+                            <li class="page-item" id="itemBtnSigComp">
+                                <button type="button"
+                                    class="page-link rounded-pill px-2 py-1 shadow-2xs border text-dark"
+                                    id="btnPaginaSigComp" title="Página siguiente">
                                     Sig <i class="bi bi-chevron-right"></i>
                                 </button>
                             </li>
                         </ul>
                     </nav>
                 </div>
-
             </div>
+
         </div>
-
-        <!-- COLUMNA DERECHA (Detail): Visor Dinámico de la Revisión Seleccionada -->
-        <div class="col-12 col-lg-7">
-            <div class="card shadow-sm border-0 rounded-4 sticky-top" style="top: 85px;" id="panelDetalleContainer">
-
-                <!-- Estado Inicial: Ningún elemento seleccionado -->
-                <div id="vistaVaciaDetalle" class="card-body p-5 text-center text-muted">
-                    <i class="bi bi-layout-text-window-reverse text-coffee opacity-50" style="font-size: 4rem;"></i>
-                    <h5 class="fw-bold mt-3 text-dark">Visor de Detalle de Revisión</h5>
-                    <p class="small text-muted mx-auto" style="max-width: 380px;">
-                        Selecciona cualquier revisión o equipo pendiente en la lista de la izquierda para examinar sus periféricos, auditoría, datos de renta y observaciones in situ.
-                    </p>
-                </div>
-
-                <!-- Detalle Dinámico Renderizado con JS -->
-                <div id="vistaContenidoDetalle" class="card-body p-4 d-none">
-
-                    <!-- Cabecera de Estado, Identificadores y Acciones -->
-                    <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 mb-3 border-bottom gap-2">
-                        <div class="d-flex align-items-center gap-2 flex-wrap">
-                            <span id="badgeResultadoDetalle" class="badge px-3 py-2 rounded-pill fs-6">
-                                <!-- JS -->
-                            </span>
-                            <span id="badgeIdRevisionDetalle" class="badge bg-dark text-white rounded-pill px-3 py-2 font-monospace small">
-                                <!-- JS -->
-                            </span>
-                            <span id="badgeIdRentaDetalle" class="badge bg-secondary-subtle text-dark border rounded-pill px-3 py-2 font-monospace small">
-                                <!-- JS -->
-                            </span>
-                            <span id="badgeTipoEquipoDetalle" class="badge bg-light text-dark border rounded-pill">
-                                <!-- JS -->
-                            </span>
-                        </div>
-
-                        <div class="d-flex gap-2">
-                            {% if request.user.es_admin %}
-                            <!-- Botón Editar Revisión (Exclusivo Administrador) -->
-                            <button type="button" id="btnEditarRevision"
-                                    class="btn btn-sm btn-outline-primary rounded-pill px-3 shadow-xs d-none"
-                                    data-bs-toggle="modal" data-bs-target="#modalEditarRevision">
-                                <i class="bi bi-pencil-square me-1"></i> Editar Revisión
-                            </button>
-                            {% endif %}
-
-                            <!-- Factura PDF de la renta pagada -->
-                            <a id="btnFacturaPdfDetalle" href="#" target="_blank" rel="noopener"
-                               class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-xs d-none">
-                                <i class="bi bi-file-earmark-pdf text-danger me-1"></i> Factura PDF
-                            </a>
-                        </div>
-                    </div>
-
-                    <!-- Ficha 1: Equipo y Cliente/Sesión -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-md-6">
-                            <div class="bg-light p-3 rounded-4 h-100">
-                                <span class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-1">
-                                    <i class="bi bi-pc-display me-1 text-coffee"></i> Estación / Puesto
-                                </span>
-                                <h4 class="fw-bold text-dark mb-1" id="nombreEquipoDetalle">--</h4>
-                                <div class="small text-muted" id="estadoEquipoDetalle">--</div>
-                            </div>
-                        </div>
-
-                        <div class="col-12 col-md-6">
-                            <div class="bg-light p-3 rounded-4 h-100">
-                                <span class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-1">
-                                    <i class="bi bi-person me-1 text-coffee"></i> Cliente y Sesión
-                                </span>
-                                <h5 class="fw-bold text-dark mb-1" id="clienteDetalle">--</h5>
-                                <div class="small d-flex justify-content-between text-muted">
-                                    <span>Tiempo: <strong id="tiempoDetalle" class="text-dark">--</strong></span>
-                                    <span>Importe: <strong id="subtotalDetalle" class="text-success">--</strong></span>
-                                </div>
-                                <div class="mt-1" id="estadoPagoDetalleContainer">
-                                    <!-- JS: badge pago -->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Alerta de Componentes Afectados (Si hubo daños) -->
-                    <div id="bannerComponentesAfectados" class="alert alert-danger rounded-4 p-3 mb-3 d-none border-0 shadow-xs">
-                        <div class="d-flex align-items-center gap-2 mb-1">
-                            <i class="bi bi-exclamation-octagon-fill fs-5 text-danger"></i>
-                            <strong class="text-danger small text-uppercase tracking-wider">Componente(s) Afectado(s) por la Revisión:</strong>
-                        </div>
-                        <div class="fw-semibold text-dark ps-4 small" id="textoComponentesAfectados">
-                            <!-- Inyectado por JS -->
-                        </div>
-                    </div>
-
-                    <!-- Ficha 3: Observaciones y Diagnóstico Registrado -->
-                    <div class="mb-3">
-                        <span class="text-muted small text-uppercase tracking-wider fw-bold d-block mb-2">
-                            <i class="bi bi-card-text me-1 text-coffee"></i> Observaciones y Diagnóstico In Situ
-                        </span>
-                        <div class="p-3 rounded-4 bg-light border border-light-subtle">
-                            <p class="mb-0 text-dark font-monospace small" id="observacionesDetalle" style="white-space: pre-wrap;">
-                                --
-                            </p>
-                        </div>
-                    </div>
-
-                    <!-- Ficha 4: Auditoría Técnica -->
-                    <div class="pt-2 border-top d-flex justify-content-between align-items-center text-muted small">
-                        <span>
-                            <i class="bi bi-person-badge text-primary me-1"></i>
-                            Inspector: <strong id="inspectorDetalle" class="text-dark">--</strong>
-                        </span>
-                        <span>
-                            <i class="bi bi-calendar3 me-1"></i>
-                            Fecha: <span id="fechaDetalle">--</span>
-                        </span>
-                    </div>
-
-                </div>
-
-            </div>
-        </div>
+        <!-- FIN APARTADO 2 -->
 
     </div>
-    <!-- FIN ROW MASTER-DETAIL EQUIPOS -->
-
-    </div>
-    <!-- FIN APARTADO 1: REVISIONES DE EQUIPOS -->
+    <!-- FIN TAB-CONTENT -->
 
     <!-- ========================================================================= -->
-    <!-- APARTADO 2: REVISIONES DE COMPONENTES (PERIFÉRICOS)                       -->
+    <!-- MODAL: FILTROS GENERALES DE REVISIONES (ESTILO MÓDULO REPORTES)           -->
     <!-- ========================================================================= -->
-    <div class="tab-pane fade" id="tab-revisiones-componentes" role="tabpanel" aria-labelledby="tab-componentes-btn">
-
-        <!-- Métricas Rápidas de Componentes -->
-        <div class="row g-3 mb-4">
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-xs rounded-4 bg-white p-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-primary-subtle text-primary p-3 rounded-4">
-                            <i class="bi bi-cpu fs-3"></i>
-                        </div>
-                        <div>
-                            <span class="text-muted small text-uppercase fw-bold">Total Componentes</span>
-                            <h3 class="fw-bold mb-0 text-dark">{{ componentes_revisiones|length }}</h3>
-                        </div>
-                    </div>
+    <div class="modal fade" id="modalFiltrosRevisiones" tabindex="-1" aria-labelledby="modalFiltrosRevisionesLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="modalFiltrosRevisionesLabel">
+                        <i class="bi bi-pc-display text-coffee fs-4" id="iconoTituloModalFiltros"></i>
+                        <span id="textoTituloModalFiltros">Filtros - Revisiones de Equipos</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-xs rounded-4 bg-white p-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-success-subtle text-success p-3 rounded-4">
-                            <i class="bi bi-check-circle-fill fs-3"></i>
-                        </div>
-                        <div>
-                            <span class="text-muted small text-uppercase fw-bold">En Buen Estado</span>
-                            <h3 class="fw-bold mb-0 text-success">
-                                {{ componentes_revisiones|length|add:"-"|add:count_componentes_con_novedad }}
-                            </h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-md-4">
-                <div class="card border-0 shadow-xs rounded-4 bg-white p-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="bg-danger-subtle text-danger p-3 rounded-4">
-                            <i class="bi bi-exclamation-triangle-fill fs-3"></i>
-                        </div>
-                        <div>
-                            <span class="text-muted small text-uppercase fw-bold">Con Daños / Reportes</span>
-                            <h3 class="fw-bold mb-0 text-danger">{{ count_componentes_con_novedad }}</h3>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filtros de Componentes -->
-        <div class="card shadow-sm border-0 rounded-4 mb-4">
-            <div class="card-body p-3">
-                <div class="row g-3 align-items-center">
-                    <div class="col-12 col-md-5">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white border-end-0 text-muted">
-                                <i class="bi bi-search"></i>
-                            </span>
-                            <input type="text" id="buscadorCompRev" class="form-control border-start-0"
-                                   placeholder="Buscar por componente, número de serie o equipo..." autocomplete="off">
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-7">
-                        <div class="d-flex flex-wrap gap-2 justify-content-md-end" id="grupoFiltrosComp">
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 active btn-filtro-comp" data-filtro="todos">
-                                <i class="bi bi-grid-fill me-1"></i> Todos
+                <div class="modal-body px-4 py-3">
+                    <!-- Sección Filtros Equipos -->
+                    <div class="p-3 bg-light rounded-4" id="seccionFiltrosEquiposModal">
+                        <label class="form-label small fw-bold text-muted mb-2 text-uppercase tracking-wider d-flex align-items-center gap-2">
+                            <i class="bi bi-pc-display text-coffee"></i> Filtro por Estado de Inspección
+                        </label>
+                        <div class="d-flex flex-wrap gap-2" id="modalFiltrosEquiposGroup">
+                            <button type="button" class="btn btn-sm rounded-pill px-3 btn-filtro-modal-eq active" data-filtro="todos">
+                                <i class="bi bi-grid-fill me-1"></i> Todos ({{ count_total|add:count_pendientes }})
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-filtro-comp" data-filtro="con-reporte">
-                                <i class="bi bi-exclamation-circle me-1"></i> Con Novedad ({{ count_componentes_con_novedad }})
+                            <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-3 btn-filtro-modal-eq" data-filtro="pendientes">
+                                <i class="bi bi-hourglass-split me-1 text-warning"></i> Solo Pendientes ({{ count_pendientes }})
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-comp" data-filtro="teclado">
+                            <button type="button" class="btn btn-sm btn-outline-success rounded-pill px-3 btn-filtro-modal-eq" data-filtro="aprobadas">
+                                <i class="bi bi-check-circle-fill me-1 text-success"></i> Solo Aprobadas ({{ count_aprobadas }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-filtro-modal-eq" data-filtro="reprobadas">
+                                <i class="bi bi-x-circle-fill me-1 text-danger"></i> Con Daños / Reprobadas ({{ count_reprobadas }})
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Sección Filtros Componentes -->
+                    <div class="p-3 bg-light rounded-4 d-none" id="seccionFiltrosComponentesModal">
+                        <label class="form-label small fw-bold text-muted mb-2 text-uppercase tracking-wider d-flex align-items-center gap-2">
+                            <i class="bi bi-tools text-primary"></i> Filtro por Estado del Componente
+                        </label>
+                        <div class="d-flex flex-wrap gap-2 mb-3" id="modalFiltrosCompEstadoGroup">
+                            <button type="button" class="btn btn-sm rounded-pill px-3 btn-filtro-modal-comp active" data-filtro="todos">
+                                <i class="bi bi-grid-fill me-1"></i> Todos los Componentes ({{ componentes_revisiones|length }})
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-3 btn-filtro-modal-comp" data-filtro="con-reporte">
+                                <i class="bi bi-exclamation-circle me-1 text-danger"></i> Con Novedad / Daño ({{ count_componentes_con_novedad }})
+                            </button>
+                        </div>
+                        <label class="form-label small fw-bold text-muted mb-2 text-uppercase tracking-wider d-flex align-items-center gap-2">
+                            <i class="bi bi-tag text-secondary"></i> Filtro por Tipo de Dispositivo
+                        </label>
+                        <div class="d-flex flex-wrap gap-2" id="modalFiltrosCompTipoGroup">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-modal-comp" data-filtro="teclado">
                                 <i class="bi bi-keyboard me-1"></i> Teclados
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-comp" data-filtro="mouse">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-modal-comp" data-filtro="mouse">
                                 <i class="bi bi-mouse me-1"></i> Mouse
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-comp" data-filtro="monitor">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-modal-comp" data-filtro="monitor">
                                 <i class="bi bi-display me-1"></i> Monitores
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-comp" data-filtro="control">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 btn-filtro-modal-comp" data-filtro="control">
                                 <i class="bi bi-controller me-1"></i> Controles
                             </button>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Tabla de Revisiones de Componentes -->
-        <div class="card shadow-sm border-0 rounded-4">
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="tablaRevisionesComponentes">
-                        <thead class="table-light">
-                            <tr class="text-secondary small text-uppercase">
-                                <th class="ps-4">Componente</th>
-                                <th>Equipo Asignado</th>
-                                <th>N° Serie</th>
-                                <th>Estado Actual</th>
-                                <th>Último Reporte Técnico</th>
-                                <th class="text-end pe-4">Historial de Revisiones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for comp in componentes_revisiones %}
-                            <tr class="fila-comp-revision"
-                                data-nombre="{{ comp.nombre|lower }}"
-                                data-tipo="{{ comp.tipo|lower }}"
-                                data-serie="{{ comp.numero_serie|default:''|lower }}"
-                                data-equipo="{{ comp.equipo.nombre|default:'sin puesto'|lower }}"
-                                data-tiene-reporte="{% if comp.observaciones or comp.estado != 'DISPONIBLE' %}true{% else %}false{% endif %}">
-                                <td class="ps-4">
-                                    <div class="d-flex align-items-center">
-                                        <div class="me-3 p-2 bg-light rounded-3 text-coffee">
-                                            {% if comp.tipo == 'Teclado' %}
-                                            <i class="bi bi-keyboard fs-5"></i>
-                                            {% elif comp.tipo == 'Mouse' %}
-                                            <i class="bi bi-mouse fs-5"></i>
-                                            {% elif comp.tipo == 'Monitor' %}
-                                            <i class="bi bi-display fs-5"></i>
-                                            {% elif comp.tipo == 'Control' %}
-                                            <i class="bi bi-controller fs-5"></i>
-                                            {% else %}
-                                            <i class="bi bi-cpu fs-5"></i>
-                                            {% endif %}
-                                        </div>
-                                        <div>
-                                            <span class="fw-bold text-dark d-block">{{ comp.nombre }}</span>
-                                            <span class="text-muted small">{{ comp.get_tipo_display }}</span>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    {% if comp.equipo %}
-                                    <span class="badge bg-light text-dark border rounded-pill">
-                                        <i class="bi bi-pc me-1 text-coffee"></i>{{ comp.equipo.nombre }}
-                                    </span>
-                                    {% else %}
-                                    <span class="text-muted small fst-italic">Sin puesto asignado</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <span class="font-monospace small text-muted">
-                                        {{ comp.numero_serie|default:"--" }}
-                                    </span>
-                                </td>
-                                <td>
-                                    {% if comp.estado == 'DISPONIBLE' %}
-                                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
-                                        <i class="bi bi-check-circle me-1"></i>{{ comp.get_estado_display }}
-                                    </span>
-                                    {% elif comp.estado == 'DANIOS_MENORES' %}
-                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill">
-                                        <i class="bi bi-exclamation-triangle me-1"></i>{{ comp.get_estado_display }}
-                                    </span>
-                                    {% else %}
-                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill">
-                                        <i class="bi bi-x-circle me-1"></i>{{ comp.get_estado_display }}
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td style="max-width: 340px;">
-                                    {% if comp.observaciones %}
-                                    <div class="d-flex align-items-center gap-1 mb-1">
-                                        {% if comp.ultima_rev_id %}
-                                        <span class="badge bg-dark text-white rounded-pill px-2 py-0 font-monospace" style="font-size: 0.7rem;">
-                                            {{ comp.ultima_rev_id }}
-                                        </span>
-                                        {% endif %}
-                                        {% if comp.ultima_fecha %}
-                                        <small class="text-muted" style="font-size: 0.75rem;">
-                                            <i class="bi bi-calendar3 me-1"></i>{{ comp.ultima_fecha }}
-                                        </small>
-                                        {% endif %}
-                                    </div>
-                                    <span class="small text-truncate d-block text-dark fw-semibold" title="{{ comp.ultima_descripcion }}">
-                                        {{ comp.ultima_descripcion|truncatechars:65 }}
-                                    </span>
-                                    {% else %}
-                                    <span class="text-muted small">
-                                        <i class="bi bi-check2 text-success me-1"></i>Sin daños reportados
-                                    </span>
-                                    {% endif %}
-                                </td>
-                                <td class="text-end pe-4">
-                                    {% if comp.observaciones %}
-                                    <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-xs btn-ver-revisiones-comp"
-                                            data-bs-toggle="modal" data-bs-target="#modalHistorialRevisionesComp"
-                                            data-id="{{ comp.componente_id }}"
-                                            data-nombre="{{ comp.nombre }}"
-                                            data-serie="{{ comp.numero_serie|default:'' }}"
-                                            data-tipo="{{ comp.get_tipo_display }}"
-                                            data-estado="{{ comp.get_estado_display }}"
-                                            data-historial="{{ comp.observaciones }}">
-                                        <i class="bi bi-journal-text me-1"></i> Ver Revisiones
-                                    </button>
-                                    {% else %}
-                                    <button type="button" class="btn btn-sm btn-light text-muted rounded-pill px-3" disabled>
-                                        <i class="bi bi-check2 me-1"></i> Al 100%
-                                    </button>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <i class="bi bi-tools display-6 text-muted opacity-50 mb-2 d-block"></i>
-                                    No hay componentes registrados en el sistema.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                            <tr id="sinCoincidenciasComp" class="d-none">
-                                <td colspan="6" class="text-center py-5 text-muted">
-                                    <i class="bi bi-search display-6 text-muted opacity-50 mb-2 d-block"></i>
-                                    No se encontraron componentes que coincidan con la búsqueda o filtro.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-    </div>
-    <!-- FIN APARTADO 2 -->
-
-</div>
-<!-- FIN TAB-CONTENT -->
-
-<!-- ========================================================================= -->
-<!-- MODAL: EDITAR REVISIÓN (EXCLUSIVO ADMINISTRADOR)                          -->
-<!-- ========================================================================= -->
-{% if request.user.es_admin %}
-<div class="modal fade" id="modalEditarRevision" tabindex="-1" aria-labelledby="modalEditarRevisionLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header border-0 pb-0 px-4 pt-4">
-                <div>
-                    <h5 class="modal-title fw-bold text-dark" id="modalEditarRevisionLabel">
-                        <i class="bi bi-pencil-square text-coffee me-2"></i>Editar Auditoría de Revisión
-                    </h5>
-                    <p class="text-muted small mb-0">Modificación administrativa de resultados, diagnóstico y estado del equipo.</p>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-
-            <form method="post" action="" id="formEditarRevision">
-                {% csrf_token %}
-                <div class="modal-body px-4 py-3">
-
-                    <!-- Info de la Revisión / Equipo -->
-                    <div class="p-3 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge bg-dark text-white rounded-pill px-3 py-1 font-monospace me-2" id="modalEditRevisionBadge">#REV-0</span>
-                            <strong class="text-dark" id="modalEditEquipoNombre">Equipo</strong>
-                        </div>
-                        <span class="text-muted small" id="modalEditCliente">Cliente</span>
-                    </div>
-
-                    <!-- Selector de Resultado: Aprobar vs Reportar Daños -->
-                    <div class="mb-3">
-                        <label class="form-label fw-bold text-dark small text-uppercase">
-                            Resultado de la Inspección:
-                        </label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioEditAprobar" value="true" onchange="toggleFormularioEditDanio(true)">
-                                <label class="btn btn-outline-success w-100 rounded-3 py-2 fw-semibold" for="radioEditAprobar">
-                                    <i class="bi bi-check-circle-fill me-1"></i> Inspección Aprobada (OK)
-                                </label>
-                            </div>
-                            <div class="col-6">
-                                <input type="radio" class="btn-check" name="inspeccion_pasada" id="radioEditReprobar" value="false" onchange="toggleFormularioEditDanio(false)">
-                                <label class="btn btn-outline-danger w-100 rounded-3 py-2 fw-semibold" for="radioEditReprobar">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Con Daños / Novedades
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Campos Condicionales de Daño para Edición -->
-                    <div id="seccionEditDanio" class="d-none p-3 rounded-4 mb-3 border border-danger-subtle bg-danger-subtle bg-opacity-10">
-                        <div class="mb-0">
-                            <label class="form-label fw-bold text-danger small text-uppercase">
-                                Asignar Estado al Equipo:
-                            </label>
-                            <select name="estado_si_daniado" id="modalEditEstadoDaniado" class="form-select rounded-3">
-                                <option value="DANIOS_MENORES">Daños Menores (Desperfecto estético o periférico menor)</option>
-                                <option value="EN_MANTENIMIENTO">En Mantenimiento (Fuera de servicio para reparación)</option>
-                                <option value="DEFECTUOSO">Defectuoso (Falla crítica)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Campo de Descripción / Observaciones -->
-                    <div class="mb-2">
-                        <label class="form-label fw-bold text-dark small text-uppercase d-flex justify-content-between">
-                            <span>Observaciones y Diagnóstico Técnico:</span>
-                        </label>
-                        <textarea name="observaciones" id="modalEditObservaciones" rows="4" class="form-control rounded-3"
-                                  placeholder="Detalle de observaciones, diagnóstico técnico o notas de auditoría..."></textarea>
-                    </div>
-
-                </div>
-
-                <div class="modal-footer border-0 pt-0 px-4 pb-4">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-coffee rounded-pill px-4">
-                        <i class="bi bi-check-circle me-1"></i> Guardar Cambios
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-3 small" id="btnRestablecerFiltrosModal">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restablecer Filtros
+                    </button>
+                    <button type="button" class="btn btn-coffee rounded-pill px-4 small fw-semibold" data-bs-dismiss="modal">
+                        <i class="bi bi-check2 me-1"></i> Aplicar y Cerrar
                     </button>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
-</div>
-{% endif %}
 
-<!-- ========================================================================= -->
-<!-- MODAL: VISOR DE HISTORIAL DE REVISIONES DE COMPONENTES                     -->
-<!-- ========================================================================= -->
-{% include 'componentes/historial_revisiones.html' %}
+    <!-- ========================================================================= -->
+    <!-- MODAL: REVOCAR REVISIÓN (EXCLUSIVO ADMINISTRADOR)                         -->
+    <!-- ========================================================================= -->
+    {% if request.user.es_admin %}
+    <div class="modal fade" id="modalRevocarRevision" tabindex="-1" aria-labelledby="modalRevocarRevisionLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark d-flex align-items-center gap-2" id="modalRevocarRevisionLabel">
+                            <i class="bi bi-arrow-counterclockwise text-danger fs-4"></i>
+                            <span>Revocar Auditoría de Revisión</span>
+                        </h5>
+                        <p class="text-muted small mb-0">Permite anular una inspección errónea para repetirla desde la app móvil.</p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
 
-<!-- ========================================================================= -->
-<!-- MODAL: COBRO DE RENTA (REUTILIZADO)                                       -->
-<!-- ========================================================================= -->
-{% if request.user.es_admin or request.user.es_cajero %}
-{% include 'rentas/cobrar.html' %}
-{% endif %}
+                <form method="post" action="" id="formRevocarRevision">
+                    {% csrf_token %}
+                    <div class="modal-body px-4 py-3">
 
-<!-- ESTILOS ESPECÍFICOS MASTER-DETAIL -->
-<style>
-    .cursor-pointer { cursor: pointer; }
-    .transition-all { transition: all 0.2s ease-in-out; }
-    .shadow-xs { box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-    .item-revision:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-    }
-    .item-revision.active {
-        border-color: var(--clr-cobre, #855204) !important;
-        background-color: #fcf9f6 !important;
-        box-shadow: 0 4px 14px rgba(133, 82, 4, 0.15) !important;
-    }
-    .btn-filtro.active {
-        box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
-        font-weight: 600;
-    }
-</style>
+                        <!-- Info de la Revisión / Equipo -->
+                        <div class="p-3 bg-light rounded-3 mb-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="badge bg-dark text-white rounded-pill px-3 py-1 font-monospace me-2"
+                                    id="modalRevocarBadge">#REV-0</span>
+                                <strong class="text-dark" id="modalRevocarEquipo">Equipo</strong>
+                            </div>
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill small">
+                                Volverá a Pendiente
+                            </span>
+                        </div>
 
-<!-- LÓGICA INTERACTIVA JAVASCRIPT MASTER-DETAIL -->
-<script>
-document.addEventListener('DOMContentLoaded', function () {
+                        <div class="alert alert-warning border-0 rounded-4 p-3 mb-0">
+                            <div class="d-flex align-items-start gap-2">
+                                <i class="bi bi-exclamation-triangle-fill text-warning fs-5 flex-shrink-0 mt-1"></i>
+                                <div>
+                                    <strong class="text-dark d-block mb-1">¿Estás seguro de anular esta revisión?</strong>
+                                    <p class="small text-muted mb-0">
+                                        El registro de auditoría será eliminado y el puesto regresará a estado <strong>Pendiente de Revisión</strong> para que el asistente técnico realice nuevamente la inspección física desde la aplicación móvil.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
 
-    const buscador = document.getElementById('buscadorEquipo');
-    const items = document.querySelectorAll('.item-revision');
-    const sinResultados = document.getElementById('sinCoincidenciasBusqueda');
-    const indicadorConteo = document.getElementById('indicadorConteo');
-    const botonesFiltro = document.querySelectorAll('.btn-filtro');
+                    </div>
 
-    let filtroActivo = 'todos';
-    let itemActivo = null;
+                    <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                        <button type="button" class="btn btn-light rounded-pill px-4"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-danger rounded-pill px-4">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Sí, Revocar Revisión
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-    const ELEMENTOS_POR_PAGINA = 4;
-    let paginaActual = 1;
-    let elementosFiltrados = [];
+    <!-- ========================================================================= -->
+    <!-- MODAL: VISOR DE HISTORIAL DE REVISIONES DE COMPONENTES                     -->
+    <!-- ========================================================================= -->
+    {% include 'componentes/historial_revisiones.html' %}
 
-    const contenedorPaginacion = document.getElementById('contenedorPaginacion');
-    const infoPaginacion = document.getElementById('infoPaginacion');
-    const pagInicio = document.getElementById('pagInicio');
-    const pagFin = document.getElementById('pagFin');
-    const pagTotal = document.getElementById('pagTotal');
-    const indicadorPaginaActual = document.getElementById('indicadorPaginaActual');
-    const btnPaginaAnt = document.getElementById('btnPaginaAnt');
-    const btnPaginaSig = document.getElementById('btnPaginaSig');
-    const itemBtnAnt = document.getElementById('itemBtnAnt');
-    const itemBtnSig = document.getElementById('itemBtnSig');
+    <!-- ========================================================================= -->
+    <!-- MODAL: COBRO DE RENTA (REUTILIZADO)                                       -->
+    <!-- ========================================================================= -->
+    {% if request.user.es_admin or request.user.es_cajero %}
+    {% include 'rentas/cobrar.html' %}
+    {% endif %}
 
-    // -------------------------------------------------------------
-    // 1. FILTRADO Y PAGINACIÓN REACTIVA (4 REGISTROS POR PÁGINA)
-    // -------------------------------------------------------------
-    function renderizarPagina() {
-        const total = elementosFiltrados.length;
-        const totalPaginas = Math.ceil(total / ELEMENTOS_POR_PAGINA) || 1;
-
-        if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-        if (paginaActual < 1) paginaActual = 1;
-
-        const indiceInicio = (paginaActual - 1) * ELEMENTOS_POR_PAGINA;
-        const indiceFin = indiceInicio + ELEMENTOS_POR_PAGINA;
-
-        // Ocultar todos y mostrar únicamente los 4 de la página actual
-        items.forEach(el => el.classList.add('d-none'));
-        elementosFiltrados.forEach(function (el, index) {
-            if (index >= indiceInicio && index < indiceFin) {
-                el.classList.remove('d-none');
-            }
-        });
-
-        // Actualizar controles de paginación
-        if (total > ELEMENTOS_POR_PAGINA) {
-            contenedorPaginacion.classList.remove('d-none');
-            pagInicio.textContent = indiceInicio + 1;
-            pagFin.textContent = Math.min(indiceFin, total);
-            pagTotal.textContent = total;
-            indicadorPaginaActual.textContent = paginaActual + ' / ' + totalPaginas;
-
-            if (itemBtnAnt) itemBtnAnt.classList.toggle('disabled', paginaActual <= 1);
-            if (itemBtnSig) itemBtnSig.classList.toggle('disabled', paginaActual >= totalPaginas);
-        } else {
-            // Si hay 4 o menos registros, se oculta la barra de paginación
-            contenedorPaginacion.classList.add('d-none');
+    <!-- ESTILOS ESPECÍFICOS MASTER-DETAIL -->
+    <style>
+        .cursor-pointer {
+            cursor: pointer;
         }
 
-        if (sinResultados) {
-            sinResultados.classList.toggle('d-none', total > 0);
-        }
-        if (indicadorConteo) {
-            indicadorConteo.textContent = total + ' registro(s) encontrado(s)';
-        }
-    }
-
-    function aplicarFiltros(reiniciarPagina = true) {
-        const query = (buscador ? buscador.value : '').trim().toLowerCase();
-        elementosFiltrados = [];
-
-        items.forEach(function (el) {
-            const tipo = el.dataset.tipo; // 'pendiente', 'aprobada', 'reprobada'
-            const nombreEquipo = el.dataset.equipo || '';
-
-            let coincideFiltro = false;
-            if (filtroActivo === 'todos') {
-                coincideFiltro = true;
-            } else if (filtroActivo === 'pendientes') {
-                coincideFiltro = (tipo === 'pendiente');
-            } else if (filtroActivo === 'aprobadas') {
-                coincideFiltro = (tipo === 'aprobada');
-            } else if (filtroActivo === 'reprobadas') {
-                coincideFiltro = (tipo === 'reprobada');
-            }
-
-            const coincideNombre = !query || nombreEquipo.includes(query);
-            if (coincideFiltro && coincideNombre) {
-                elementosFiltrados.push(el);
-            }
-        });
-
-        if (reiniciarPagina) {
-            paginaActual = 1;
+        .transition-all {
+            transition: all 0.2s ease-in-out;
         }
 
-        renderizarPagina();
-    }
-
-    if (btnPaginaAnt) {
-        btnPaginaAnt.addEventListener('click', function () {
-            if (paginaActual > 1) {
-                paginaActual--;
-                renderizarPagina();
-            }
-        });
-    }
-
-    if (btnPaginaSig) {
-        btnPaginaSig.addEventListener('click', function () {
-            const totalPaginas = Math.ceil(elementosFiltrados.length / ELEMENTOS_POR_PAGINA);
-            if (paginaActual < totalPaginas) {
-                paginaActual++;
-                renderizarPagina();
-            }
-        });
-    }
-
-    if (buscador) {
-        buscador.addEventListener('input', function () {
-            aplicarFiltros(true);
-        });
-    }
-
-    botonesFiltro.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            botonesFiltro.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            filtroActivo = this.dataset.filtro;
-            aplicarFiltros(true);
-        });
-    });
-
-    // -------------------------------------------------------------
-    // 2. SELECCIÓN DE REVISIÓN Y RENDERIZADO EN PANEL DERECHO
-    // -------------------------------------------------------------
-    window.seleccionarItem = function (el) {
-        if (!el) return;
-
-        items.forEach(i => i.classList.remove('active'));
-        el.classList.add('active');
-        itemActivo = el;
-
-        const vistaVacia = document.getElementById('vistaVaciaDetalle');
-        const vistaContenido = document.getElementById('vistaContenidoDetalle');
-        if (vistaVacia) vistaVacia.classList.add('d-none');
-        if (vistaContenido) vistaContenido.classList.remove('d-none');
-
-        const d = el.dataset;
-        const esPendiente = (d.tipo === 'pendiente');
-
-        // Identificadores #REV y #RN
-        const badgeIdRev = document.getElementById('badgeIdRevisionDetalle');
-        const badgeIdRen = document.getElementById('badgeIdRentaDetalle');
-        if (badgeIdRev) {
-            if (!esPendiente && d.revisionId) {
-                badgeIdRev.textContent = '#REV-' + d.revisionId;
-                badgeIdRev.classList.remove('d-none');
-            } else {
-                badgeIdRev.classList.add('d-none');
-            }
-        }
-        if (badgeIdRen) {
-            if (d.rentaId) {
-                badgeIdRen.textContent = 'Renta #RN-' + d.rentaId + (d.detalleId ? ' (Sesión #DR-' + d.detalleId + ')' : '');
-                badgeIdRen.classList.remove('d-none');
-            } else {
-                badgeIdRen.classList.add('d-none');
-            }
+        .shadow-xs {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         }
 
-        // Badge de resultado
-        const badgeResultado = document.getElementById('badgeResultadoDetalle');
-        if (badgeResultado) {
-            if (esPendiente) {
-                badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-warning text-dark';
-                badgeResultado.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Pendiente de Inspección';
-            } else if (d.inspeccionPasada === 'true') {
-                badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-success text-white';
-                badgeResultado.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Inspección Aprobada';
-            } else {
-                badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-danger text-white';
-                badgeResultado.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Inspección con Daños';
-            }
+        .item-revision:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
-        // Tipo de equipo
-        const badgeTipo = document.getElementById('badgeTipoEquipoDetalle');
-        if (badgeTipo) badgeTipo.textContent = d.equipoTipo || 'Equipo';
-
-        // Ficha Equipo
-        const lblNombre = document.getElementById('nombreEquipoDetalle');
-        if (lblNombre) lblNombre.textContent = d.equipoNombre || '--';
-
-        const lblEstado = document.getElementById('estadoEquipoDetalle');
-        if (lblEstado) {
-            lblEstado.textContent = esPendiente ? 'Estado: Esperando verificación física (App Móvil)' : ('Estado actual: ' + (d.equipoEstado || 'Normal'));
+        .item-revision.active {
+            border-color: var(--clr-cobre, #855204) !important;
+            background-color: #fcf9f6 !important;
+            box-shadow: 0 4px 14px rgba(133, 82, 4, 0.15) !important;
         }
 
-        // Ficha Cliente y Renta
-        const lblCliente = document.getElementById('clienteDetalle');
-        if (lblCliente) lblCliente.textContent = d.cliente || '--';
-
-        const lblTiempo = document.getElementById('tiempoDetalle');
-        if (lblTiempo) lblTiempo.textContent = d.tiempo || '--';
-
-        const lblSubtotal = document.getElementById('subtotalDetalle');
-        if (lblSubtotal) lblSubtotal.textContent = d.subtotal || '--';
-
-        // Badge Estado de Pago
-        const containerPago = document.getElementById('estadoPagoDetalleContainer');
-        if (containerPago) {
-            if (d.pagoEstado === 'PAGADO') {
-                containerPago.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small"><i class="bi bi-check-circle me-1"></i>Renta Pagada</span>';
-            } else {
-                containerPago.innerHTML = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill small"><i class="bi bi-clock-history me-1"></i>Cobro Pendiente</span>';
-            }
+        /* Estilización de iconos de pestaña: celeste inactivo, blanco activo */
+        #pills-tab-revisiones .nav-link i {
+            color: #00b4d8 !important;
+            transition: color 0.2s ease;
         }
 
-        // Observaciones y Detección de Componentes Afectados
-        const lblObs = document.getElementById('observacionesDetalle');
-        const bannerAfectados = document.getElementById('bannerComponentesAfectados');
-        const txtAfectados = document.getElementById('textoComponentesAfectados');
-
-        if (lblObs) {
-            const rawObs = d.observaciones || '';
-            if (rawObs.includes('[Componentes Afectados]:')) {
-                const partes = rawObs.split('[Diagnóstico]:');
-                const compAfectadosStr = partes[0].replace('[Componentes Afectados]:', '').trim();
-                const diagnosticoStr = partes.length > 1 ? partes[1].trim() : compAfectadosStr;
-
-                if (bannerAfectados && txtAfectados) {
-                    txtAfectados.textContent = compAfectadosStr;
-                    bannerAfectados.classList.remove('d-none');
-                }
-                lblObs.textContent = diagnosticoStr || 'Sin detalles adicionales.';
-            } else {
-                if (bannerAfectados) bannerAfectados.classList.add('d-none');
-                lblObs.textContent = esPendiente
-                    ? 'El equipo aún no ha sido evaluado in situ. El Asistente Técnico realizará la inspección desde la aplicación móvil.'
-                    : (rawObs || 'Sin observaciones adicionales registradas.');
-            }
+        #pills-tab-revisiones .nav-link.active i {
+            color: #ffffff !important;
         }
 
-        // Auditoría
-        const lblInspector = document.getElementById('inspectorDetalle');
-        if (lblInspector) lblInspector.textContent = esPendiente ? 'Esperando App Móvil' : (d.inspector || '--');
+        /* Botones de filtro dentro del Modal General */
+        .btn-filtro-modal-eq.active,
+        .btn-filtro-modal-comp.active {
+            background-color: var(--clr-cobre, #855204) !important;
+            color: #ffffff !important;
+            border-color: var(--clr-cobre, #855204) !important;
+            box-shadow: 0 2px 6px rgba(133, 82, 4, 0.25);
+        }
+    </style>
 
-        const lblFecha = document.getElementById('fechaDetalle');
-        if (lblFecha) lblFecha.textContent = esPendiente ? (d.horaFin || 'En espera') : (d.fecha || '--');
+    <!-- LÓGICA INTERACTIVA JAVASCRIPT MASTER-DETAIL -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
 
-        // Botón Editar Revisión (Exclusivo Administrador)
-        const btnEditar = document.getElementById('btnEditarRevision');
-        if (btnEditar) {
-            if (!esPendiente && d.revisionId) {
-                btnEditar.classList.remove('d-none');
-                btnEditar.onclick = function () {
-                    const form = document.getElementById('formEditarRevision');
-                    if (form) form.action = '/revisiones/editar/' + d.revisionId + '/';
+            // =============================================================
+            // 1. VARIABLES Y ELEMENTOS DE EQUIPOS
+            // =============================================================
+            const buscador = document.getElementById('buscadorEquipo');
+            const items = document.querySelectorAll('.item-revision');
+            const sinResultados = document.getElementById('sinCoincidenciasBusqueda');
+            const indicadorConteo = document.getElementById('indicadorConteo');
+            const badgeFiltroEqActivo = document.getElementById('badgeFiltroEqActivo');
+            const textoFiltroEqActivo = document.getElementById('textoFiltroEqActivo');
+            const btnLimpiarFiltroEq = document.getElementById('btnLimpiarFiltroEq');
 
-                    const bRev = document.getElementById('modalEditRevisionBadge');
-                    if (bRev) bRev.textContent = '#REV-' + d.revisionId;
+            let filtroActivo = 'todos';
+            let itemActivo = null;
 
-                    const eqNom = document.getElementById('modalEditEquipoNombre');
-                    if (eqNom) eqNom.textContent = d.equipoNombre || 'Equipo';
+            const ELEMENTOS_POR_PAGINA = 4;
+            let paginaActual = 1;
+            let elementosFiltrados = [];
 
-                    const cli = document.getElementById('modalEditCliente');
-                    if (cli) cli.textContent = 'Cliente: ' + (d.cliente || '--');
+            const contenedorPaginacion = document.getElementById('contenedorPaginacion');
+            const infoPaginacion = document.getElementById('infoPaginacion');
+            const pagInicio = document.getElementById('pagInicio');
+            const pagFin = document.getElementById('pagFin');
+            const pagTotal = document.getElementById('pagTotal');
+            const indicadorPaginaActual = document.getElementById('indicadorPaginaActual');
+            const btnPaginaAnt = document.getElementById('btnPaginaAnt');
+            const btnPaginaSig = document.getElementById('btnPaginaSig');
+            const itemBtnAnt = document.getElementById('itemBtnAnt');
+            const itemBtnSig = document.getElementById('itemBtnSig');
 
-                    const txtObs = document.getElementById('modalEditObservaciones');
-                    if (txtObs) txtObs.value = d.observaciones || '';
-
-                    const isPasa = (d.inspeccionPasada === 'true');
-                    const radioAprobar = document.getElementById('radioEditAprobar');
-                    const radioReprobar = document.getElementById('radioEditReprobar');
-                    if (isPasa && radioAprobar) {
-                        radioAprobar.checked = true;
-                        toggleFormularioEditDanio(true);
-                    } else if (radioReprobar) {
-                        radioReprobar.checked = true;
-                        toggleFormularioEditDanio(false);
-                    }
+            // =============================================================
+            // 2. FILTRADO Y PAGINACIÓN DE EQUIPOS
+            // =============================================================
+            function actualizarBadgeFiltroEq() {
+                if (!textoFiltroEqActivo || !badgeFiltroEqActivo || !btnLimpiarFiltroEq) return;
+                const labels = {
+                    'todos': 'Todos',
+                    'pendientes': 'Pendientes',
+                    'aprobadas': 'Aprobadas',
+                    'reprobadas': 'Con Daños'
                 };
-            } else {
-                btnEditar.classList.add('d-none');
-            }
-        }
-
-        const btnCobrar = document.getElementById('btnCobrarDesdeDetalle');
-        if (btnCobrar) {
-            if (d.pagoEstado === 'PENDIENTE') {
-                btnCobrar.classList.remove('d-none');
-                btnCobrar.dataset.detalleId = d.detalleId;
-                btnCobrar.dataset.equipoNombre = d.equipoNombre;
-                btnCobrar.dataset.clienteNombre = d.cliente;
-                btnCobrar.dataset.clienteCorreo = d.clienteCorreo || '';
-                btnCobrar.dataset.tiempo = d.tiempo;
-                btnCobrar.dataset.total = d.subtotalRaw;
-            } else {
-                btnCobrar.classList.add('d-none');
-            }
-        }
-
-        const btnFactura = document.getElementById('btnFacturaPdfDetalle');
-        if (btnFactura) {
-            if (d.rentaId && d.pagoEstado === 'PAGADO') {
-                btnFactura.classList.remove('d-none');
-                btnFactura.href = '/factura_renta/' + d.rentaId + '/';
-            } else {
-                btnFactura.classList.add('d-none');
-            }
-        }
-    };
-
-    // -------------------------------------------------------------
-    // 3. CONTROL FORMULARIO DE EDICIÓN
-    // -------------------------------------------------------------
-    window.toggleFormularioEditDanio = function (pasa) {
-        const seccionDanio = document.getElementById('seccionEditDanio');
-        if (seccionDanio) {
-            if (pasa) seccionDanio.classList.add('d-none');
-            else seccionDanio.classList.remove('d-none');
-        }
-    };
-
-    // Pre-selección si viene por URL (ej. ?detalle_id=X o ?equipo_id=Y)
-    const urlParams = new URLSearchParams(window.location.search);
-    const detalleUrl = urlParams.get('detalle_id');
-    const equipoUrl = urlParams.get('equipo_id');
-
-    let elementoInicial = null;
-    if (detalleUrl) {
-        elementoInicial = document.getElementById('item-pendiente-' + detalleUrl) ||
-                          document.querySelector(`.item-revision[data-detalle-id="${detalleUrl}"]`);
-    } else if (equipoUrl) {
-        elementoInicial = document.querySelector(`.item-revision[data-equipo-id="${equipoUrl}"]`);
-    }
-
-    // Inicializar filtros y paginación (4 por página)
-    aplicarFiltros(true);
-
-    if (elementoInicial) {
-        const idx = elementosFiltrados.indexOf(elementoInicial);
-        if (idx !== -1) {
-            paginaActual = Math.floor(idx / ELEMENTOS_POR_PAGINA) + 1;
-            renderizarPagina();
-        }
-        seleccionarItem(elementoInicial);
-    }
-
-    // -------------------------------------------------------------
-    // 4. FILTRADO Y BÚSQUEDA DEL APARTADO DE COMPONENTES
-    // -------------------------------------------------------------
-    const buscadorComp = document.getElementById('buscadorCompRev');
-    const filasComp = document.querySelectorAll('.fila-comp-revision');
-    const sinResultadosComp = document.getElementById('sinCoincidenciasComp');
-    const botonesFiltroComp = document.querySelectorAll('.btn-filtro-comp');
-    let filtroActivoComp = 'todos';
-
-    function filtrarComponentes() {
-        const query = (buscadorComp ? buscadorComp.value : '').trim().toLowerCase();
-        let visibles = 0;
-
-        filasComp.forEach(function (fila) {
-            const nombre = fila.dataset.nombre || '';
-            const tipo = fila.dataset.tipo || '';
-            const serie = fila.dataset.serie || '';
-            const equipo = fila.dataset.equipo || '';
-            const tieneReporte = fila.dataset.tieneReporte === 'true';
-
-            let cumpleFiltro = false;
-            if (filtroActivoComp === 'todos') {
-                cumpleFiltro = true;
-            } else if (filtroActivoComp === 'con-reporte') {
-                cumpleFiltro = tieneReporte;
-            } else if (filtroActivoComp === 'teclado') {
-                cumpleFiltro = tipo.includes('teclado');
-            } else if (filtroActivoComp === 'mouse') {
-                cumpleFiltro = tipo.includes('mouse');
-            } else if (filtroActivoComp === 'monitor') {
-                cumpleFiltro = tipo.includes('monitor');
-            } else if (filtroActivoComp === 'control') {
-                cumpleFiltro = tipo.includes('control');
-            }
-
-            const cumpleTexto = !query ||
-                nombre.includes(query) ||
-                serie.includes(query) ||
-                equipo.includes(query) ||
-                tipo.includes(query);
-
-            if (cumpleFiltro && cumpleTexto) {
-                fila.classList.remove('d-none');
-                visibles++;
-            } else {
-                fila.classList.add('d-none');
-            }
-        });
-
-        if (sinResultadosComp) {
-            sinResultadosComp.classList.toggle('d-none', visibles > 0);
-        }
-    }
-
-    if (buscadorComp) {
-        buscadorComp.addEventListener('input', filtrarComponentes);
-    }
-
-    botonesFiltroComp.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            botonesFiltroComp.forEach(b => {
-                b.classList.remove('active', 'btn-secondary', 'btn-danger');
-                if (b.dataset.filtro === 'con-reporte') {
-                    b.classList.add('btn-outline-danger');
+                textoFiltroEqActivo.textContent = labels[filtroActivo] || 'Todos';
+                if (filtroActivo !== 'todos') {
+                    btnLimpiarFiltroEq.classList.remove('d-none');
+                    badgeFiltroEqActivo.classList.add('bg-warning-subtle', 'border-warning-subtle');
                 } else {
-                    b.classList.add('btn-outline-secondary');
+                    btnLimpiarFiltroEq.classList.add('d-none');
+                    badgeFiltroEqActivo.classList.remove('bg-warning-subtle', 'border-warning-subtle');
                 }
-            });
-            this.classList.add('active');
-            if (this.dataset.filtro === 'con-reporte') {
-                this.classList.remove('btn-outline-danger');
-                this.classList.add('btn-danger');
-            } else {
-                this.classList.remove('btn-outline-secondary');
-                this.classList.add('btn-secondary');
+                actualizarConteoFiltrosGlobales();
             }
-            filtroActivoComp = this.dataset.filtro;
-            filtrarComponentes();
-        });
-    });
 
-});
-</script>
-{% endblock %}
+            function renderizarPagina() {
+                const total = elementosFiltrados.length;
+                const totalPaginas = Math.ceil(total / ELEMENTOS_POR_PAGINA) || 1;
+
+                if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+                if (paginaActual < 1) paginaActual = 1;
+
+                const indiceInicio = (paginaActual - 1) * ELEMENTOS_POR_PAGINA;
+                const indiceFin = indiceInicio + ELEMENTOS_POR_PAGINA;
+
+                items.forEach(el => el.classList.add('d-none'));
+                elementosFiltrados.forEach(function (el, index) {
+                    if (index >= indiceInicio && index < indiceFin) {
+                        el.classList.remove('d-none');
+                    }
+                });
+
+                if (total > ELEMENTOS_POR_PAGINA) {
+                    if (contenedorPaginacion) contenedorPaginacion.classList.remove('d-none');
+                    if (pagInicio) pagInicio.textContent = indiceInicio + 1;
+                    if (pagFin) pagFin.textContent = Math.min(indiceFin, total);
+                    if (pagTotal) pagTotal.textContent = total;
+                    if (indicadorPaginaActual) indicadorPaginaActual.textContent = paginaActual + ' / ' + totalPaginas;
+
+                    if (itemBtnAnt) itemBtnAnt.classList.toggle('disabled', paginaActual <= 1);
+                    if (itemBtnSig) itemBtnSig.classList.toggle('disabled', paginaActual >= totalPaginas);
+                } else {
+                    if (contenedorPaginacion) contenedorPaginacion.classList.add('d-none');
+                }
+
+                if (sinResultados) {
+                    sinResultados.classList.toggle('d-none', total > 0);
+                }
+                if (indicadorConteo) {
+                    indicadorConteo.textContent = total + ' registro(s) encontrado(s)';
+                }
+            }
+
+            function aplicarFiltros(reiniciarPagina = true) {
+                const query = (buscador ? buscador.value : '').trim().toLowerCase();
+                elementosFiltrados = [];
+
+                items.forEach(function (el) {
+                    const tipo = el.dataset.tipo;
+                    const nombreEquipo = el.dataset.equipo || '';
+
+                    let coincideFiltro = false;
+                    if (filtroActivo === 'todos') {
+                        coincideFiltro = true;
+                    } else if (filtroActivo === 'pendientes') {
+                        coincideFiltro = (tipo === 'pendiente');
+                    } else if (filtroActivo === 'aprobadas') {
+                        coincideFiltro = (tipo === 'aprobada');
+                    } else if (filtroActivo === 'reprobadas') {
+                        coincideFiltro = (tipo === 'reprobada');
+                    }
+
+                    const coincideNombre = !query || nombreEquipo.includes(query);
+                    if (coincideFiltro && coincideNombre) {
+                        elementosFiltrados.push(el);
+                    }
+                });
+
+                if (reiniciarPagina) {
+                    paginaActual = 1;
+                }
+
+                actualizarBadgeFiltroEq();
+                renderizarPagina();
+            }
+
+            if (btnPaginaAnt) {
+                btnPaginaAnt.addEventListener('click', function () {
+                    if (paginaActual > 1) {
+                        paginaActual--;
+                        renderizarPagina();
+                    }
+                });
+            }
+
+            if (btnPaginaSig) {
+                btnPaginaSig.addEventListener('click', function () {
+                    const totalPaginas = Math.ceil(elementosFiltrados.length / ELEMENTOS_POR_PAGINA);
+                    if (paginaActual < totalPaginas) {
+                        paginaActual++;
+                        renderizarPagina();
+                    }
+                });
+            }
+
+            if (buscador) {
+                buscador.addEventListener('input', function () {
+                    aplicarFiltros(true);
+                });
+            }
+
+            if (btnLimpiarFiltroEq) {
+                btnLimpiarFiltroEq.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    filtroActivo = 'todos';
+                    sincronizarBotonesModalEq('todos');
+                    aplicarFiltros(true);
+                });
+            }
+
+            // =============================================================
+            // 3. SELECCIÓN DE REVISIÓN Y DETALLE DERECHO
+            // =============================================================
+            window.seleccionarItem = function (el) {
+                if (!el) return;
+
+                items.forEach(i => i.classList.remove('active'));
+                el.classList.add('active');
+                itemActivo = el;
+
+                const vistaVacia = document.getElementById('vistaVaciaDetalle');
+                const vistaContenido = document.getElementById('vistaContenidoDetalle');
+                if (vistaVacia) vistaVacia.classList.add('d-none');
+                if (vistaContenido) vistaContenido.classList.remove('d-none');
+
+                const d = el.dataset;
+                const esPendiente = (d.tipo === 'pendiente');
+
+                // Identificadores #REV y #RN
+                const badgeIdRev = document.getElementById('badgeIdRevisionDetalle');
+                const badgeIdRen = document.getElementById('badgeIdRentaDetalle');
+                if (badgeIdRev) {
+                    if (!esPendiente && d.revisionId) {
+                        badgeIdRev.textContent = '#REV-' + d.revisionId;
+                        badgeIdRev.classList.remove('d-none');
+                    } else {
+                        badgeIdRev.classList.add('d-none');
+                    }
+                }
+                if (badgeIdRen) {
+                    if (d.rentaId) {
+                        badgeIdRen.textContent = 'Renta #RN-' + d.rentaId + (d.detalleId ? ' (Sesión #DR-' + d.detalleId + ')' : '');
+                        badgeIdRen.classList.remove('d-none');
+                    } else {
+                        badgeIdRen.classList.add('d-none');
+                    }
+                }
+
+                // Badge de resultado
+                const badgeResultado = document.getElementById('badgeResultadoDetalle');
+                if (badgeResultado) {
+                    if (esPendiente) {
+                        badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-warning text-dark';
+                        badgeResultado.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Pendiente de Inspección';
+                    } else if (d.inspeccionPasada === 'true') {
+                        badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-success text-white';
+                        badgeResultado.innerHTML = '<i class="bi bi-check-circle-fill me-1"></i> Inspección Aprobada';
+                    } else {
+                        badgeResultado.className = 'badge px-3 py-2 rounded-pill fs-6 bg-danger text-white';
+                        badgeResultado.innerHTML = '<i class="bi bi-exclamation-triangle-fill me-1"></i> Inspección con Daños';
+                    }
+                }
+
+                // Tipo de equipo
+                const badgeTipo = document.getElementById('badgeTipoEquipoDetalle');
+                if (badgeTipo) badgeTipo.textContent = d.equipoTipo || 'Equipo';
+
+                // Ficha Equipo
+                const lblNombre = document.getElementById('nombreEquipoDetalle');
+                if (lblNombre) lblNombre.textContent = d.equipoNombre || '--';
+
+                const lblEstado = document.getElementById('estadoEquipoDetalle');
+                if (lblEstado) {
+                    lblEstado.textContent = esPendiente ? 'Estado: Esperando verificación física (App Móvil)' : ('Estado actual: ' + (d.equipoEstado || 'Normal'));
+                }
+
+                // Ficha Cliente y Renta
+                const lblCliente = document.getElementById('clienteDetalle');
+                if (lblCliente) lblCliente.textContent = d.cliente || '--';
+
+                const lblTiempo = document.getElementById('tiempoDetalle');
+                if (lblTiempo) lblTiempo.textContent = d.tiempo || '--';
+
+                const lblSubtotal = document.getElementById('subtotalDetalle');
+                if (lblSubtotal) lblSubtotal.textContent = d.subtotal || '--';
+
+                // Badge Estado de Pago
+                const containerPago = document.getElementById('estadoPagoDetalleContainer');
+                if (containerPago) {
+                    if (d.pagoEstado === 'PAGADO') {
+                        containerPago.innerHTML = '<span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small"><i class="bi bi-check-circle me-1"></i>Renta Pagada</span>';
+                    } else {
+                        containerPago.innerHTML = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill small"><i class="bi bi-clock-history me-1"></i>Cobro Pendiente</span>';
+                    }
+                }
+
+                // Observaciones y Diagnóstico Técnico
+                const lblObs = document.getElementById('observacionesDetalle');
+                const bannerAfectados = document.getElementById('bannerComponentesAfectados');
+                const txtAfectados = document.getElementById('textoComponentesAfectados');
+
+                if (lblObs) {
+                    const rawObs = d.observaciones || '';
+                    if (rawObs.includes('[Componentes Afectados]:')) {
+                        const partes = rawObs.split('[Diagnóstico]:');
+                        const compAfectadosStr = partes[0].replace('[Componentes Afectados]:', '').trim();
+                        const diagnosticoStr = partes.length > 1 ? partes[1].trim() : compAfectadosStr;
+
+                        if (bannerAfectados && txtAfectados) {
+                            txtAfectados.textContent = compAfectadosStr;
+                            bannerAfectados.classList.remove('d-none');
+                        }
+                        lblObs.textContent = diagnosticoStr || 'Sin detalles adicionales.';
+                    } else {
+                        if (bannerAfectados) bannerAfectados.classList.add('d-none');
+                        lblObs.textContent = esPendiente
+                            ? 'Pendiente de inspección desde la aplicación móvil.'
+                            : (rawObs || 'Sin observaciones adicionales registradas.');
+                    }
+                }
+
+                // Auditoría
+                const lblInspector = document.getElementById('inspectorDetalle');
+                if (lblInspector) lblInspector.textContent = esPendiente ? 'Esperando App Móvil' : (d.inspector || '--');
+
+                const lblFecha = document.getElementById('fechaDetalle');
+                if (lblFecha) lblFecha.textContent = esPendiente ? (d.horaFin || 'En espera') : (d.fecha || '--');
+
+                // Botón Revocar Revisión (Exclusivo Administrador)
+                const btnRevocar = document.getElementById('btnRevocarRevision');
+                if (btnRevocar) {
+                    if (!esPendiente && d.revisionId) {
+                        btnRevocar.classList.remove('d-none');
+                        const puedeRevocar = (d.puedeRevocar === 'true');
+                        if (puedeRevocar) {
+                            btnRevocar.removeAttribute('disabled');
+                            btnRevocar.classList.remove('opacity-50');
+                            btnRevocar.title = "Revocar esta revisión técnica para repetir la inspección desde la app móvil";
+                            btnRevocar.onclick = function () {
+                                const form = document.getElementById('formRevocarRevision');
+                                if (form) form.action = '/revisiones/reiniciar/' + d.revisionId + '/';
+
+                                const bRev = document.getElementById('modalRevocarBadge');
+                                if (bRev) bRev.textContent = '#REV-' + d.revisionId;
+
+                                const eqNom = document.getElementById('modalRevocarEquipo');
+                                if (eqNom) eqNom.textContent = d.equipoNombre || 'Equipo';
+                            };
+                        } else {
+                            btnRevocar.setAttribute('disabled', 'disabled');
+                            btnRevocar.classList.add('opacity-50');
+                            btnRevocar.title = "No se puede revocar: El equipo ya fue rentado posteriormente o está en uso";
+                            btnRevocar.onclick = null;
+                        }
+                    } else {
+                        btnRevocar.classList.add('d-none');
+                    }
+                }
+
+                const btnCobrar = document.getElementById('btnCobrarDesdeDetalle');
+                if (btnCobrar) {
+                    if (d.pagoEstado === 'PENDIENTE') {
+                        btnCobrar.classList.remove('d-none');
+                        btnCobrar.dataset.detalleId = d.detalleId;
+                        btnCobrar.dataset.equipoNombre = d.equipoNombre;
+                        btnCobrar.dataset.clienteNombre = d.cliente;
+                        btnCobrar.dataset.clienteCorreo = d.clienteCorreo || '';
+                        btnCobrar.dataset.tiempo = d.tiempo;
+                        btnCobrar.dataset.total = d.subtotalRaw;
+                    } else {
+                        btnCobrar.classList.add('d-none');
+                    }
+                }
+
+                const btnFactura = document.getElementById('btnFacturaPdfDetalle');
+                if (btnFactura) {
+                    if (d.rentaId && d.pagoEstado === 'PAGADO') {
+                        btnFactura.classList.remove('d-none');
+                        btnFactura.href = '/factura_renta/' + d.rentaId + '/';
+                    } else {
+                        btnFactura.classList.add('d-none');
+                    }
+                }
+            };
+
+            // =============================================================
+            // 4. ACCESO RÁPIDO DESDE INDICADOR DE PENDIENTES
+            // =============================================================
+            const btnAccesoPend = document.getElementById('btnAccesoPendientes');
+            if (btnAccesoPend) {
+                btnAccesoPend.addEventListener('click', function (e) {
+                    e.preventDefault();
+
+                    // 1. Activar pestaña de equipos si no está activa
+                    const tabEquiposBtn = document.getElementById('tab-equipos-btn');
+                    if (tabEquiposBtn) tabEquiposBtn.click();
+
+                    // 2. Establecer filtro a pendientes
+                    filtroActivo = 'pendientes';
+                    sincronizarBotonesModalEq('pendientes');
+                    aplicarFiltros(true);
+
+                    // 3. Seleccionar el primer pendiente visible
+                    const primerPendiente = document.querySelector('.tarjeta-pendiente');
+                    if (primerPendiente) {
+                        seleccionarItem(primerPendiente);
+                    }
+
+                    // 4. Desplazamiento suave al contenedor
+                    const contMaster = document.getElementById('contenedorListaRevisiones');
+                    if (contMaster) {
+                        contMaster.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            }
+
+            // =============================================================
+            // 5. FILTRADO Y PAGINACIÓN DE COMPONENTES
+            // =============================================================
+            const buscadorComp = document.getElementById('buscadorCompRev');
+            const filasComp = document.querySelectorAll('.fila-comp-revision');
+            const sinResultadosComp = document.getElementById('sinCoincidenciasComp');
+            const badgeFiltroCompActivo = document.getElementById('badgeFiltroCompActivo');
+            const textoFiltroCompActivo = document.getElementById('textoFiltroCompActivo');
+            const btnLimpiarFiltroComp = document.getElementById('btnLimpiarFiltroComp');
+
+            let filtroActivoComp = 'todos';
+            const COMPONENTES_POR_PAGINA = 8;
+            let paginaCompActual = 1;
+            let componentesFiltrados = [];
+
+            const contenedorPaginacionComp = document.getElementById('contenedorPaginacionComp');
+            const infoPaginacionComp = document.getElementById('infoPaginacionComp');
+            const pagInicioComp = document.getElementById('pagInicioComp');
+            const pagFinComp = document.getElementById('pagFinComp');
+            const pagTotalComp = document.getElementById('pagTotalComp');
+            const indicadorPaginaActualComp = document.getElementById('indicadorPaginaActualComp');
+            const btnPaginaAntComp = document.getElementById('btnPaginaAntComp');
+            const btnPaginaSigComp = document.getElementById('btnPaginaSigComp');
+            const itemBtnAntComp = document.getElementById('itemBtnAntComp');
+            const itemBtnSigComp = document.getElementById('itemBtnSigComp');
+
+            function actualizarBadgeFiltroComp() {
+                if (!textoFiltroCompActivo || !badgeFiltroCompActivo || !btnLimpiarFiltroComp) return;
+                const labels = {
+                    'todos': 'Todos',
+                    'con-reporte': 'Con Novedad',
+                    'teclado': 'Teclados',
+                    'mouse': 'Mouse',
+                    'monitor': 'Monitores',
+                    'control': 'Controles'
+                };
+                textoFiltroCompActivo.textContent = labels[filtroActivoComp] || 'Todos';
+                if (filtroActivoComp !== 'todos') {
+                    btnLimpiarFiltroComp.classList.remove('d-none');
+                    badgeFiltroCompActivo.classList.add('bg-warning-subtle', 'border-warning-subtle');
+                } else {
+                    btnLimpiarFiltroComp.classList.add('d-none');
+                    badgeFiltroCompActivo.classList.remove('bg-warning-subtle', 'border-warning-subtle');
+                }
+                actualizarConteoFiltrosGlobales();
+            }
+
+            function renderizarPaginaComp() {
+                const total = componentesFiltrados.length;
+                const totalPaginas = Math.ceil(total / COMPONENTES_POR_PAGINA) || 1;
+
+                if (paginaCompActual > totalPaginas) paginaCompActual = totalPaginas;
+                if (paginaCompActual < 1) paginaCompActual = 1;
+
+                const indiceInicio = (paginaCompActual - 1) * COMPONENTES_POR_PAGINA;
+                const indiceFin = indiceInicio + COMPONENTES_POR_PAGINA;
+
+                filasComp.forEach(fila => fila.classList.add('d-none'));
+                componentesFiltrados.forEach((fila, idx) => {
+                    if (idx >= indiceInicio && idx < indiceFin) {
+                        fila.classList.remove('d-none');
+                    }
+                });
+
+                if (total > COMPONENTES_POR_PAGINA) {
+                    if (contenedorPaginacionComp) contenedorPaginacionComp.classList.remove('d-none');
+                    if (pagInicioComp) pagInicioComp.textContent = indiceInicio + 1;
+                    if (pagFinComp) pagFinComp.textContent = Math.min(indiceFin, total);
+                    if (pagTotalComp) pagTotalComp.textContent = total;
+                    if (indicadorPaginaActualComp) indicadorPaginaActualComp.textContent = paginaCompActual + ' / ' + totalPaginas;
+
+                    if (itemBtnAntComp) itemBtnAntComp.classList.toggle('disabled', paginaCompActual <= 1);
+                    if (itemBtnSigComp) itemBtnSigComp.classList.toggle('disabled', paginaCompActual >= totalPaginas);
+                } else {
+                    if (contenedorPaginacionComp) {
+                        if (total > 0) {
+                            contenedorPaginacionComp.classList.remove('d-none');
+                            if (pagInicioComp) pagInicioComp.textContent = 1;
+                            if (pagFinComp) pagFinComp.textContent = total;
+                            if (pagTotalComp) pagTotalComp.textContent = total;
+                            if (indicadorPaginaActualComp) indicadorPaginaActualComp.textContent = '1 / 1';
+                            if (itemBtnAntComp) itemBtnAntComp.classList.add('disabled');
+                            if (itemBtnSigComp) itemBtnSigComp.classList.add('disabled');
+                        } else {
+                            contenedorPaginacionComp.classList.add('d-none');
+                        }
+                    }
+                }
+
+                if (sinResultadosComp) {
+                    sinResultadosComp.classList.toggle('d-none', total > 0);
+                }
+            }
+
+            function filtrarComponentes(reiniciarPagina = true) {
+                const query = (buscadorComp ? buscadorComp.value : '').trim().toLowerCase();
+                componentesFiltrados = [];
+
+                filasComp.forEach(function (fila) {
+                    const nombre = fila.dataset.nombre || '';
+                    const tipo = fila.dataset.tipo || '';
+                    const serie = fila.dataset.serie || '';
+                    const equipo = fila.dataset.equipo || '';
+                    const tieneReporte = fila.dataset.tieneReporte === 'true';
+
+                    let cumpleFiltro = false;
+                    if (filtroActivoComp === 'todos') {
+                        cumpleFiltro = true;
+                    } else if (filtroActivoComp === 'con-reporte') {
+                        cumpleFiltro = tieneReporte;
+                    } else if (filtroActivoComp === 'teclado') {
+                        cumpleFiltro = tipo.includes('teclado');
+                    } else if (filtroActivoComp === 'mouse') {
+                        cumpleFiltro = tipo.includes('mouse');
+                    } else if (filtroActivoComp === 'monitor') {
+                        cumpleFiltro = tipo.includes('monitor');
+                    } else if (filtroActivoComp === 'control') {
+                        cumpleFiltro = tipo.includes('control');
+                    }
+
+                    const cumpleTexto = !query ||
+                        nombre.includes(query) ||
+                        serie.includes(query) ||
+                        equipo.includes(query) ||
+                        tipo.includes(query);
+
+                    if (cumpleFiltro && cumpleTexto) {
+                        componentesFiltrados.push(fila);
+                    }
+                });
+
+                if (reiniciarPagina) {
+                    paginaCompActual = 1;
+                }
+
+                actualizarBadgeFiltroComp();
+                renderizarPaginaComp();
+            }
+
+            if (btnPaginaAntComp) {
+                btnPaginaAntComp.addEventListener('click', function () {
+                    if (paginaCompActual > 1) {
+                        paginaCompActual--;
+                        renderizarPaginaComp();
+                    }
+                });
+            }
+
+            if (btnPaginaSigComp) {
+                btnPaginaSigComp.addEventListener('click', function () {
+                    const totalPaginas = Math.ceil(componentesFiltrados.length / COMPONENTES_POR_PAGINA);
+                    if (paginaCompActual < totalPaginas) {
+                        paginaCompActual++;
+                        renderizarPaginaComp();
+                    }
+                });
+            }
+
+            if (buscadorComp) {
+                buscadorComp.addEventListener('input', function () {
+                    filtrarComponentes(true);
+                });
+            }
+
+            if (btnLimpiarFiltroComp) {
+                btnLimpiarFiltroComp.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    filtroActivoComp = 'todos';
+                    sincronizarBotonesModalComp('todos');
+                    filtrarComponentes(true);
+                });
+            }
+
+            // =============================================================
+            // =============================================================
+            // 6. CONTROL DEL MODAL GENERAL DE FILTROS SEGÚN PESTAÑA ACTIVA
+            // =============================================================
+            const btnsModalEq = document.querySelectorAll('.btn-filtro-modal-eq');
+            const btnsModalComp = document.querySelectorAll('.btn-filtro-modal-comp');
+            const badgeFiltrosActivosCount = document.getElementById('badgeFiltrosActivosCount');
+            const btnRestablecerModal = document.getElementById('btnRestablecerFiltrosModal');
+            const tabEquiposBtn = document.getElementById('tab-equipos-btn');
+            const tabComponentesBtn = document.getElementById('tab-componentes-btn');
+            const modalFiltrosElem = document.getElementById('modalFiltrosRevisiones');
+            const seccionFiltrosEquiposModal = document.getElementById('seccionFiltrosEquiposModal');
+            const seccionFiltrosComponentesModal = document.getElementById('seccionFiltrosComponentesModal');
+            const textoTituloModalFiltros = document.getElementById('textoTituloModalFiltros');
+            const iconoTituloModalFiltros = document.getElementById('iconoTituloModalFiltros');
+
+            function actualizarModalSegunPestana() {
+                const pestanaEquipos = tabEquiposBtn && tabEquiposBtn.classList.contains('active');
+                if (pestanaEquipos) {
+                    if (seccionFiltrosEquiposModal) seccionFiltrosEquiposModal.classList.remove('d-none');
+                    if (seccionFiltrosComponentesModal) seccionFiltrosComponentesModal.classList.add('d-none');
+                    if (textoTituloModalFiltros) textoTituloModalFiltros.textContent = 'Filtros - Revisiones de Equipos';
+                    if (iconoTituloModalFiltros) iconoTituloModalFiltros.className = 'bi bi-pc-display text-coffee fs-4';
+                } else {
+                    if (seccionFiltrosEquiposModal) seccionFiltrosEquiposModal.classList.add('d-none');
+                    if (seccionFiltrosComponentesModal) seccionFiltrosComponentesModal.classList.remove('d-none');
+                    if (textoTituloModalFiltros) textoTituloModalFiltros.textContent = 'Filtros - Revisiones de Componentes';
+                    if (iconoTituloModalFiltros) iconoTituloModalFiltros.className = 'bi bi-tools text-primary fs-4';
+                }
+            }
+
+            if (modalFiltrosElem) {
+                modalFiltrosElem.addEventListener('show.bs.modal', actualizarModalSegunPestana);
+            }
+            if (tabEquiposBtn) {
+                tabEquiposBtn.addEventListener('shown.bs.tab', actualizarModalSegunPestana);
+            }
+            if (tabComponentesBtn) {
+                tabComponentesBtn.addEventListener('shown.bs.tab', actualizarModalSegunPestana);
+            }
+
+            function sincronizarBotonesModalEq(filtro) {
+                btnsModalEq.forEach(b => {
+                    b.classList.toggle('active', b.dataset.filtro === filtro);
+                });
+            }
+
+            function sincronizarBotonesModalComp(filtro) {
+                btnsModalComp.forEach(b => {
+                    b.classList.toggle('active', b.dataset.filtro === filtro);
+                });
+            }
+
+            function actualizarConteoFiltrosGlobales() {
+                if (!badgeFiltrosActivosCount) return;
+                let conteo = 0;
+                if (filtroActivo !== 'todos') conteo++;
+                if (filtroActivoComp !== 'todos') conteo++;
+
+                if (conteo > 0) {
+                    badgeFiltrosActivosCount.textContent = conteo;
+                    badgeFiltrosActivosCount.classList.remove('d-none');
+                } else {
+                    badgeFiltrosActivosCount.classList.add('d-none');
+                }
+            }
+
+            btnsModalEq.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    filtroActivo = this.dataset.filtro;
+                    sincronizarBotonesModalEq(filtroActivo);
+                    aplicarFiltros(true);
+                });
+            });
+
+            btnsModalComp.forEach(btn => {
+                btn.addEventListener('click', function () {
+                    filtroActivoComp = this.dataset.filtro;
+                    sincronizarBotonesModalComp(filtroActivoComp);
+                    filtrarComponentes(true);
+                });
+            });
+
+            if (btnRestablecerModal) {
+                btnRestablecerModal.addEventListener('click', function () {
+                    const pestanaEquipos = tabEquiposBtn && tabEquiposBtn.classList.contains('active');
+                    if (pestanaEquipos) {
+                        filtroActivo = 'todos';
+                        sincronizarBotonesModalEq('todos');
+                        if (buscador) buscador.value = '';
+                        aplicarFiltros(true);
+                    } else {
+                        filtroActivoComp = 'todos';
+                        sincronizarBotonesModalComp('todos');
+                        if (buscadorComp) buscadorComp.value = '';
+                        filtrarComponentes(true);
+                    }
+                });
+            }
+
+            // =============================================================
+            // 7. INICIALIZACIÓN DE LA VISTA
+            // =============================================================
+            // Pre-selección si viene por URL (ej. ?detalle_id=X o ?equipo_id=Y)
+            const urlParams = new URLSearchParams(window.location.search);
+            const detalleUrl = urlParams.get('detalle_id');
+            const equipoUrl = urlParams.get('equipo_id');
+
+            let elementoInicial = null;
+            if (detalleUrl) {
+                elementoInicial = document.getElementById('item-pendiente-' + detalleUrl) ||
+                    document.querySelector(`.item-revision[data-detalle-id="${detalleUrl}"]`);
+            } else if (equipoUrl) {
+                elementoInicial = document.querySelector(`.item-revision[data-equipo-id="${equipoUrl}"]`);
+            }
+
+            // Inicializar filtros y paginación
+            aplicarFiltros(true);
+            filtrarComponentes(true);
+
+            if (elementoInicial) {
+                const idx = elementosFiltrados.indexOf(elementoInicial);
+                if (idx !== -1) {
+                    paginaActual = Math.floor(idx / ELEMENTOS_POR_PAGINA) + 1;
+                    renderizarPagina();
+                }
+                seleccionarItem(elementoInicial);
+            }
+
+        });
+    </script>
+    {% endblock %}

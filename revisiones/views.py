@@ -1,9 +1,10 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.db import transaction
+from django.db import models, transaction
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
+from equipos.models import Equipo
 from rentas.models import DetalleRenta
 from usuarios.decorators import admin_required, asistente_o_admin_required
 from .models import RevisionEquipo
@@ -42,11 +43,39 @@ def revisiones_list(request):
         .order_by('hora_fin')
     )
 
-    # 3. Métricas y contadores para los botones de filtro
+    # 3. Métricas y contadores para los botones de filtro y tarjetas resumen
     count_pendientes = len(detalles_pendientes)
     count_aprobadas = sum(1 for r in revisiones if r.inspeccion_pasada)
     count_reprobadas = sum(1 for r in revisiones if not r.inspeccion_pasada)
     count_total = len(revisiones)
+
+    # Total de equipos disponibles y total registrados
+    count_equipos_disponibles = Equipo.objects.filter(estado='DISPONIBLE').count()
+    count_equipos_total = Equipo.objects.count()
+
+    # Daños reportados en la semana en curso (lunes 00:00 al presente)
+    ahora = timezone.localtime(timezone.now())
+    inicio_semana = ahora - timezone.timedelta(days=ahora.weekday())
+    inicio_semana = inicio_semana.replace(hour=0, minute=0, second=0, microsecond=0)
+    count_danios_semana = RevisionEquipo.objects.filter(
+        inspeccion_pasada=False,
+        fecha_revision__gte=inicio_semana
+    ).count()
+
+    # Determinar si cada revisión puede revocarse
+    # (solo si el equipo no tiene rentas posteriores ni está actualmente en uso)
+    ultimos_detalles_por_equipo = dict(
+        DetalleRenta.objects.values('equipo_id').annotate(max_id=models.Max('detalle_renta_id')).values_list('equipo_id', 'max_id')
+    )
+    equipos_con_renta_activa = set(
+        DetalleRenta.objects.filter(estado__in=('ACTIVA', 'PENDIENTE_REVISION')).values_list('equipo_id', flat=True)
+    )
+
+    for r in revisiones:
+        eq_id = r.detalle_renta.equipo_id
+        es_ultimo = (ultimos_detalles_por_equipo.get(eq_id) == r.detalle_renta_id)
+        en_uso = (eq_id in equipos_con_renta_activa)
+        r.puede_revocarse = (es_ultimo and not en_uso)
 
     # 4. Obtener componentes para el apartado de Revisiones de Componentes
     from componentes.models import Componente
@@ -104,6 +133,9 @@ def revisiones_list(request):
         'count_aprobadas': count_aprobadas,
         'count_reprobadas': count_reprobadas,
         'count_total': count_total,
+        'count_equipos_disponibles': count_equipos_disponibles,
+        'count_equipos_total': count_equipos_total,
+        'count_danios_semana': count_danios_semana,
         'count_componentes_con_novedad': count_componentes_con_novedad,
         'equipo_id_param': equipo_id_param,
         'detalle_id_param': detalle_id_param,
@@ -114,7 +146,7 @@ def revisiones_list(request):
 @asistente_o_admin_required
 def crear_revision(request):
     """
-    Registra la inspección física in situ pos-renta.
+    Registra la inspección técnica pos-renta.
     Regla estricta: Si se reporta daño o novedad, la descripción es obligatoria.
     Actualiza atómicamente el equipo, la sesión de renta y crea el registro de revisión.
     """
@@ -234,7 +266,9 @@ def crear_revision(request):
 def reiniciar_revision(request, revision_id):
     """
     Opción exclusiva para el Administrador:
-    Anula una revisión errónea, elimina su registro y devuelve el equipo a estado PENDIENTE_REVISION.
+    Revoca una revisión errónea, elimina su registro y devuelve el equipo a estado PENDIENTE_REVISION
+    para que el técnico realice la inspección física nuevamente desde la app móvil.
+    Seguridad: Valida que el equipo no haya sido rentado nuevamente de forma posterior ni esté en uso.
     """
     if request.method == 'POST':
         try:
@@ -249,20 +283,53 @@ def reiniciar_revision(request, revision_id):
                 detalle = revision.detalle_renta
                 equipo = detalle.equipo
 
-                # Restaurar el detalle a PENDIENTE_REVISION
+                # 1. Validación: Verificar que el equipo NO haya sido rentado de nuevo posteriormente
+                renta_posterior = DetalleRenta.objects.filter(
+                    equipo=equipo,
+                    detalle_renta_id__gt=detalle.detalle_renta_id
+                ).exists()
+
+                renta_activa = DetalleRenta.objects.filter(
+                    equipo=equipo,
+                    estado__in=('ACTIVA', 'PENDIENTE_REVISION')
+                ).exclude(detalle_renta_id=detalle.detalle_renta_id).exists()
+
+                if renta_posterior or renta_activa:
+                    messages.error(
+                        request,
+                        f'No es posible revocar la revisión #{revision_id}: El equipo {equipo.nombre} ya ha sido rentado posteriormente o se encuentra en uso actualmente.'
+                    )
+                    return redirect('revisiones')
+
+                # 2. Restaurar el detalle de la sesión a PENDIENTE_REVISION
                 detalle.estado = 'PENDIENTE_REVISION'
                 detalle.save(update_fields=['estado'])
 
-                # Eliminar el registro de auditoría erróneo
+                # 3. Limpiar cualquier reporte inyectado en periféricos/componentes por esta revisión
+                from componentes.models import Componente
+                prefijo_rev = f"[REVISIÓN: #{revision.revision_equipo_id}"
+                componentes_equipo = Componente.objects.filter(equipo=equipo)
+                for comp in componentes_equipo:
+                    if comp.observaciones and prefijo_rev in comp.observaciones:
+                        bloques = [b.strip() for b in comp.observaciones.split('--------------------------------------------------') if b.strip()]
+                        bloques_filtrados = [b for b in bloques if prefijo_rev not in b]
+                        if bloques_filtrados:
+                            comp.observaciones = "\n--------------------------------------------------\n".join(bloques_filtrados) + "\n--------------------------------------------------"
+                        else:
+                            comp.observaciones = None
+                            comp.estado = 'DISPONIBLE'
+                        comp.save(update_fields=['observaciones', 'estado'])
+
+                # 4. Eliminar el registro de auditoría de revisión
                 revision.delete()
 
             messages.success(
                 request,
-                f'La revisión #{revision_id} fue anulada correctamente. '
-                f'El equipo {equipo.nombre} ha vuelto a la bandeja de Pendientes de Revisión para ser evaluado nuevamente.'
+                f'La revisión #{revision_id} fue revocada correctamente. '
+                f'El equipo {equipo.nombre} ha vuelto a la lista de pendientes para que se realice la inspección nuevamente desde la app móvil.'
             )
         except Exception as e:
-            messages.error(request, f'Error al anular la revisión: {str(e)}')
+            messages.error(request, f'Error al revocar la revisión: {str(e)}')
 
     return redirect('revisiones')
 
