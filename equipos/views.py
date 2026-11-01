@@ -1,5 +1,9 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
 from django.db import IntegrityError
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -8,11 +12,15 @@ from usuarios.decorators import admin_required
 from .forms import EquipoForm
 from .models import Equipo
 
+logger = logging.getLogger(__name__)
+
 
 @login_required
 @admin_required
 def equipo_list(request):
-    equipos = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
+    equipos_qs = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
+    paginator = Paginator(equipos_qs, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
     componentes = Componente.objects.select_related('equipo').filter(
         activo=True
     ).exclude(
@@ -20,7 +28,8 @@ def equipo_list(request):
     ).order_by('tipo', 'nombre')
     componentes_libres = [c for c in componentes if c.equipo_id is None]
     return render(request, 'equipos/equipos.html', {
-        'equipos': equipos,
+        'equipos': page_obj,
+        'page_obj': page_obj,
         'componentes': componentes,
         'componentes_libres': componentes_libres,
     })
@@ -38,8 +47,9 @@ def equipo_create(request):
                 if componentes_ids:
                     Componente.objects.filter(pk__in=componentes_ids).update(equipo=equipo)
                 messages.success(request, 'Equipo registrado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al guardar el equipo: {e}')
+            except Exception:
+                logger.exception('Error al guardar el equipo')
+                messages.error(request, 'Ocurrió un error al guardar el equipo. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))
@@ -62,8 +72,9 @@ def equipo_edit(request):
                 if componentes_ids:
                     Componente.objects.filter(pk__in=componentes_ids).update(equipo=equipo)
                 messages.success(request, 'Equipo actualizado correctamente.')
-            except Exception as e:
-                messages.error(request, f'Error al actualizar el equipo: {e}')
+            except Exception:
+                logger.exception('Error al actualizar el equipo')
+                messages.error(request, 'Ocurrió un error al actualizar el equipo. Intenta nuevamente.')
         else:
             for error in form.errors.values():
                 messages.error(request, error.as_text().lstrip('* '))
@@ -80,9 +91,10 @@ def equipo_delete(request):
             equipo.componentes.update(equipo=None)
             equipo.delete()
             messages.success(request, f'Equipo {equipo.nombre} eliminado correctamente.')
-        except IntegrityError:
+        except ProtectedError:
             messages.error(request, 'No se puede eliminar el equipo porque tiene rentas o registros asociados.')
-        except Exception as e:
-            messages.error(request, f'Error al eliminar el equipo: {e}')
+        except Exception:
+            logger.exception('Error al eliminar el equipo')
+            messages.error(request, 'Ocurrió un error al eliminar el equipo. Intenta nuevamente.')
     return redirect('equipos')
 

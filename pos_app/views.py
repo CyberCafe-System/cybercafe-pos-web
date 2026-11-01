@@ -1,4 +1,5 @@
 import csv
+import datetime
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import groupby
 
@@ -8,6 +9,7 @@ from openpyxl.utils import get_column_letter
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -27,12 +29,49 @@ IVA = Decimal('0.13')
 CENTAVOS = Decimal('0.01')
 
 
+def _rango_fecha_local(dia):
+    tz = timezone.get_current_timezone()
+    inicio = timezone.make_aware(datetime.datetime.combine(dia, datetime.time.min), tz)
+    fin = timezone.make_aware(datetime.datetime.combine(dia, datetime.time.max), tz)
+    return inicio, fin
+
+
+def _filtrar_por_fechas(qs, fecha_inicio_str, fecha_fin_str):
+    tz = timezone.get_current_timezone()
+    if fecha_inicio_str:
+        try:
+            d_ini = datetime.date.fromisoformat(fecha_inicio_str)
+            dt_ini = timezone.make_aware(datetime.datetime.combine(d_ini, datetime.time.min), tz)
+            qs = qs.filter(fecha__gte=dt_ini)
+        except (ValueError, TypeError):
+            pass
+    if fecha_fin_str:
+        try:
+            d_fin = datetime.date.fromisoformat(fecha_fin_str)
+            dt_fin = timezone.make_aware(datetime.datetime.combine(d_fin, datetime.time.max), tz)
+            qs = qs.filter(fecha__lte=dt_fin)
+        except (ValueError, TypeError):
+            pass
+    return qs
+
+
 @login_required
 def inicio(request):
-    hoy = timezone.localdate()
+    if getattr(request.user, 'es_asistente', False):
+        from django.contrib.auth import logout
+        logout(request)
+        messages.error(
+            request,
+            'El rol de Asistente Técnico no tiene acceso al sistema web. '
+            'Por favor, utiliza la aplicación móvil oficial.'
+        )
+        return redirect('login')
 
-    ventas_hoy_qs = Venta.objects.filter(fecha__date=hoy)
-    rentas_hoy_qs = Renta.objects.filter(fecha__date=hoy)
+    hoy = timezone.localdate()
+    inicio_hoy, fin_hoy = _rango_fecha_local(hoy)
+
+    ventas_hoy_qs = Venta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
+    rentas_hoy_qs = Renta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
 
     # Ingresos totales de hoy (POS + Rentas)
     subtotal_ventas = sum((v.subtotal + v.iva) for v in ventas_hoy_qs) or Decimal('0.00')
@@ -107,6 +146,8 @@ def inicio(request):
     # Configuración de semana actual (Lunes a Domingo)
     inicio_semana = hoy - timezone.timedelta(days=hoy.weekday())  # Lunes
     fin_semana = inicio_semana + timezone.timedelta(days=6)       # Domingo
+    inicio_semana_dt, _ = _rango_fecha_local(inicio_semana)
+    _, fin_semana_dt = _rango_fecha_local(fin_semana)
 
     # Gráfica 1: Ingresos de la Semana (Lunes a Domingo)
     dias_semana_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -119,19 +160,21 @@ def inicio(request):
         etiqueta = dias_semana_es[i]
         chart_dias_labels.append(etiqueta)
 
-        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__date=dia)) or Decimal('0.00')
-        r_sub = sum(r.total for r in Renta.objects.filter(fecha__date=dia)) or Decimal('0.00')
+        inicio_dia_dt, fin_dia_dt = _rango_fecha_local(dia)
+        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
+        r_sub = sum(r.total for r in Renta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
 
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
 
     # Gráfica 2: Top 5 Productos Más Vendidos de la Semana (Lunes a Domingo)
     top_vendidos_qs = list(
-        DetalleVenta.objects.filter(venta__fecha__date__range=(inicio_semana, fin_semana))
+        DetalleVenta.objects.filter(venta__fecha__range=(inicio_semana_dt, fin_semana_dt))
         .values('producto__nombre')
         .annotate(total_unidades=Sum('cantidad'))
         .order_by('-total_unidades')[:5]
     )
+
     chart_top_labels = []
     chart_top_data = []
     for item in top_vendidos_qs:
@@ -356,7 +399,20 @@ def procesar_venta(request):
 
     request.session['carrito'] = {}
     request.session['ultima_venta_id'] = venta.venta_id
-    messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
+
+    # Enviar factura por correo si el checklist está activado
+    enviar_correo = bool(request.POST.get('enviar_correo'))
+    if enviar_correo and cliente.correo:
+        from config.servicios_email import enviar_factura_venta_correo
+        ok, msg_correo = enviar_factura_venta_correo(venta)
+        if ok:
+            messages.success(request, f'Venta #{venta.venta_id} registrada. Factura enviada a {cliente.correo}.')
+        else:
+            messages.warning(request, f'Venta #{venta.venta_id} registrada. (Aviso de correo: {msg_correo})')
+    elif enviar_correo and not cliente.correo:
+        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrónico registrado).')
+    else:
+        messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
 
     return _respuesta_pdf(venta)
 
@@ -390,12 +446,8 @@ def reportes(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
@@ -408,7 +460,10 @@ def reportes(request):
 
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             monto_v = (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_ventas += monto_v
@@ -422,13 +477,21 @@ def reportes(request):
                 'tipo': 'Venta POS',
                 'es_venta': True,
                 'venta_id': v.venta_id,
+                'renta_id': None,
             })
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             monto_r = r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
             total_rentas += monto_r
             transacciones.append({
@@ -436,11 +499,12 @@ def reportes(request):
                 'fecha': r.fecha,
                 'usuario': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': monto_r,
                 'tipo': 'Renta de Equipo',
                 'es_venta': False,
                 'venta_id': None,
+                'renta_id': r.renta_id,
             })
 
     transacciones.sort(key=lambda x: x['fecha'], reverse=True)
@@ -451,10 +515,14 @@ def reportes(request):
     pct_ventas = int((total_ventas / total_global * 100)) if total_global > 0 else 0
     pct_rentas = 100 - pct_ventas if total_global > 0 else 0
 
+    paginator = Paginator(transacciones, 10)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     usuarios = Usuario.objects.filter(activo=True).order_by('username')
 
     return render(request, 'reportes.html', {
-        'transacciones': transacciones,
+        'transacciones': page_obj,
+        'page_obj': page_obj,
         'total_recaudado_global': total_global,
         'total_ventas': total_ventas,
         'total_rentas': total_rentas,
@@ -482,12 +550,8 @@ def reportes_exportar_csv(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
@@ -497,7 +561,10 @@ def reportes_exportar_csv(request):
     filas = []
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             filas.append({
                 'fecha_obj': v.fecha,
@@ -512,9 +579,16 @@ def reportes_exportar_csv(request):
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             filas.append({
                 'fecha_obj': r.fecha,
                 'ticket': f"R-{r.renta_id}",
@@ -522,7 +596,7 @@ def reportes_exportar_csv(request):
                 'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'cajero': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': f"${r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
             })
 
@@ -551,12 +625,8 @@ def reportes_exportar_excel(request):
     ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
-    if fecha_inicio_str:
-        ventas_qs = ventas_qs.filter(fecha__date__gte=fecha_inicio_str)
-        rentas_qs = rentas_qs.filter(fecha__date__gte=fecha_inicio_str)
-    if fecha_fin_str:
-        ventas_qs = ventas_qs.filter(fecha__date__lte=fecha_fin_str)
-        rentas_qs = rentas_qs.filter(fecha__date__lte=fecha_fin_str)
+    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
+    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
     if usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
@@ -566,7 +636,10 @@ def reportes_exportar_excel(request):
     filas = []
     if tipo_filtro in ['todos', 'ventas']:
         for v in ventas_qs:
-            items_nombres = [f"{d.cantidad}x {d.producto.nombre}" for d in v.detalles.all()]
+            items_nombres = []
+            for d in v.detalles.all():
+                prod_nombre = d.producto.nombre if d.producto else "Producto"
+                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             filas.append({
                 'fecha_obj': v.fecha,
@@ -581,9 +654,16 @@ def reportes_exportar_excel(request):
 
     if tipo_filtro in ['todos', 'rentas']:
         for r in rentas_qs:
-            det = r.detalles.first()
-            equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
-            minutos = (det.tiempo_de_renta + (det.tiempo_agregado or 0)) if det else 60
+            detalles = list(r.detalles.all())
+            if detalles:
+                equipos_info = []
+                for det in detalles:
+                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
+                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
+                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
+                concepto = ", ".join(equipos_info)
+            else:
+                concepto = "Renta de Equipo"
             filas.append({
                 'fecha_obj': r.fecha,
                 'ticket': f"R-{r.renta_id}",
@@ -591,7 +671,7 @@ def reportes_exportar_excel(request):
                 'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'cajero': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': f"Renta {equipo_nom} ({minutos} min)",
+                'concepto': concepto,
                 'total': float(r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
             })
 

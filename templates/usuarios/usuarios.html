@@ -18,11 +18,13 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0" placeholder="Buscar usuario...">
+                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0"
+                        placeholder="Buscar usuario...">
                 </div>
                 <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
                     <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Username</strong>, <strong class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
+                    <span>Buscando en: <strong class="text-dark">Username</strong>, <strong
+                            class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
                 </div>
             </div>
         </div>
@@ -45,12 +47,15 @@
                 </thead>
                 <tbody>
                     {% for usuario in usuarios %}
-                    <tr class="fila-usuario" data-busqueda="{{ usuario.username|lower }} {{ usuario.nombre|lower }} {{ usuario.correo|lower }}">
+                    <tr class="fila-usuario"
+                        data-busqueda="{{ usuario.username|lower }} {{ usuario.nombre|lower }} {{ usuario.correo|lower }}">
                         <td class="fw-semibold text-dark">{{ usuario.nombre }}</td>
-                        <td><span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span></td>
+                        <td><span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span>
+                        </td>
                         <td class="text-muted">{{ usuario.correo }}</td>
                         <td>
-                            <span class="badge {% if usuario.rol.nombre == 'ADMINISTRADOR' %}bg-dark{% elif usuario.rol.nombre == 'CAJERO' %}bg-primary{% else %}bg-secondary{% endif %}">
+                            <span
+                                class="badge {% if usuario.rol.nombre == 'ADMINISTRADOR' %}bg-dark{% elif usuario.rol.nombre == 'CAJERO' %}bg-primary{% else %}bg-secondary{% endif %}">
                                 {{ usuario.rol.nombre }}
                             </span>
                             {% if usuario.es_asistente %}
@@ -59,15 +64,17 @@
                         </td>
                         <td>
                             {% if usuario.activo %}
-                                <span class="badge bg-success">Activo</span>
+                            <span class="badge bg-success">Activo</span>
                             {% else %}
-                                <span class="badge bg-secondary">Inactivo</span>
+                            <span class="badge bg-secondary">Inactivo</span>
                             {% endif %}
                         </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-usuario" data-bs-toggle="modal" data-bs-target="#modalModificarUsuario"
-                                data-id="{{ usuario.usuario_id }}" data-username="{{ usuario.username }}" data-nombre="{{ usuario.nombre }}"
-                                data-correo="{{ usuario.correo }}" data-rol="{{ usuario.rol_id }}" title="Editar">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-usuario"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarUsuario"
+                                data-id="{{ usuario.usuario_id }}" data-username="{{ usuario.username }}"
+                                data-nombre="{{ usuario.nombre }}" data-correo="{{ usuario.correo }}"
+                                data-rol="{{ usuario.rol_id }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <form method="POST" action="{% url 'desactivar_usuario' %}" class="d-inline">
@@ -102,6 +109,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' %}
     </div>
 </div>
 

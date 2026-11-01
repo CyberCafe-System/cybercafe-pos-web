@@ -20,11 +20,13 @@
             <div class="col-md-6">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorCategorias" class="form-control border-start-0" placeholder="Buscar categoría...">
+                    <input type="text" id="buscadorCategorias" class="form-control border-start-0"
+                        placeholder="Buscar categoría...">
                 </div>
                 <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
                     <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Nombre</strong> y <strong class="text-dark">Descripción</strong></span>
+                    <span>Buscando en: <strong class="text-dark">Nombre</strong> y <strong
+                            class="text-dark">Descripción</strong></span>
                 </div>
             </div>
         </div>
@@ -48,20 +50,23 @@
                 </thead>
                 <tbody>
                     {% for categoria in categorias %}
-                    <tr class="fila-categoria" data-busqueda="{{ categoria.nombre|lower }} {{ categoria.descripcion|default:''|lower }}">
+                    <tr class="fila-categoria"
+                        data-busqueda="{{ categoria.nombre|lower }} {{ categoria.descripcion|default:''|lower }}">
                         <td class="fw-semibold text-dark">{{ categoria.nombre }}</td>
                         <td class="text-muted">{{ categoria.descripcion|default:"Sin descripción" }}</td>
                         <td>
                             {% if categoria.activa %}
-                                <span class="badge bg-success">Activa</span>
+                            <span class="badge bg-success">Activa</span>
                             {% else %}
-                                <span class="badge bg-secondary">Inactiva</span>
+                            <span class="badge bg-secondary">Inactiva</span>
                             {% endif %}
                         </td>
                         {% if request.user.es_admin %}
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-bs-toggle="modal" data-bs-target="#modalEditarCategoria"
-                                data-id="{{ categoria.categoria_id }}" data-nombre="{{ categoria.nombre }}" data-descripcion="{{ categoria.descripcion|default:'' }}" title="Editar">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar" data-bs-toggle="modal"
+                                data-bs-target="#modalEditarCategoria" data-id="{{ categoria.categoria_id }}"
+                                data-nombre="{{ categoria.nombre }}"
+                                data-descripcion="{{ categoria.descripcion|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <form method="POST" action="{% url 'desactivar_categoria' %}" class="d-inline">
@@ -82,7 +87,8 @@
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="{% if request.user.es_admin %}4{% else %}3{% endif %}" class="text-center text-muted py-5">
+                        <td colspan="{% if request.user.es_admin %}4{% else %}3{% endif %}"
+                            class="text-center text-muted py-5">
                             <i class="bi bi-tags fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay categorías registradas aún.
                         </td>
@@ -97,6 +103,7 @@
                 </tbody>
             </table>
         </div>
+        {% include 'includes/paginacion.html' %}
     </div>
 </div>
 

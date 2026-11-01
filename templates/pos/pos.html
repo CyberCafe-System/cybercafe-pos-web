@@ -157,12 +157,9 @@
             <div class="card-header bg-white border-bottom pt-3 pb-2 d-flex justify-content-between align-items-center flex-shrink-0">
                 <h5 class="fw-bold mb-0 fs-6"><i class="bi bi-receipt me-2 text-coffee"></i>Resumen de Orden</h5>
                 {% if items %}
-                <form method="POST" action="{% url 'limpiar_carrito' %}" class="m-0" onsubmit="return confirm('¿Seguro que deseas vaciar el carrito?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" style="font-size: 0.75rem;" title="Vaciar todos los productos del carrito">
-                        <i class="bi bi-trash3 me-1"></i> Limpiar Carrito
-                    </button>
-                </form>
+                <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 rounded-pill" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#modalLimpiarCarrito" title="Vaciar todos los productos del carrito">
+                    <i class="bi bi-trash3 me-1"></i> Limpiar Carrito
+                </button>
                 {% endif %}
             </div>
             <div class="card-body p-3 d-flex flex-column flex-grow-1 overflow-hidden">
@@ -254,6 +251,34 @@
 </div>
 
 {% include 'pos/venta.html' %}
+
+<!-- Modal Limpiar Carrito -->
+<div class="modal fade" id="modalLimpiarCarrito" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Vaciar Carrito
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-trash3 text-danger display-4 mb-3"></i>
+                <h6 class="fw-bold mb-2">¿Seguro que desea vaciar el carrito?</h6>
+                <p class="text-muted small mb-0">Esta acción eliminará todos los productos agregados a la orden actual y no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center gap-2">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'limpiar_carrito' %}" class="m-0">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">
+                        <i class="bi bi-trash3 me-1"></i> Sí, vaciar carrito
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
 <style>
     /* Bloquear scroll general de la ventana y fijar el POS al 100vh */
@@ -446,22 +471,233 @@
             buscadorPos.addEventListener('input', aplicarFiltros);
         }
 
+        // --- CALCULADORA DE CAMBIO EN MODAL DE VENTA ---
+        function redondearCentavos(valor) {
+            return Math.round((valor + Number.EPSILON) * 100) / 100;
+        }
+
+        function actualizarVueltoVenta() {
+            const inputPaga = document.getElementById('inputPagaConVenta');
+            const vueltoTexto = document.getElementById('cobroVueltoTextoVenta');
+            const inputTotal = document.getElementById('posTotalAPagar');
+            if (!inputPaga || !vueltoTexto || !inputTotal) return;
+
+            const val = inputPaga.value.trim();
+            if (val === '') {
+                vueltoTexto.textContent = '$0.00';
+                vueltoTexto.className = 'fs-5 font-monospace text-dark';
+                return;
+            }
+
+            let total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
+            let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+            total = redondearCentavos(total);
+            pagaCon = redondearCentavos(pagaCon);
+            if (pagaCon > 99999.99) {
+                pagaCon = 99999.99;
+                inputPaga.value = pagaCon.toFixed(2);
+            }
+            if (pagaCon < 0) {
+                pagaCon = 0;
+                inputPaga.value = pagaCon.toFixed(2);
+            }
+            const diff = redondearCentavos(pagaCon - total);
+
+            if (diff >= 0) {
+                vueltoTexto.textContent = `$${diff.toFixed(2)}`;
+                vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
+            } else {
+                vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
+                vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+            }
+        }
+
+        const inputPagaVenta = document.getElementById('inputPagaConVenta');
+        if (inputPagaVenta) {
+            inputPagaVenta.addEventListener('input', actualizarVueltoVenta);
+        }
+
+        document.querySelectorAll('.btn-billete-cobro-venta').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const monto = this.dataset.monto;
+                const inputPaga = document.getElementById('inputPagaConVenta');
+                const inputTotal = document.getElementById('posTotalAPagar');
+                if (!inputPaga || !inputTotal) return;
+
+                const total = parseFloat((inputTotal.value || '0').replace(',', '.')) || 0;
+                if (monto === 'exacto') {
+                    inputPaga.value = Math.round((total + Number.EPSILON) * 100) / 100;
+                    inputPaga.value = Number(inputPaga.value).toFixed(2);
+                } else {
+                    let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
+                    if (m > 99999.99) m = 99999.99;
+                    if (m < 0) m = 0;
+                    inputPaga.value = m.toFixed(2);
+                }
+                actualizarVueltoVenta();
+            });
+        });
+
+        const selectClientePos = document.getElementById('posSelectCliente');
+        const checkCorreoVenta = document.getElementById('checkEnviarCorreoVenta');
+        const textoCorreoDestino = document.getElementById('textoCorreoDestino');
+        const inputBuscarClientePos = document.getElementById('inputBuscarClientePos');
+        const listaResultadosClientePos = document.getElementById('listaResultadosClientePos');
+        const btnLimpiarClientePos = document.getElementById('btnLimpiarClientePos');
+        const badgeClienteSeleccionado = document.getElementById('badgeClienteSeleccionado');
+        const sinResultadosClientePos = document.getElementById('sinResultadosClientePos');
+        const itemsClientePos = document.querySelectorAll('.item-cliente-pos');
+
+        function filtrarClientesPos(termino) {
+            termino = (termino || '').toLowerCase().trim();
+            let visibles = 0;
+            itemsClientePos.forEach(function (item) {
+                const searchStr = item.dataset.search || '';
+                if (!termino || searchStr.includes(termino)) {
+                    item.classList.remove('d-none');
+                    visibles++;
+                } else {
+                    item.classList.add('d-none');
+                }
+            });
+            if (sinResultadosClientePos) {
+                if (visibles === 0) {
+                    sinResultadosClientePos.classList.remove('d-none');
+                } else {
+                    sinResultadosClientePos.classList.add('d-none');
+                }
+            }
+        }
+
+        if (inputBuscarClientePos && listaResultadosClientePos) {
+            inputBuscarClientePos.addEventListener('focus', function () {
+                filtrarClientesPos(this.value);
+                listaResultadosClientePos.classList.remove('d-none');
+            });
+
+            inputBuscarClientePos.addEventListener('input', function () {
+                filtrarClientesPos(this.value);
+                listaResultadosClientePos.classList.remove('d-none');
+            });
+
+            document.addEventListener('click', function (e) {
+                const cont = document.getElementById('contenedorBuscarClientePos');
+                if (cont && !cont.contains(e.target)) {
+                    listaResultadosClientePos.classList.add('d-none');
+                }
+            });
+        }
+
+        itemsClientePos.forEach(function (item) {
+            item.addEventListener('click', function () {
+                const clienteId = this.dataset.id;
+                const clienteNombre = this.dataset.nombre;
+
+                if (selectClientePos) {
+                    selectClientePos.value = clienteId;
+                    selectClientePos.dispatchEvent(new Event('change'));
+                }
+
+                if (inputBuscarClientePos) {
+                    inputBuscarClientePos.value = clienteNombre;
+                }
+                if (badgeClienteSeleccionado) {
+                    badgeClienteSeleccionado.textContent = '✓ Seleccionado';
+                    badgeClienteSeleccionado.className = 'badge bg-success-subtle text-success border border-success-subtle small';
+                }
+                if (btnLimpiarClientePos) {
+                    btnLimpiarClientePos.classList.remove('d-none');
+                }
+                if (listaResultadosClientePos) {
+                    listaResultadosClientePos.classList.add('d-none');
+                }
+            });
+        });
+
+        if (btnLimpiarClientePos) {
+            btnLimpiarClientePos.addEventListener('click', function () {
+                if (inputBuscarClientePos) {
+                    inputBuscarClientePos.value = '';
+                    inputBuscarClientePos.focus();
+                }
+                if (selectClientePos) {
+                    selectClientePos.value = '';
+                    selectClientePos.dispatchEvent(new Event('change'));
+                }
+                if (badgeClienteSeleccionado) {
+                    badgeClienteSeleccionado.textContent = 'Sin seleccionar';
+                    badgeClienteSeleccionado.className = 'badge bg-light text-muted border small';
+                }
+                this.classList.add('d-none');
+                filtrarClientesPos('');
+                if (listaResultadosClientePos) {
+                    listaResultadosClientePos.classList.remove('d-none');
+                }
+            });
+        }
+
+        function actualizarInfoCorreoCliente() {
+            if (!selectClientePos || !checkCorreoVenta || !textoCorreoDestino) return;
+            const opt = selectClientePos.options[selectClientePos.selectedIndex];
+            if (!opt || !opt.value) {
+                textoCorreoDestino.innerHTML = '<span class="text-muted">Seleccione un cliente para enviar factura.</span>';
+                checkCorreoVenta.disabled = false;
+                return;
+            }
+
+            const correo = (opt.dataset.correo || '').trim();
+            if (correo) {
+                textoCorreoDestino.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+                checkCorreoVenta.disabled = false;
+                checkCorreoVenta.checked = true;
+            } else {
+                textoCorreoDestino.innerHTML = '<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Cliente sin correo registrado.';
+                checkCorreoVenta.checked = false;
+                checkCorreoVenta.disabled = true;
+            }
+        }
+
+        if (selectClientePos) {
+            selectClientePos.addEventListener('change', actualizarInfoCorreoCliente);
+        }
+
+        const modalVentaEl = document.getElementById('modalProcesarVenta');
+        if (modalVentaEl) {
+            modalVentaEl.addEventListener('shown.bs.modal', function () {
+                const inputPaga = document.getElementById('inputPagaConVenta');
+                if (inputPaga) {
+                    inputPaga.value = '';
+                    actualizarVueltoVenta();
+                    inputPaga.focus();
+                }
+                actualizarInfoCorreoCliente();
+            });
+        }
+
         // Al enviar el formulario de venta: abre PDF en pestaña nueva y refresca el POS
         const formVenta = document.getElementById('formProcesarVenta');
+        const btnCompletarVenta = document.getElementById('btnCompletarVenta');
         if (formVenta) {
             formVenta.addEventListener('submit', function () {
+                if (btnCompletarVenta) {
+                    btnCompletarVenta.disabled = true;
+                    btnCompletarVenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
+                }
                 const modalElement = document.getElementById('modalProcesarVenta');
                 if (modalElement && window.bootstrap) {
-                    const modalInstance = bootstrap.Modal.getInstance(modalElement);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
+                    setTimeout(function () {
+                        const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                        if (modalInstance) {
+                            modalInstance.hide();
+                        }
+                    }, 600);
                 }
                 setTimeout(function () {
                     window.location.reload();
-                }, 800);
+                }, 1800);
             });
         }
     });
 </script>
+
 {% endblock %}

@@ -12,6 +12,7 @@ from equipos import views as equipos_views
 from inventario import views as inventario_views
 from pos_app import views as pos_views
 from rentas import views as rentas_views
+from revisiones import views as revisiones_views
 from usuarios import views as usuarios_views
 from usuarios.forms import WebAuthenticationForm
 
@@ -42,6 +43,9 @@ urlpatterns = [
     path('equipos/', equipos_views.equipo_list, name='equipos'),
     path('componentes/', componentes_views.componente_list, name='componentes'),
     path('usuarios/', usuarios_views.usuario_list, name='usuarios'),
+    path('revisiones/', revisiones_views.revisiones_list, name='revisiones'),
+    path('revisiones/crear/', revisiones_views.crear_revision, name='crear_revision'),
+    path('revisiones/reiniciar/<int:revision_id>/', revisiones_views.reiniciar_revision, name='reiniciar_revision'),
     path('reportes/', pos_views.reportes, name='reportes'),
     path('reportes/exportar_csv/', pos_views.reportes_exportar_csv, name='reportes_exportar_csv'),
     path('reportes/exportar_excel/', pos_views.reportes_exportar_excel, name='reportes_exportar_excel'),
@@ -49,6 +53,7 @@ urlpatterns = [
     # --- RENTAS ---
     path('crear_renta/', rentas_views.renta_create, name='crear_renta'),
     path('extender_renta/', rentas_views.renta_extender, name='extender_renta'),
+    path('enviar_revision/', rentas_views.renta_enviar_revision, name='enviar_revision'),
     path('finalizar_renta/', rentas_views.renta_finalizar, name='finalizar_renta'),
     path('factura_renta/', rentas_views.renta_factura_pdf, name='factura_renta'),
     path('factura_renta/<int:renta_id>/', rentas_views.renta_factura_pdf, name='factura_renta_id'),

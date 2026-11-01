@@ -99,14 +99,17 @@ def renta_extender(request):
                 costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
                 detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
-                detalle.subtotal += costo_extra
+                detalle.subtotal = (detalle.subtotal + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 detalle.save(update_fields=['tiempo_agregado', 'subtotal'])
 
                 renta = detalle.renta
-                renta.total += costo_extra
-                renta.save(update_fields=['total'])
+                renta.total = (renta.total + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+                renta.estado_de_pago = 'PAGADO'
+                renta.save(update_fields=['total', 'estado_de_pago'])
 
-            messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Nuevo total: ${detalle.subtotal}')
+            messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Cobro registrado. Nuevo total: ${detalle.subtotal}')
+            request.session['ultima_renta_id'] = renta.renta_id
+            return _respuesta_factura_renta(renta)
         except ValueError as e:
             messages.error(request, str(e))
         except Exception:
@@ -154,12 +157,13 @@ def renta_create(request):
                 horas = Decimal(tiempo) / Decimal('60')
                 subtotal = (tarifa * horas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
+                subtotal = subtotal.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 renta = Renta.objects.create(
                     usuario=request.user,
                     cliente=cliente,
                     fecha=ahora,
                     total=subtotal,
-                    estado_de_pago='PENDIENTE',
+                    estado_de_pago='PAGADO',
                 )
 
                 DetalleRenta.objects.create(
@@ -173,7 +177,30 @@ def renta_create(request):
                     estado='ACTIVA',
                 )
 
-            messages.success(request, f'Renta iniciada para {equipo.nombre} — {tiempo} min. Total: ${subtotal}')
+            # Envío de factura por correo si se solicitó
+            enviar_correo = bool(request.POST.get('enviar_correo'))
+            cliente_correo = renta.cliente.correo if renta.cliente else None
+            if enviar_correo and cliente_correo:
+                from config.servicios_email import enviar_factura_renta_correo
+                ok, msg_correo = enviar_factura_renta_correo(renta)
+                if ok:
+                    messages.success(
+                        request,
+                        f'Renta de {equipo.nombre} cobrada e iniciada exitosamente ({tiempo} min). Factura enviada a {cliente_correo}.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Renta de {equipo.nombre} cobrada e iniciada ({tiempo} min). (Aviso correo: {msg_correo})'
+                    )
+            else:
+                messages.success(
+                    request,
+                    f'Renta de {equipo.nombre} cobrada e iniciada exitosamente ({tiempo} min — Total: ${subtotal}).'
+                )
+
+            request.session['ultima_renta_id'] = renta.renta_id
+            return _respuesta_factura_renta(renta)
 
         except ValueError as e:
             messages.error(request, str(e))
@@ -185,7 +212,48 @@ def renta_create(request):
 
 @login_required
 @cajero_o_admin_required
+def renta_enviar_revision(request):
+    """
+    Finaliza el tiempo de uso del equipo y lo envía directamente a revisión técnica.
+    La renta ya fue cobrada previamente al momento de su inicio.
+    """
+    if request.method == 'POST':
+        detalle_id = request.POST.get('detalle_renta_id')
+        try:
+            with transaction.atomic():
+                detalle = get_object_or_404(
+                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    pk=detalle_id,
+                )
+                if detalle.estado != 'ACTIVA':
+                    raise ValueError(
+                        f"La renta de {detalle.equipo.nombre} no está activa "
+                        f"(estado actual: {detalle.get_estado_display()})."
+                    )
+                detalle.estado = 'PENDIENTE_REVISION'
+                detalle.hora_fin = timezone.now()
+                detalle.save(update_fields=['estado', 'hora_fin'])
+
+            messages.info(
+                request,
+                f'Sesión de {detalle.equipo.nombre} finalizada. El puesto ha pasado a '
+                f'Revisión Técnica.'
+            )
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            messages.error(request, 'No se pudo enviar el equipo a revisión. Inténtalo de nuevo.')
+
+    return redirect('rentas')
+
+
+@login_required
+@cajero_o_admin_required
 def renta_finalizar(request):
+    """
+    Cobra la renta (PAGADO). Soporta cobrar antes de la revisión (el equipo pasa a PENDIENTE_REVISION)
+    o cobrar después de la revisión (el equipo ya fue o está en PENDIENTE_REVISION).
+    """
     if request.method == 'POST':
         detalle_id = request.POST.get('detalle_renta_id')
         try:
@@ -195,31 +263,54 @@ def renta_finalizar(request):
                     pk=detalle_id,
                 )
 
-                if detalle.estado != 'ACTIVA':
-                    raise ValueError(
-                        f"La renta de {detalle.equipo.nombre} no está activa "
-                        f"(estado actual: {detalle.get_estado_display()})."
-                    )
-
-                detalle.estado = 'PENDIENTE_REVISION'
-                detalle.hora_fin = timezone.now()
-                detalle.save(update_fields=['estado', 'hora_fin'])
+                # Si estaba activa, finalizamos el tiempo y enviamos a revisión
+                if detalle.estado == 'ACTIVA':
+                    detalle.estado = 'PENDIENTE_REVISION'
+                    detalle.hora_fin = timezone.now()
+                    detalle.save(update_fields=['estado', 'hora_fin'])
 
                 renta = detalle.renta
+                nuevo_cliente_id = request.POST.get('cliente_id')
+                if nuevo_cliente_id:
+                    nuevo_cl = Cliente.objects.filter(pk=nuevo_cliente_id).first()
+                    if nuevo_cl:
+                        renta.cliente = nuevo_cl
                 renta.estado_de_pago = 'PAGADO'
-                renta.save(update_fields=['estado_de_pago'])
+                renta.save(update_fields=['cliente', 'estado_de_pago'])
 
-            messages.success(
-                request,
-                f'Renta de {detalle.equipo.nombre} cobrada. El equipo queda '
-                f'pendiente de revisión antes de volver a estar disponible.'
-            )
+            # Enviar comprobante por correo si el checklist está activado
+            enviar_correo = bool(request.POST.get('enviar_correo'))
+            cliente_correo = renta.cliente.correo if renta.cliente else None
+            if enviar_correo and cliente_correo:
+                from config.servicios_email import enviar_factura_renta_correo
+                ok, msg_correo = enviar_factura_renta_correo(renta)
+                if ok:
+                    messages.success(
+                        request,
+                        f'Renta de {detalle.equipo.nombre} cobrada. Factura enviada por correo a {cliente_correo}.'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'Renta de {detalle.equipo.nombre} cobrada. (Aviso de correo: {msg_correo})'
+                    )
+            elif enviar_correo and not cliente_correo:
+                messages.info(
+                    request,
+                    f'Renta de {detalle.equipo.nombre} cobrada. (El cliente no tiene correo electrónico registrado).'
+                )
+            else:
+                messages.success(
+                    request,
+                    f'Renta de {detalle.equipo.nombre} cobrada exitosamente.'
+                )
+
             request.session['ultima_renta_id'] = renta.renta_id
             return _respuesta_factura_renta(renta)
         except ValueError as e:
             messages.error(request, str(e))
         except Exception:
-            messages.error(request, 'No se pudo finalizar la renta. Inténtalo de nuevo.')
+            messages.error(request, 'No se pudo cobrar la renta. Inténtalo de nuevo.')
 
     return redirect('rentas')
 

@@ -37,7 +37,7 @@ def cajero_o_admin_required(view_func):
 
 def asistente_o_admin_required(view_func):
     """
-    Compatibilidad web: El rol Asistente opera exclusivamente en la aplicación móvil.
-    En el sistema web, el acceso queda reservado únicamente para Administradores.
+    Las consultas y gestión de revisiones en el sistema web están reservadas
+    exclusivamente para el Administrador. El Asistente opera únicamente vía app móvil.
     """
     return admin_required(view_func)

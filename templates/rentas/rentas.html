@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static l10n %}
 
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
@@ -104,9 +104,13 @@
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-success timer-progress-bar"
                              id="progress-bar-{{ equipo.equipo_id }}" style="width: 100%;"></div>
                     </div>
-                    <div class="d-flex justify-content-between text-muted mt-1" style="font-size: 0.72rem;">
+                    <div class="d-flex justify-content-between align-items-center text-muted mt-1" style="font-size: 0.72rem;">
                         <span>Inicio: {{ equipo.renta_activa.hora_inicio|date:"h:i A" }}</span>
-                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong></span>
+                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" style="font-size: 0.65rem;">
+                                <i class="bi bi-check-circle-fill"></i> Pagado
+                            </span>
+                        </span>
                     </div>
                 </div>
 
@@ -127,29 +131,32 @@
                         <i class="bi bi-info-circle"></i>
                     </button>
 
+                    <!-- Factura / Comprobante PDF -->
+                    <a href="{% url 'factura_renta_id' equipo.renta_activa.renta.renta_id %}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Ver Factura PDF Pagada">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+
                     {% if request.user.es_admin or request.user.es_cajero %}
                     <!-- Botón Extender Tiempo -->
-                    <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill flex-grow-1 py-1 btn-abrir-extender"
+                    <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
                             data-bs-toggle="modal" data-bs-target="#modalExtenderRenta"
                             data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
                             data-equipo-nombre="{{ equipo.nombre }}"
                             data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
                             data-tarifa="{{ equipo.tarifa_por_hora }}"
                             title="Agregar más tiempo a la sesión">
-                        <i class="bi bi-clock-history me-1"></i> + Tiempo
+                        <i class="bi bi-clock-history"></i> + Tiempo
                     </button>
 
-                    <!-- Botón Cobrar con Modal y Calculadora -->
-                    <button type="button" class="btn btn-sm btn-danger rounded-pill flex-grow-1 py-1 shadow-sm btn-abrir-cobro"
-                            data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
-                            data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
-                            data-equipo-nombre="{{ equipo.nombre }}"
-                            data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
-                            data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
-                            data-total="{{ equipo.renta_activa.subtotal }}"
-                            title="Finalizar y Cobrar Sesión">
-                        <i class="bi bi-cash-stack me-1"></i> Cobrar
-                    </button>
+                    <!-- Botón Finalizar y Enviar a Revisión (Cobro ya realizado al inicio) -->
+                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1" onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar el puesto a Revisión Técnica?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
+                        <button type="submit" class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold" title="Finalizar tiempo y enviar el equipo a revisión técnica">
+                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                        </button>
+                    </form>
                     {% endif %}
                 </div>
             </div>
@@ -175,16 +182,24 @@
                         <span class="text-muted">Fin:</span>
                         <span class="fw-bold">{{ equipo.revision_pendiente.hora_fin|date:"h:i A" }}</span>
                     </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Total cobrado:</span>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted">Importe renta:</span>
                         <span class="fw-bold text-success">${{ equipo.revision_pendiente.subtotal }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Estado pago:</span>
+                        {% if equipo.revision_pendiente.renta.estado_de_pago == 'PAGADO' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Pagado</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pago Pendiente</span>
+                        {% endif %}
                     </div>
                 </div>
 
-                <p class="text-muted small mb-3">Se habilita cuando el módulo de revisiones lo libere.</p>
+                <p class="text-muted small mb-3">Inspección física requerida en el puesto para liberar el equipo.</p>
 
-                <div class="mt-auto d-flex gap-2">
-                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
+                <div class="mt-auto d-flex gap-1 flex-wrap justify-content-center">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill btn-info-equipo px-2 py-1"
                             data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
                             data-nombre="{{ equipo.nombre }}"
                             data-tipo="{{ equipo.tipo }}"
@@ -196,14 +211,41 @@
                             data-total="${{ equipo.revision_pendiente.subtotal }}"
                             data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
                             title="Ver Periféricos e Información">
-                        <i class="bi bi-info-circle me-1"></i> Info
+                        <i class="bi bi-info-circle"></i> Info
                     </button>
+
+                    {% if request.user.es_admin or request.user.es_asistente %}
+                    <!-- Botón Revisar Ahora (Administrador o Asistente) -->
+                    <a href="{% url 'revisiones' %}?detalle_id={{ equipo.revision_pendiente.detalle_renta_id }}&equipo_id={{ equipo.equipo_id }}"
+                       class="btn btn-sm btn-info text-dark rounded-pill px-3 py-1 shadow-sm fw-semibold"
+                       title="Realizar inspección técnica">
+                        <i class="bi bi-clipboard-check me-1"></i> Revisar Puesto
+                    </a>
+                    {% endif %}
+
+                    {% if equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_admin or equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_cajero %}
+                    <!-- Botón Cobrar si pago quedó pendiente -->
+                    <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1 shadow-sm btn-abrir-cobro"
+                            data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
+                            data-detalle-id="{{ equipo.revision_pendiente.detalle_renta_id }}"
+                            data-equipo-nombre="{{ equipo.nombre }}"
+                            data-cliente-nombre="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
+                            data-cliente-correo="{{ equipo.revision_pendiente.renta.cliente.correo|default:'' }}"
+                            data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
+                            data-total="{{ equipo.revision_pendiente.subtotal|unlocalize }}"
+                            title="Cobrar sesión de renta">
+                        <i class="bi bi-cash-stack me-1"></i> Cobrar
+                    </button>
+                    {% endif %}
+
+                    {% if equipo.revision_pendiente.renta.estado_de_pago == 'PAGADO' %}
                     <a href="{% url 'factura_renta_id' equipo.revision_pendiente.renta.renta_id %}"
                        target="_blank" rel="noopener"
-                       class="btn btn-outline-danger flex-grow-1 rounded-pill"
+                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
                        title="Ver/Descargar factura de la renta">
-                        <i class="bi bi-file-earmark-pdf me-1"></i> Factura PDF
+                        <i class="bi bi-file-earmark-pdf"></i> PDF
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -646,17 +688,149 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // -------------------------------------------------------------
-    // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA
+    // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA Y BUSCADOR DE CLIENTE
     // -------------------------------------------------------------
     let cobroTotalActual = 0;
+    let clienteOriginalNombre = '';
+    let clienteOriginalCorreo = '';
+
+    const inputBuscarClienteRenta = document.getElementById('inputBuscarClienteRenta');
+    const listaResultadosClienteRenta = document.getElementById('listaResultadosClienteRenta');
+    const btnLimpiarClienteRenta = document.getElementById('btnLimpiarClienteRenta');
+    const selectClienteCobroRenta = document.getElementById('selectClienteCobroRenta');
+    const badgeClienteCobroRenta = document.getElementById('badgeClienteCobroRenta');
+    const sinResultadosClienteRenta = document.getElementById('sinResultadosClienteRenta');
+    const itemsClienteRenta = document.querySelectorAll('.item-cliente-renta');
+    const checkCorreoRenta = document.getElementById('checkEnviarCorreoRenta');
+    const textoDestinoRenta = document.getElementById('textoCorreoDestinoRenta');
+
+    function actualizarCorreoCobroRenta(correo) {
+        if (!checkCorreoRenta || !textoDestinoRenta) return;
+        correo = (correo || '').trim();
+        if (correo) {
+            checkCorreoRenta.disabled = false;
+            checkCorreoRenta.checked = true;
+            textoDestinoRenta.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+        } else {
+            checkCorreoRenta.checked = false;
+            checkCorreoRenta.disabled = true;
+            textoDestinoRenta.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado.`;
+        }
+    }
+
+    function filtrarClientesRenta(termino) {
+        termino = (termino || '').toLowerCase().trim();
+        let visibles = 0;
+        itemsClienteRenta.forEach(function (item) {
+            const searchStr = item.dataset.search || '';
+            if (!termino || searchStr.includes(termino)) {
+                item.classList.remove('d-none');
+                visibles++;
+            } else {
+                item.classList.add('d-none');
+            }
+        });
+        if (sinResultadosClienteRenta) {
+            if (visibles === 0) {
+                sinResultadosClienteRenta.classList.remove('d-none');
+            } else {
+                sinResultadosClienteRenta.classList.add('d-none');
+            }
+        }
+    }
+
+    if (inputBuscarClienteRenta && listaResultadosClienteRenta) {
+        inputBuscarClienteRenta.addEventListener('focus', function () {
+            filtrarClientesRenta(this.value);
+            listaResultadosClienteRenta.classList.remove('d-none');
+        });
+
+        inputBuscarClienteRenta.addEventListener('input', function () {
+            filtrarClientesRenta(this.value);
+            listaResultadosClienteRenta.classList.remove('d-none');
+        });
+
+        document.addEventListener('click', function (e) {
+            const cont = document.getElementById('contenedorBuscarClienteRenta');
+            if (cont && !cont.contains(e.target)) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+        });
+    }
+
+    itemsClienteRenta.forEach(function (item) {
+        item.addEventListener('click', function () {
+            const clId = this.dataset.id;
+            const clNombre = this.dataset.nombre;
+            const clCorreo = this.dataset.correo;
+
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = clId;
+            }
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clNombre;
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = '✓ Cambiado';
+                badgeClienteCobroRenta.className = 'badge bg-primary text-white small';
+            }
+            if (btnLimpiarClienteRenta) {
+                btnLimpiarClienteRenta.classList.remove('d-none');
+            }
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+            actualizarCorreoCobroRenta(clCorreo);
+        });
+    });
+
+    if (btnLimpiarClienteRenta) {
+        btnLimpiarClienteRenta.addEventListener('click', function () {
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clienteOriginalNombre;
+            }
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = '';
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = 'Asignado';
+                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+            }
+            this.classList.add('d-none');
+            actualizarCorreoCobroRenta(clienteOriginalCorreo);
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+        });
+    }
+
     document.querySelectorAll('.btn-abrir-cobro').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('cobroDetalleId').value = this.dataset.detalleId;
             document.getElementById('cobroEquipoNombre').textContent = this.dataset.equipoNombre;
-            document.getElementById('cobroClienteNombre').textContent = this.dataset.clienteNombre;
             document.getElementById('cobroTiempoTotal').textContent = this.dataset.tiempo;
 
-            cobroTotalActual = parseFloat(this.dataset.total) || 0;
+            clienteOriginalNombre = this.dataset.clienteNombre || '';
+            clienteOriginalCorreo = (this.dataset.clienteCorreo || '').trim();
+
+            if (inputBuscarClienteRenta) {
+                inputBuscarClienteRenta.value = clienteOriginalNombre;
+            }
+            if (selectClienteCobroRenta) {
+                selectClienteCobroRenta.value = '';
+            }
+            if (badgeClienteCobroRenta) {
+                badgeClienteCobroRenta.textContent = 'Asignado';
+                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+            }
+            if (btnLimpiarClienteRenta) {
+                btnLimpiarClienteRenta.classList.add('d-none');
+            }
+            if (listaResultadosClienteRenta) {
+                listaResultadosClienteRenta.classList.add('d-none');
+            }
+
+            cobroTotalActual = parseFloat((this.dataset.total || '0').replace(',', '.')) || 0;
             document.getElementById('cobroTotalTexto').textContent = `$${cobroTotalActual.toFixed(2)}`;
 
             // Reset calculadora
@@ -665,27 +839,45 @@ document.addEventListener('DOMContentLoaded', function () {
                 inputPaga.value = '';
                 actualizarVueltoCobro();
             }
+
+            actualizarCorreoCobroRenta(clienteOriginalCorreo);
         });
     });
+
+    function redondearCentavos(valor) {
+        return Math.round((valor + Number.EPSILON) * 100) / 100;
+    }
 
     function actualizarVueltoCobro() {
         const inputPaga = document.getElementById('inputPagaConRenta');
         const vueltoTexto = document.getElementById('cobroVueltoTexto');
         if (!inputPaga || !vueltoTexto) return;
 
-        const pagaCon = parseFloat(inputPaga.value) || 0;
-        if (pagaCon <= 0) {
+        const val = inputPaga.value.trim();
+        if (val === '') {
             vueltoTexto.textContent = '$0.00';
             vueltoTexto.className = 'fs-5 font-monospace text-dark';
             return;
         }
 
-        const vuelto = pagaCon - cobroTotalActual;
-        if (vuelto >= 0) {
-            vueltoTexto.textContent = `$${vuelto.toFixed(2)}`;
+        let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+        let total = redondearCentavos(cobroTotalActual);
+        pagaCon = redondearCentavos(pagaCon);
+        if (pagaCon > 99999.99) {
+            pagaCon = 99999.99;
+            inputPaga.value = pagaCon.toFixed(2);
+        }
+        if (pagaCon < 0) {
+            pagaCon = 0;
+            inputPaga.value = pagaCon.toFixed(2);
+        }
+        const diff = redondearCentavos(pagaCon - total);
+
+        if (diff >= 0) {
+            vueltoTexto.textContent = `$${diff.toFixed(2)}`;
             vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
         } else {
-            vueltoTexto.textContent = `Faltan $${Math.abs(vuelto).toFixed(2)}`;
+            vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
             vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
         }
     }
@@ -702,13 +894,77 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!inputPaga) return;
 
             if (monto === 'exacto') {
-                inputPaga.value = cobroTotalActual.toFixed(2);
+                let m = Math.round((cobroTotalActual + Number.EPSILON) * 100) / 100;
+                if (m > 99999.99) m = 99999.99;
+                if (m < 0) m = 0;
+                inputPaga.value = m.toFixed(2);
             } else {
-                inputPaga.value = parseFloat(monto).toFixed(2);
+                let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
+                if (m > 99999.99) m = 99999.99;
+                if (m < 0) m = 0;
+                inputPaga.value = m.toFixed(2);
             }
             actualizarVueltoCobro();
+            inputPaga.focus();
         });
     });
+
+    const modalCobroEl = document.getElementById('modalCobroRenta');
+    if (modalCobroEl) {
+        modalCobroEl.addEventListener('shown.bs.modal', function () {
+            const inputPaga = document.getElementById('inputPagaConRenta');
+            if (inputPaga) {
+                inputPaga.focus();
+            }
+        });
+    }
+
+    // Al confirmar cobro de renta: abrir factura PDF en pestaña nueva y refrescar rentas
+    const formCobroRenta = document.getElementById('formCobroRenta');
+    const btnConfirmarCobroRenta = document.getElementById('btnConfirmarCobroRenta');
+    if (formCobroRenta) {
+        formCobroRenta.addEventListener('submit', function () {
+            if (btnConfirmarCobroRenta) {
+                btnConfirmarCobroRenta.disabled = true;
+                btnConfirmarCobroRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
+            }
+            if (modalCobroEl && window.bootstrap) {
+                setTimeout(function () {
+                    const modalInstance = bootstrap.Modal.getInstance(modalCobroEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 600);
+            }
+            setTimeout(function () {
+                window.location.reload();
+            }, 1800);
+        });
+    }
+
+    // Al confirmar extensión de renta: abrir factura actualizada PDF en pestaña nueva y refrescar rentas
+    const formExtenderRenta = document.getElementById('formExtenderRenta');
+    const btnConfirmarExtenderRenta = document.getElementById('btnConfirmarExtenderRenta');
+    const modalExtenderEl = document.getElementById('modalExtenderRenta');
+    if (formExtenderRenta) {
+        formExtenderRenta.addEventListener('submit', function () {
+            if (btnConfirmarExtenderRenta) {
+                btnConfirmarExtenderRenta.disabled = true;
+                btnConfirmarExtenderRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando extensión...';
+            }
+            if (modalExtenderEl && window.bootstrap) {
+                setTimeout(function () {
+                    const modalInstance = bootstrap.Modal.getInstance(modalExtenderEl);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                }, 600);
+            }
+            setTimeout(function () {
+                window.location.reload();
+            }, 1800);
+        });
+    }
 
     // -------------------------------------------------------------
     // 6. MODAL DE INFO / HARDWARE DE EQUIPO

@@ -63,10 +63,26 @@
                                 Periféricos actualmente asignados y disponibles en bodega:
                             </p>
 
+                            <!-- Buscador en tiempo real de componentes -->
+                            <div class="input-group input-group-sm mb-2 shadow-sm rounded-3">
+                                <span class="input-group-text bg-white border-end-0 text-muted">
+                                    <i class="bi bi-search"></i>
+                                </span>
+                                <input type="text" id="buscarCompEditar" class="form-control border-start-0 border-end-0 ps-0"
+                                    placeholder="Buscar por nombre o categoría (Mouse, Teclado...)..." autocomplete="off">
+                                <button class="btn btn-outline-secondary border-start-0 bg-white text-muted d-none" type="button" id="btnLimpiarBuscarCompEditar">
+                                    <i class="bi bi-x"></i>
+                                </button>
+                            </div>
+
                             <div class="border rounded-3 p-2 bg-light overflow-auto flex-grow-1" style="max-height: 290px; min-height: 220px;">
                                 {% for comp in componentes %}
                                 <div class="item-comp-edit form-check d-flex align-items-center justify-content-between py-2 px-3 mb-2 bg-white rounded-3 border border-light shadow-sm"
-                                     data-equipo-id="{{ comp.equipo_id|default:'' }}">
+                                     data-equipo-id="{{ comp.equipo_id|default:'' }}"
+                                     data-nombre="{{ comp.nombre|lower }}"
+                                     data-categoria="{{ comp.tipo|lower }} {{ comp.get_tipo_display|lower }}"
+                                     data-serie="{{ comp.numero_serie|default:''|lower }}"
+                                     data-busqueda="{{ comp.nombre|lower }} {{ comp.tipo|lower }} {{ comp.get_tipo_display|lower }} {{ comp.numero_serie|default:''|lower }}">
                                     <div class="d-flex align-items-center">
                                         <input class="form-check-input me-2 check-comp-edit" type="checkbox" name="componentes" value="{{ comp.componente_id }}" id="compEdit{{ comp.componente_id }}">
                                         <label class="form-check-label small fw-medium text-dark cursor-pointer mb-0" for="compEdit{{ comp.componente_id }}">
@@ -79,11 +95,12 @@
                                             {% if comp.numero_serie %}<span class="text-muted d-block" style="font-size: 0.72rem;">S/N: {{ comp.numero_serie }}</span>{% endif %}
                                         </label>
                                     </div>
-                                    <div>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="badge bg-light text-muted border small text-uppercase" style="font-size: 0.65rem;">{{ comp.get_tipo_display }}</span>
                                         <span class="badge bg-secondary-subtle text-secondary small badge-comp-status"
                                               data-equipo-id="{{ comp.equipo_id|default:'' }}"
                                               data-equipo-nombre="{{ comp.equipo.nombre|default:'' }}"
-                                              style="font-size: 0.7rem;">
+                                              style="font-size: 0.65rem;">
                                             {% if comp.equipo %}En: {{ comp.equipo.nombre }}{% else %}En Bodega{% endif %}
                                         </span>
                                     </div>
@@ -98,6 +115,11 @@
                                 <div id="emptyCompEditar" class="h-100 d-none flex-column align-items-center justify-content-center text-center text-muted py-5">
                                     <i class="bi bi-box-seam fs-1 d-block mb-2 text-muted opacity-50"></i>
                                     <span class="small">No hay periféricos asignados ni libres en bodega para este equipo.</span>
+                                </div>
+
+                                <div id="noMatchCompEditar" class="d-none flex-column align-items-center justify-content-center text-center text-muted py-4">
+                                    <i class="bi bi-search fs-3 d-block mb-1 text-muted opacity-50"></i>
+                                    <span class="small">No se encontraron componentes que coincidan.</span>
                                 </div>
                             </div>
                             <small class="text-muted d-block mt-2" style="font-size: 0.75rem;">
