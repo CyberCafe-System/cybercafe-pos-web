@@ -56,9 +56,9 @@ class Usuario(AbstractBaseUser):
         db_constraint=False,
         related_name='usuarios',
     )
-    nombre = models.CharField(max_length=255)
-    username = models.CharField(max_length=100, unique=True)
-    correo = models.EmailField(max_length=255)
+    nombre = models.CharField(max_length=50)
+    username = models.CharField(max_length=50, unique=True)
+    correo = models.EmailField(max_length=75)
     password = models.CharField(max_length=255)
     is_superuser = models.BooleanField(default=False)
     last_login = models.DateTimeField(blank=True, null=True)

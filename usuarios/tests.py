@@ -239,3 +239,63 @@ class WebSecurityIsolationTests(SimpleTestCase):
 
 
 
+
+
+class UsuarioValidationRulesTests(SimpleTestCase):
+    def test_password_validator_rejects_under_8_chars(self):
+        from usuarios.validators import SeguridadIntermediaPasswordValidator
+        from django.core.exceptions import ValidationError
+
+        validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+        with self.assertRaises(ValidationError) as ctx:
+            validator.validate('Pass1')
+        self.assertEqual(ctx.exception.code, 'password_too_short')
+
+    def test_password_validator_rejects_over_15_chars(self):
+        from usuarios.validators import SeguridadIntermediaPasswordValidator
+        from django.core.exceptions import ValidationError
+
+        validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+        with self.assertRaises(ValidationError) as ctx:
+            validator.validate('Password123456789')
+        self.assertEqual(ctx.exception.code, 'password_too_long')
+
+    def test_password_validator_requires_uppercase(self):
+        from usuarios.validators import SeguridadIntermediaPasswordValidator
+        from django.core.exceptions import ValidationError
+
+        validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+        with self.assertRaises(ValidationError) as ctx:
+            validator.validate('password123')
+        self.assertEqual(ctx.exception.code, 'password_no_upper')
+
+    def test_password_validator_requires_number(self):
+        from usuarios.validators import SeguridadIntermediaPasswordValidator
+        from django.core.exceptions import ValidationError
+
+        validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+        with self.assertRaises(ValidationError) as ctx:
+            validator.validate('PasswordABC')
+        self.assertEqual(ctx.exception.code, 'password_no_numbers')
+
+    def test_password_validator_accepts_valid_password(self):
+        from usuarios.validators import SeguridadIntermediaPasswordValidator
+
+        validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+        self.assertIsNone(validator.validate('Clave123'))
+        self.assertIsNone(validator.validate('Clave1234567890'))
+
+    def test_form_max_lengths(self):
+        from usuarios.forms import UsuarioCreateForm, UsuarioEditForm
+
+        create_form = UsuarioCreateForm()
+        self.assertEqual(create_form.fields['nombre'].max_length, 50)
+        self.assertEqual(create_form.fields['username'].max_length, 50)
+        self.assertEqual(create_form.fields['correo'].max_length, 75)
+        self.assertEqual(create_form.fields['password'].max_length, 15)
+        self.assertEqual(create_form.fields['password'].min_length, 8)
+
+        edit_form = UsuarioEditForm()
+        self.assertEqual(edit_form.fields['nombre'].max_length, 50)
+        self.assertEqual(edit_form.fields['username'].max_length, 50)
+        self.assertEqual(edit_form.fields['correo'].max_length, 75)

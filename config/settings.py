@@ -147,6 +147,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'usuarios.validators.SeguridadIntermediaPasswordValidator',
         'OPTIONS': {
             'min_length': 8,
+            'max_length': 15,
         },
     },
 ]

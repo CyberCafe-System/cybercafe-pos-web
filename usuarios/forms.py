@@ -19,16 +19,34 @@ class WebAuthenticationForm(AuthenticationForm):
             )
 
 
-
 class UsuarioCreationForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=50,
+        label='Nombre completo',
+        widget=forms.TextInput(attrs={'maxlength': '50'}),
+    )
+    username = forms.CharField(
+        max_length=50,
+        label='Nombre de usuario',
+        widget=forms.TextInput(attrs={'maxlength': '50'}),
+    )
+    correo = forms.EmailField(
+        max_length=75,
+        label='Correo electrónico',
+        widget=forms.EmailInput(attrs={'maxlength': '75'}),
+    )
     password1 = forms.CharField(
         label='Contraseña',
-        widget=forms.PasswordInput,
-        help_text='Mínimo 8 caracteres, debe combinar letras y números.',
+        min_length=8,
+        max_length=15,
+        widget=forms.PasswordInput(attrs={'placeholder': '********', 'minlength': '8', 'maxlength': '15'}),
+        help_text='Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número.',
     )
     password2 = forms.CharField(
         label='Confirmar contraseña',
-        widget=forms.PasswordInput,
+        min_length=8,
+        max_length=15,
+        widget=forms.PasswordInput(attrs={'placeholder': '********', 'minlength': '8', 'maxlength': '15'}),
     )
 
     class Meta:
@@ -62,6 +80,18 @@ class UsuarioCreationForm(forms.ModelForm):
 
 
 class UsuarioChangeForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'maxlength': '50'}),
+    )
+    username = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'maxlength': '50'}),
+    )
+    correo = forms.EmailField(
+        max_length=75,
+        widget=forms.EmailInput(attrs={'maxlength': '75'}),
+    )
     password = ReadOnlyPasswordHashField(label='Contraseña')
 
     class Meta:
@@ -79,18 +109,34 @@ class UsuarioChangeForm(forms.ModelForm):
 
 
 class UsuarioCreateForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '50'}),
+    )
+    username = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '50'}),
+    )
+    correo = forms.EmailField(
+        max_length=75,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'maxlength': '75'}),
+    )
     password = forms.CharField(
         label='Contraseña',
-        widget=forms.PasswordInput(attrs={'class': 'form-control'}),
+        min_length=8,
+        max_length=15,
+        widget=forms.PasswordInput(attrs={
+            'class': 'form-control',
+            'placeholder': '********',
+            'minlength': '8',
+            'maxlength': '15',
+        }),
     )
 
     class Meta:
         model = Usuario
         fields = ('username', 'nombre', 'correo', 'rol')
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'correo': forms.EmailInput(attrs={'class': 'form-control'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -124,13 +170,23 @@ class UsuarioCreateForm(forms.ModelForm):
 
 
 class UsuarioEditForm(forms.ModelForm):
+    nombre = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '50'}),
+    )
+    username = forms.CharField(
+        max_length=50,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'maxlength': '50'}),
+    )
+    correo = forms.EmailField(
+        max_length=75,
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'maxlength': '75'}),
+    )
+
     class Meta:
         model = Usuario
         fields = ('username', 'nombre', 'correo', 'rol')
         widgets = {
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
-            'correo': forms.EmailInput(attrs={'class': 'form-control'}),
             'rol': forms.Select(attrs={'class': 'form-select'}),
         }
 
