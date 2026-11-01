@@ -127,6 +127,9 @@ def renta_create(request):
         tiempo_str = request.POST.get('tiempo_de_renta', '60')
 
         try:
+            if not cliente_id:
+                raise ValueError("Debe seleccionar un cliente para iniciar la renta.")
+
             tiempo = int(tiempo_str)
             if tiempo <= 0:
                 raise ValueError("El tiempo debe ser mayor a 0.")

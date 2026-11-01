@@ -70,13 +70,13 @@
                                         <i class="bi bi-search"></i>
                                     </span>
                                     <input type="text" id="inputBuscarClienteCrearRenta" class="form-control border-start-0 ps-0" 
-                                           placeholder="Buscar por nombre o DUI..." autocomplete="off">
+                                           placeholder="Buscar por nombre o DUI..." autocomplete="off" required>
                                     <button class="btn btn-outline-secondary border-start-0 d-none" type="button" id="btnLimpiarClienteCrearRenta" title="Limpiar selección">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
 
-                                <select name="cliente_id" id="selectClienteRenta" class="d-none" required>
+                                <select name="cliente_id" id="selectClienteRenta" class="d-none">
                                     <option value="" selected disabled>Seleccione el cliente</option>
                                     {% for cl in clientes %}
                                     <option value="{{ cl.cliente_id }}" 
@@ -344,6 +344,7 @@
         });
 
         inputBuscarClienteCrearRenta.addEventListener('input', function () {
+            this.setCustomValidity('');
             filtrarClientesCrearRenta(this.value);
             listaResultadosClienteCrearRenta.classList.remove('d-none');
         });
@@ -368,6 +369,7 @@
             }
             if (inputBuscarClienteCrearRenta) {
                 inputBuscarClienteCrearRenta.value = clienteNombre;
+                inputBuscarClienteCrearRenta.setCustomValidity('');
             }
             if (badgeClienteCrearRenta) {
                 badgeClienteCrearRenta.textContent = '✓ Seleccionado';
@@ -385,6 +387,7 @@
 
     if (btnLimpiarClienteCrearRenta) {
         btnLimpiarClienteCrearRenta.addEventListener('click', function () {
+            if (inputBuscarClienteCrearRenta) inputBuscarClienteCrearRenta.setCustomValidity('');
             if (inputBuscarClienteCrearRenta) {
                 inputBuscarClienteCrearRenta.value = '';
                 inputBuscarClienteCrearRenta.focus();
@@ -414,7 +417,17 @@
     const modalNuevaRentaEl = document.getElementById('modalNuevaRenta');
 
     if (formNuevaRenta) {
-        formNuevaRenta.addEventListener('submit', function () {
+        formNuevaRenta.addEventListener('submit', function (e) {
+            const clienteVal = selectClienteRenta ? selectClienteRenta.value : '';
+            if (!clienteVal) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (inputBuscarClienteCrearRenta) {
+                    inputBuscarClienteCrearRenta.setCustomValidity('Selecciona un elemento de la lista.');
+                    inputBuscarClienteCrearRenta.reportValidity();
+                }
+                return false;
+            }
             if (btnConfirmarCrearRenta) {
                 btnConfirmarCrearRenta.disabled = true;
                 btnConfirmarCrearRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando e Iniciando...';
