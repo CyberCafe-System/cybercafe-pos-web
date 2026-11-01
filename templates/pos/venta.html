@@ -34,7 +34,7 @@
                         </div>
 
                         <!-- Select nativo (oculto pero funcional para POST y validación) -->
-                        <select name="cliente_id" id="posSelectCliente" style="position: absolute; opacity: 0; pointer-events: none; height: 0; width: 0;" required>
+                        <select name="cliente_id" id="posSelectCliente" style="position: absolute; left: 0; top: 0; width: 1px; height: 1px; opacity: 0;" required>
                             <option value="" selected disabled>Seleccione un cliente...</option>
                             {% for cliente in clientes %}
                             <option value="{{ cliente.cliente_id }}" 
@@ -105,14 +105,16 @@
                     </div>
 
                     <!-- Checklist de Envío por Correo Simplificado -->
-                    <div class="card border rounded-3 p-2 bg-light shadow-xs mb-1">
-                        <div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
-                            <input class="form-check-input mt-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoVenta" value="1" checked>
+                    <div class="card border rounded-3 p-3 bg-light shadow-xs mb-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
+                                <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoVenta" value="1" checked style="cursor: pointer;">
+                            </div>
                             <label class="form-check-label fw-semibold text-dark small mb-0" for="checkEnviarCorreoVenta" style="cursor: pointer;">
                                 <i class="bi bi-envelope-at text-primary me-1"></i>Enviar factura por correo
                             </label>
                         </div>
-                        <div id="infoCorreoClienteContainer" class="small mt-1 ps-4" style="font-size: 0.8rem;">
+                        <div id="infoCorreoClienteContainer" class="small ps-1" style="font-size: 0.8rem;">
                             <span id="textoCorreoDestino" class="text-muted">Seleccione un cliente para enviar factura.</span>
                         </div>
                     </div>
