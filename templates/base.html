@@ -33,13 +33,6 @@
                 <li>
                     <a href="{% url 'rentas' %}" class="{% if request.resolver_match.url_name == 'rentas' or request.resolver_match.url_name == 'crear_renta' or request.resolver_match.url_name == 'extender_renta' or request.resolver_match.url_name == 'finalizar_renta' or request.resolver_match.url_name == 'enviar_revision' or request.resolver_match.url_name == 'factura_renta' or request.resolver_match.url_name == 'factura_renta_id' %}active{% endif %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
                 </li>
-                {% if request.user.es_admin %}
-                <li>
-                    <a href="{% url 'revisiones' %}" class="{% if 'revision' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-clipboard-check"></i> Revisiones
-                    </a>
-                </li>
-                {% endif %}
                 {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     <a href="{% url 'pos' %}" class="{% if request.resolver_match.url_name == 'pos' or request.resolver_match.url_name == 'procesar_venta' or request.resolver_match.url_name == 'ticket_pdf' or request.resolver_match.url_name == 'ticket_pdf_venta' %}active{% endif %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
@@ -49,13 +42,14 @@
                 <li>
                     <a href="{% url 'inventario' %}" class="{% if request.resolver_match.url_name == 'inventario' or request.resolver_match.url_name == 'crear_producto' or request.resolver_match.url_name == 'modificar_producto' or request.resolver_match.url_name == 'desactivar_producto' %}active{% endif %}"><i class="bi bi-box-seam"></i> Inventario</a>
                 </li>
-                {% endif %}
-                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'categorias' %}" class="{% if request.resolver_match.url_name == 'categorias' or request.resolver_match.url_name == 'crear_categoria' or request.resolver_match.url_name == 'modificar_categoria' or request.resolver_match.url_name == 'desactivar_categoria' %}active{% endif %}"><i class="bi bi-tags"></i> Categorías</a>
                 </li>
-                {% endif %}
-                {% if request.user.es_admin %}
+                <li>
+                    <a href="{% url 'revisiones' %}" class="{% if 'revision' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-clipboard-check"></i> Revisiones
+                    </a>
+                </li>
                 <li>
                     <a href="{% url 'equipos' %}" class="{% if request.resolver_match.url_name == 'equipos' or request.resolver_match.url_name == 'crear_equipo' or request.resolver_match.url_name == 'modificar_equipo' or request.resolver_match.url_name == 'eliminar_equipo' %}active{% endif %}"><i class="bi bi-cpu"></i> Equipos</a>
                 </li>
@@ -72,8 +66,6 @@
                 <li>
                     <a href="{% url 'usuarios' %}" class="{% if request.resolver_match.url_name == 'usuarios' or request.resolver_match.url_name == 'crear_usuario' or request.resolver_match.url_name == 'modificar_usuario' or request.resolver_match.url_name == 'desactivar_usuario' %}active{% endif %}"><i class="bi bi-person-badge"></i> Usuarios</a>
                 </li>
-                {% endif %}
-                {% if request.user.es_admin %}
                 <li>
                     <a href="{% url 'reportes' %}" class="{% if request.resolver_match.url_name == 'reportes' or request.resolver_match.url_name == 'reportes_exportar_csv' or request.resolver_match.url_name == 'reportes_exportar_excel' %}active{% endif %}"><i class="bi bi-graph-up"></i> Reportes</a>
                 </li>
