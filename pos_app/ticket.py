@@ -141,17 +141,21 @@ def generar_factura_pdf(venta):
         [f'IVA ({IVA_PORCENTAJE}%)', _money(venta.iva)],
         ['TOTAL A PAGAR', _money(venta.total)],
     ]
-    total_tabla = Table(totales, colWidths=[40 * mm, 40 * mm], hAlign='RIGHT')
+    total_tabla = Table(totales, colWidths=[60 * mm, 40 * mm], hAlign='RIGHT')
     total_tabla.setStyle(TableStyle([
         ('FONTSIZE', (0, 0), (-1, -1), 11),
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, 1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, 1), 5),
         ('TEXTCOLOR', (0, 0), (-1, 1), GRIS),
         ('BACKGROUND', (0, 2), (-1, 2), COFFEE),
         ('TEXTCOLOR', (0, 2), (-1, 2), colors.white),
         ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 2), (-1, 2), 14),
+        ('TOPPADDING', (0, 2), (-1, 2), 7),
+        ('BOTTOMPADDING', (0, 2), (-1, 2), 7),
     ]))
     elementos.append(total_tabla)
     elementos.append(Spacer(1, 15 * mm))

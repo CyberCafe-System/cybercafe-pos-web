@@ -170,11 +170,13 @@ def generar_factura_renta_pdf(renta):
     elementos.append(Spacer(1, 6 * mm))
 
     # TOTAL RENTA
-    total_tabla = Table([['TOTAL A PAGAR', _money(total)]], colWidths=[50 * mm, 35 * mm], hAlign='RIGHT')
+    total_tabla = Table([['TOTAL A PAGAR', _money(total)]], colWidths=[60 * mm, 40 * mm], hAlign='RIGHT')
     total_tabla.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'RIGHT'),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LEFTPADDING', (0, 0), (-1, -1), 10),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
         ('BACKGROUND', (0, 0), (-1, 0), COFFEE),
         ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
