@@ -3,11 +3,12 @@ from decimal import ROUND_HALF_UP, Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from clientes.models import Cliente
+from config.context_processors import obtener_rentas_activas_payload
 from equipos.models import Equipo
 from usuarios.decorators import cajero_o_admin_required
 
@@ -28,6 +29,12 @@ def _respuesta_factura_renta(renta):
     )
     respuesta['Content-Disposition'] = f'inline; filename="factura_renta_{renta.renta_id}.pdf"'
     return respuesta
+
+
+@login_required
+def api_rentas_activas(request):
+    """Endpoint ligero para sincronizar notificaciones globales de rentas activas en cualquier pantalla."""
+    return JsonResponse({'rentas': obtener_rentas_activas_payload()})
 
 
 @login_required
@@ -316,22 +323,22 @@ def renta_finalizar(request):
                 if ok:
                     messages.success(
                         request,
-                        f'Renta de {detalle.equipo.nombre} cobrada. Factura enviada por correo a {cliente_correo}.'
+                        f'Renta de {equipo.nombre} cobrada. Factura enviada por correo a {cliente_correo}.'
                     )
                 else:
                     messages.warning(
                         request,
-                        f'Renta de {detalle.equipo.nombre} cobrada. (Aviso de correo: {msg_correo})'
+                        f'Renta de {equipo.nombre} cobrada. (Aviso de correo: {msg_correo})'
                     )
             elif enviar_correo and not cliente_correo:
                 messages.info(
                     request,
-                    f'Renta de {detalle.equipo.nombre} cobrada. (El cliente no tiene correo electrónico registrado).'
+                    f'Renta de {equipo.nombre} cobrada. (El cliente no tiene correo electrónico registrado).'
                 )
             else:
                 messages.success(
                     request,
-                    f'Renta de {detalle.equipo.nombre} cobrada exitosamente.'
+                    f'Renta de {equipo.nombre} cobrada exitosamente.'
                 )
 
             request.session['ultima_renta_id'] = renta.renta_id

@@ -13,6 +13,10 @@ class Rol(models.Model):
         verbose_name = 'rol'
         verbose_name_plural = 'roles'
 
+    @property
+    def es_asistente(self):
+        return self.rol_id == 3 or (self.nombre or '').strip().lower() == 'asistente'
+
     def __str__(self):
         return self.nombre
 
@@ -75,13 +79,17 @@ class Usuario(AbstractBaseUser):
         verbose_name = 'usuario'
         verbose_name_plural = 'usuarios'
 
+    def _obtener_nombre_rol(self):
+        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
+        if cached_rol is None and self.rol_id:
+            try:
+                cached_rol = self.rol
+            except Exception:
+                cached_rol = None
+        return (getattr(cached_rol, 'nombre', '') or '').strip().lower()
+
     def save(self, *args, **kwargs):
-        # Sincronizar is_superuser con el rol
-        es_admin_rol = (self.rol_id == 1)
-        if not es_admin_rol and hasattr(self, '_state'):
-            cached_rol = self._state.fields_cache.get('rol')
-            if cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'admin':
-                es_admin_rol = True
+        es_admin_rol = (self.rol_id == 1) or (self._obtener_nombre_rol() in ('admin', 'administrador'))
         self.is_superuser = bool(es_admin_rol)
         super().save(*args, **kwargs)
 
@@ -90,7 +98,7 @@ class Usuario(AbstractBaseUser):
         return self.activo
 
     @is_active.setter
-    def is_active(self, value): #type: ignore
+    def is_active(self, value):  # type: ignore
         self.activo = value
 
     @property
@@ -101,22 +109,19 @@ class Usuario(AbstractBaseUser):
     def es_admin(self):
         if self.rol_id == 1:
             return True
-        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
-        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'admin')
+        return self._obtener_nombre_rol() in ('admin', 'administrador')
 
     @property
     def es_cajero(self):
         if self.rol_id == 2:
             return True
-        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
-        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'cajero')
+        return self._obtener_nombre_rol() == 'cajero'
 
     @property
     def es_asistente(self):
         if self.rol_id == 3:
             return True
-        cached_rol = self._state.fields_cache.get('rol') if hasattr(self, '_state') else None
-        return bool(cached_rol and getattr(cached_rol, 'nombre', '').lower() == 'asistente')
+        return self._obtener_nombre_rol() == 'asistente'
 
     def get_full_name(self):
         return self.nombre

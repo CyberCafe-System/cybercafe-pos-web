@@ -1,16 +1,20 @@
+import json
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import SimpleTestCase
 from django.test.client import RequestFactory
-from django.urls import reverse
+from django.urls import resolve, reverse
 
 from clientes.models import Cliente
+from config.context_processors import contexto_global_sistema
+from equipos.forms import EquipoForm
 from equipos.models import Equipo
 from equipos.views import equipo_delete
 from inventario.models import Producto
 from pos_app.views import procesar_venta
+from rentas.views import api_rentas_activas
 from revisiones.models import RevisionEquipo
 from revisiones.views import editar_revision
 
@@ -22,6 +26,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.user.is_authenticated = True
         self.user.es_cajero = True
         self.user.es_admin = True
+        self.user.es_asistente = False
 
     def _preparar_request(self, path, post_data, session_data=None):
         request = self.factory.post(path, post_data)
@@ -167,3 +172,56 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         response = editar_revision(request, revision_id=5)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(eq_mock.estado, 'DANIOS_MENORES')
+
+    @patch('rentas.views.obtener_rentas_activas_payload')
+    def test_api_rentas_activas_notificaciones_globales(self, mock_payload):
+        mock_payload.return_value = [
+            {
+                'detalle_id': 42,
+                'equipo_id': 1,
+                'equipo_nombre': 'PC-01',
+                'cliente_nombre': 'Juan Pérez',
+                'inicio_iso': '2026-11-01T23:00:00+00:00',
+                'tiempo_total': 60,
+                'notif_key': '42_60',
+            }
+        ]
+        url = reverse('api_rentas_activas')
+        self.assertEqual(url, '/api/rentas_activas/')
+        request = self.factory.get(url)
+        request.user = self.user
+
+        response = api_rentas_activas(request)
+        self.assertEqual(response.status_code, 200)
+        data = json.loads(response.content)
+        self.assertEqual(len(data['rentas']), 1)
+        self.assertEqual(data['rentas'][0]['equipo_nombre'], 'PC-01')
+
+    @patch('config.context_processors.obtener_rentas_activas_payload')
+    def test_contexto_global_sistema_navegacion_y_notificaciones(self, mock_payload):
+        mock_payload.return_value = [{'detalle_id': 9, 'equipo_nombre': 'PC-02'}]
+        request = self.factory.get('/usuarios/')
+        request.user = self.user
+        request.resolver_match = resolve('/usuarios/')
+
+        ctx = contexto_global_sistema(request)
+        self.assertTrue(ctx['nav_usuarios'])
+        self.assertFalse(ctx['nav_inicio'])
+        self.assertEqual(ctx['modulo_titulo'], 'Usuarios')
+        self.assertEqual(ctx['modulo_icono'], 'bi-person-badge')
+        self.assertIn('PC-02', ctx['rentas_activas_global_json'])
+
+    @patch('equipos.forms.Equipo.objects')
+    def test_equipo_form_rechaza_nombre_duplicado(self, mock_equipo_objects):
+        mock_equipo_objects.filter.return_value.exists.return_value = True
+        form = EquipoForm(
+            data={
+                'nombre': 'PC-01',
+                'tipo': 'PC',
+                'tarifa_por_hora': '1,50',
+                'estado': 'DISPONIBLE',
+                'descripcion': 'Estación principal',
+            }
+        )
+        self.assertFalse(form.is_valid())
+        self.assertIn('nombre', form.errors)

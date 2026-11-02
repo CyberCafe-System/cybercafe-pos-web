@@ -17,7 +17,11 @@
                         <select name="rol" id="editarUsuarioRol" class="form-select rounded-3" required>
                             <option value="">Seleccione un rol</option>
                             {% for rol in roles %}
-                            <option value="{{ rol.rol_id }}">{{ rol.nombre }}{% if rol.nombre|lower == 'asistente' %} (Solo App Móvil){% endif %}</option>
+                            {% if rol.es_asistente %}
+                            <option value="{{ rol.rol_id }}">{{ rol.nombre }} (Solo App Móvil)</option>
+                            {% else %}
+                            <option value="{{ rol.rol_id }}">{{ rol.nombre }}</option>
+                            {% endif %}
                             {% endfor %}
                         </select>
                     </div>

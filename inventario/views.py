@@ -2,7 +2,6 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
@@ -40,8 +39,12 @@ def producto_create(request):
         form = ProductoForm(request.POST, request.FILES)
         if form.is_valid():
             try:
+                tiene_imagen = bool(form.cleaned_data.get('imagen_upload'))
                 producto = form.save()
-                messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente con imagen optimizada.')
+                if tiene_imagen:
+                    messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente con imagen optimizada.')
+                else:
+                    messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente.')
             except Exception:
                 logger.exception('Error al registrar el producto')
                 messages.error(request, 'Ocurrió un error al registrar el producto. Intenta nuevamente.')
@@ -80,5 +83,3 @@ def producto_toggle(request):
         estado = 'activado' if producto.activo else 'desactivado'
         messages.success(request, f'Producto "{producto.nombre}" {estado} correctamente.')
     return redirect('inventario')
-
-

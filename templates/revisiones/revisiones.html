@@ -544,13 +544,13 @@
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
                                             <div class="me-3 p-2 bg-light rounded-3 text-coffee">
-                                                {% if comp.tipo == 'Teclado' %}
+                                                {% if comp.tipo == 'TECLADO' or comp.tipo == 'Teclado' %}
                                                 <i class="bi bi-keyboard fs-5"></i>
-                                                {% elif comp.tipo == 'Mouse' %}
+                                                {% elif comp.tipo == 'MOUSE' or comp.tipo == 'Mouse' %}
                                                 <i class="bi bi-mouse fs-5"></i>
-                                                {% elif comp.tipo == 'Monitor' %}
+                                                {% elif comp.tipo == 'MONITOR' or comp.tipo == 'Monitor' %}
                                                 <i class="bi bi-display fs-5"></i>
-                                                {% elif comp.tipo == 'Control' %}
+                                                {% elif comp.tipo == 'CONTROL' or comp.tipo == 'Control' %}
                                                 <i class="bi bi-controller fs-5"></i>
                                                 {% else %}
                                                 <i class="bi bi-cpu fs-5"></i>

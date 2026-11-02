@@ -20,6 +20,9 @@ def usuario_list(request):
     usuarios_qs = Usuario.objects.select_related('rol').all().order_by('usuario_id')
     paginator = Paginator(usuarios_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
+    current_uid = getattr(request.user, 'usuario_id', None)
+    for u in page_obj:
+        u.es_usuario_actual = (u.usuario_id == current_uid)
     roles = Rol.objects.all().order_by('nombre')
     return render(
         request,

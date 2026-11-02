@@ -601,9 +601,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
 
                 // Disparar notificación emergente si no se ha notificado
-                if (!notifiedDetalles.has(detalleId)) {
-                    notifiedDetalles.add(detalleId);
-                    dispararToastTiempoAgotado(eqNombre, clienteNombre);
+                const notifKeyLocal = `${detalleId}_${tiempoTotalMin}`;
+                if (!notifiedDetalles.has(notifKeyLocal)) {
+                    notifiedDetalles.add(notifKeyLocal);
+                    if (typeof window.notificarTiempoAgotadoGlobal === 'function') {
+                        window.notificarTiempoAgotadoGlobal(detalleId, tiempoTotalMin, eqNombre, clienteNombre);
+                    } else {
+                        dispararToastTiempoAgotado(eqNombre, clienteNombre);
+                    }
                 }
             }
         });

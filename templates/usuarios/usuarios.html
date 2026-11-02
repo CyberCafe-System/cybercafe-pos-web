@@ -50,15 +50,18 @@
                     <tr class="fila-usuario"
                         data-busqueda="{{ usuario.username|lower }} {{ usuario.nombre|lower }} {{ usuario.correo|lower }}">
                         <td class="fw-semibold text-dark">{{ usuario.nombre }}</td>
-                        <td><span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span>
                         </td>
                         <td class="text-muted">{{ usuario.correo }}</td>
                         <td>
-                            <span
-                                class="badge {% if usuario.es_admin %}bg-dark{% elif usuario.es_cajero %}bg-primary{%
-                                else %}bg-secondary{% endif %}">
-                                {{ usuario.rol.nombre }}
-                            </span>
+                            {% if usuario.es_admin %}
+                            <span class="badge bg-dark">{{ usuario.rol.nombre }}</span>
+                            {% elif usuario.es_cajero %}
+                            <span class="badge bg-primary">{{ usuario.rol.nombre }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ usuario.rol.nombre }}</span>
+                            {% endif %}
                             {% if usuario.es_asistente %}
                             <span class="badge bg-info text-dark ms-1"><i class="bi bi-phone"></i> Solo App Móvil</span>
                             {% endif %}
@@ -82,11 +85,16 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="usuario_id" value="{{ usuario.usuario_id }}">
                                 {% if usuario.activo %}
-                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar" {% if
-                                    usuario.usuario_id==request.user.usuario_id %}disabled
-                                    title="No puedes desactivar tu propia cuenta en sesión" {% endif %}>
+                                {% if usuario.es_usuario_actual %}
+                                <button type="button" class="btn btn-sm btn-outline-warning" disabled
+                                    title="No puedes desactivar tu propia cuenta en sesión">
                                     <i class="bi bi-toggle-on"></i>
                                 </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% endif %}
                                 {% else %}
                                 <button type="submit" class="btn btn-sm btn-outline-success" title="Activar">
                                     <i class="bi bi-toggle-off"></i>
@@ -124,8 +132,8 @@
         btn.addEventListener('click', function () {
             document.getElementById('editarUsuarioId').value = btn.dataset.id;
             document.getElementById('editarUsuarioNombre').value = btn.dataset.nombre;
-            document.getElementById('editarUsuarioUsername').value = this.dataset.username;
-            document.getElementById('editarUsuarioCorreo').value = this.dataset.correo;
+            document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
+            document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
             document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
             // Limpiar campo de nueva contraseña
             const passInput = document.getElementById('editarUsuarioPassword');

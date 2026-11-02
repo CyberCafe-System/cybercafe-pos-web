@@ -52,6 +52,7 @@ urlpatterns = [
     path('reportes/exportar_excel/', pos_views.reportes_exportar_excel, name='reportes_exportar_excel'),
 
     # --- RENTAS ---
+    path('api/rentas_activas/', rentas_views.api_rentas_activas, name='api_rentas_activas'),
     path('crear_renta/', rentas_views.renta_create, name='crear_renta'),
     path('extender_renta/', rentas_views.renta_extender, name='extender_renta'),
     path('enviar_revision/', rentas_views.renta_enviar_revision, name='enviar_revision'),

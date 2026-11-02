@@ -1,8 +1,7 @@
-import os
-
 from decimal import Decimal, ROUND_HALF_UP
 
 from django import forms
+from django.db.models import Q
 
 from categorias.models import Categoria
 from .models import Producto
@@ -30,8 +29,25 @@ class ProductoForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        if args and hasattr(args[0], 'copy'):
+            data = args[0].copy()
+            for campo in ('precio_compra', 'precio_venta'):
+                if campo in data:
+                    data[campo] = str(data[campo]).replace(',', '.')
+            args = (data,) + args[1:]
+        elif args and isinstance(args[0], dict):
+            data = dict(args[0])
+            for campo in ('precio_compra', 'precio_venta'):
+                if campo in data:
+                    data[campo] = str(data[campo]).replace(',', '.')
+            args = (data,) + args[1:]
         super().__init__(*args, **kwargs)
-        self.fields['categoria'].queryset = Categoria.objects.filter(activa=True).order_by('nombre')
+        if self.instance and self.instance.pk and self.instance.categoria_id:
+            self.fields['categoria'].queryset = Categoria.objects.filter(
+                Q(activa=True) | Q(pk=self.instance.categoria_id)
+            ).order_by('nombre')
+        else:
+            self.fields['categoria'].queryset = Categoria.objects.filter(activa=True).order_by('nombre')
         self.fields['categoria'].empty_label = 'Seleccione una categoría'
 
     def clean_precio_compra(self):
