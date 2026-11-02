@@ -90,6 +90,7 @@
                                 data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
                                 data-serie="{{ comp.numero_serie|default:'' }}" data-tipo="{{ comp.tipo }}"
                                 data-estado="{{ comp.estado }}" data-equipo="{{ comp.equipo_id|default:'' }}"
+                                data-descripcion="{{ comp.descripcion|default:'' }}"
                                 data-observaciones="{{ comp.observaciones|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -145,6 +146,23 @@
             document.getElementById('editCompEstado').value = this.dataset.estado;
             document.getElementById('editCompEquipo').value = this.dataset.equipo;
             document.getElementById('editCompObservaciones').value = this.dataset.observaciones;
+
+            // Extraer Marca y Modelo desde descripcion ("Marca: X | Modelo: Y")
+            const desc = this.dataset.descripcion || '';
+            let marca = '';
+            let modelo = '';
+            desc.split('|').forEach(function (part) {
+                const p = part.trim();
+                if (p.toLowerCase().startsWith('marca:')) {
+                    marca = p.substring(6).trim();
+                } else if (p.toLowerCase().startsWith('modelo:')) {
+                    modelo = p.substring(7).trim();
+                }
+            });
+            const inputMarca = document.getElementById('editCompMarca');
+            const inputModelo = document.getElementById('editCompModelo');
+            if (inputMarca) inputMarca.value = marca;
+            if (inputModelo) inputModelo.value = modelo;
         });
     });
 </script>

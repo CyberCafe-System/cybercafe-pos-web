@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
@@ -29,7 +30,11 @@ def categoria_create(request):
     if request.method == 'POST':
         form = CategoriaForm(request.POST)
         if form.is_valid():
-            form.save()
+            cat = form.save()
+            messages.success(request, f'Categoría "{cat.nombre}" registrada correctamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error.as_text().lstrip('* '))
     return redirect('categorias')
 
 
@@ -40,7 +45,11 @@ def categoria_edit(request):
         categoria = get_object_or_404(Categoria, pk=request.POST.get('categoria_id'))
         form = CategoriaForm(request.POST, instance=categoria)
         if form.is_valid():
-            form.save()
+            cat = form.save()
+            messages.success(request, f'Categoría "{cat.nombre}" actualizada correctamente.')
+        else:
+            for error in form.errors.values():
+                messages.error(request, error.as_text().lstrip('* '))
     return redirect('categorias')
 
 
@@ -51,5 +60,6 @@ def categoria_toggle(request):
         categoria = get_object_or_404(Categoria, pk=request.POST.get('categoria_id'))
         categoria.activa = not categoria.activa
         categoria.save(update_fields=['activa'])
+        estado_txt = 'activada' if categoria.activa else 'desactivada'
+        messages.success(request, f'Categoría "{categoria.nombre}" {estado_txt} correctamente.')
     return redirect('categorias')
-

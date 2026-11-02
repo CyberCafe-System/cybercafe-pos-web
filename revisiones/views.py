@@ -1,5 +1,5 @@
 import logging
-logger = logging.getLogger(__name__)
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models, transaction
@@ -10,6 +10,8 @@ from equipos.models import Equipo
 from rentas.models import DetalleRenta
 from usuarios.decorators import admin_required, asistente_o_admin_required
 from .models import RevisionEquipo
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -184,7 +186,7 @@ def crear_revision(request):
                 if detalle.estado != 'PENDIENTE_REVISION':
                     messages.warning(
                         request,
-                        f'El equipo {detalle.equipo.nombre} ya no se encuentra en estado Pendiente de Revisión '
+                        f'El equipo {equipo.nombre} ya no se encuentra en estado Pendiente de Revisión '
                         f'(estado actual: {detalle.get_estado_display()}).'
                     )
                     return redirect('revisiones')
@@ -236,7 +238,6 @@ def crear_revision(request):
                         if c_obj:
                             nuevo_estado = 'DANIOS_MENORES' if estado_si_daniado == 'DANIOS_MENORES' else 'REQUIERE_REEMPLAZO'
                             c_obj.estado = nuevo_estado
-                            estado_label = c_obj.get_estado_display()
                             bloque_revision = (
                                 f"[REVISIÓN: #{revision.revision_equipo_id} | FECHA: {fecha_str}]\n"
                                 f"Descripción: {observaciones or 'Novedad reportada en inspección técnica'}\n"
@@ -261,6 +262,7 @@ def crear_revision(request):
                 )
 
         except Exception as e:
+            logger.exception('Error al registrar la revisión:')
             messages.error(request, f'No se pudo registrar la revisión: {str(e)}')
 
     return redirect('revisiones')
@@ -334,6 +336,7 @@ def reiniciar_revision(request, revision_id):
                 f'El equipo {equipo.nombre} ha vuelto a la lista de pendientes para que se realice la inspección nuevamente desde la app móvil.'
             )
         except Exception as e:
+            logger.exception('Error al revocar la revisión:')
             messages.error(request, f'Error al revocar la revisión: {str(e)}')
 
     return redirect('revisiones')
@@ -364,11 +367,14 @@ def editar_revision(request, revision_id):
                     equipo.estado = 'DISPONIBLE'
                 else:
                     estado_daniado = request.POST.get('estado_si_daniado', 'DANIOS_MENORES')
+                    if estado_daniado not in ('DANIOS_MENORES', 'DEFECTUOSO', 'EN_MANTENIMIENTO'):
+                        estado_daniado = 'DANIOS_MENORES'
                     equipo.estado = estado_daniado
                 equipo.save(update_fields=['estado'])
 
             messages.success(request, f'Revisión #{revision_id} actualizada correctamente por el Administrador.')
         except Exception as e:
+            logger.exception('Error al actualizar la revisión:')
             messages.error(request, f'No se pudo actualizar la revisión: {str(e)}')
 
     return redirect('revisiones')

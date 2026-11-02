@@ -1,9 +1,9 @@
 import csv
 import datetime
+import json
 import logging
 import uuid
 from decimal import ROUND_HALF_UP, Decimal
-from itertools import groupby
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -110,10 +110,11 @@ def inicio(request):
 
     transacciones = []
     for v in ultimas_ventas_raw:
-        items_nombres = [d.producto.nombre for d in v.detalles.all()[:2]]
+        detalles_v = list(v.detalles.all())
+        items_nombres = [d.producto.nombre for d in detalles_v[:2] if d.producto]
         concepto = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-        if v.detalles.count() > 2:
-            concepto += f" (+{v.detalles.count() - 2} más)"
+        if len(detalles_v) > 2:
+            concepto += f" (+{len(detalles_v) - 2} más)"
         cliente_nombre = f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General"
         transacciones.append({
             'id': f"TK-{v.venta_id}",
@@ -128,7 +129,8 @@ def inicio(request):
         })
 
     for r in ultimas_rentas_raw:
-        det = r.detalles.first()
+        detalles_r = list(r.detalles.all())
+        det = detalles_r[0] if detalles_r else None
         equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
         minutos = det.tiempo_de_renta if det else 60
         cliente_nombre = f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General"
@@ -201,8 +203,6 @@ def inicio(request):
     equipos_libres = max(0, total_equipos - equipos_ocupados)
     porcentaje_ocupacion = int(round((equipos_ocupados / total_equipos * 100))) if total_equipos else 0
 
-    import json
-
     return render(request, 'inicio.html', {
         'ingresos_hoy': ingresos_hoy,
         'equipos_activos': equipos_activos_str,
@@ -239,7 +239,7 @@ def _resumen_carrito(carrito):
     subtotal = Decimal('0.00')
     for producto_id, cantidad in carrito.items():
         producto = (
-            Producto.objects.filter(pk=producto_id, activo=True)
+            Producto.objects.filter(pk=producto_id, activo=True, categoria__activa=True)
             .select_related('categoria')
             .first()
         )
@@ -262,7 +262,7 @@ def _respuesta_pdf(venta):
 @cajero_o_admin_required
 def pos(request):
     productos = (
-        Producto.objects.filter(activo=True)
+        Producto.objects.filter(activo=True, categoria__activa=True)
         .select_related('categoria')
         .order_by('categoria__nombre', 'nombre')
     )
@@ -305,7 +305,12 @@ def pos(request):
 @cajero_o_admin_required
 def agregar_carrito(request):
     if request.method == 'POST':
-        producto = get_object_or_404(Producto, pk=request.POST.get('producto_id'), activo=True)
+        producto = get_object_or_404(
+            Producto.objects.select_related('categoria'),
+            pk=request.POST.get('producto_id'),
+            activo=True,
+            categoria__activa=True,
+        )
         try:
             cantidad = int(request.POST.get('cantidad') or 1)
         except (TypeError, ValueError):
@@ -334,7 +339,12 @@ def actualizar_cantidad_carrito(request):
     if request.method == 'POST':
         producto_id = str(request.POST.get('producto_id'))
         accion = request.POST.get('accion')
-        producto = get_object_or_404(Producto, pk=producto_id, activo=True)
+        producto = get_object_or_404(
+            Producto.objects.select_related('categoria'),
+            pk=producto_id,
+            activo=True,
+            categoria__activa=True,
+        )
         carrito = _obtener_carrito(request)
         actual = carrito.get(producto_id, 0)
 
@@ -394,12 +404,12 @@ def procesar_venta(request):
                     f'Esta solicitud ya fue procesada anteriormente (Factura #{venta_previa.venta_id}).'
                 )
                 return _respuesta_pdf(venta_previa)
-        messages.error(request, 'La solicitud de cobro ya expirÃ³ o no es vÃ¡lida. Intente nuevamente.')
+        messages.error(request, 'La solicitud de cobro ya expiró o no es válida. Intente nuevamente.')
         return redirect('pos')
 
     carrito = _obtener_carrito(request)
     if not carrito:
-        messages.error(request, 'El carrito estÃ¡ vacÃ­o. Agrega productos antes de procesar el pago.')
+        messages.error(request, 'El carrito está vacío. Agrega productos antes de procesar el pago.')
         return redirect('pos')
 
     cliente_id = request.POST.get('cliente_id')
@@ -407,16 +417,16 @@ def procesar_venta(request):
 
     try:
         with transaction.atomic():
-            # 1. Obtener y ordenar IDs de productos para evitar deadlocks en locks simultÃ¡neos
+            # 1. Obtener y ordenar IDs de productos para evitar deadlocks en locks simultáneos
             ids_productos = sorted([int(pid) for pid in carrito.keys()])
 
             # 2. Bloquear filas de productos en BD con select_for_update()
             productos_bloqueados = {
                 p.producto_id: p
-                for p in Producto.objects.select_for_update().filter(producto_id__in=ids_productos)
+                for p in Producto.objects.select_for_update().select_related('categoria').filter(producto_id__in=ids_productos)
             }
 
-            # 3. Revalidar stock y estado activo de todos los productos (prevenciÃ³n TOCTOU)
+            # 3. Revalidar stock y estado activo de todos los productos y su categoría (prevención TOCTOU)
             items_procesar = []
             subtotal_recalculado = Decimal('0.00')
 
@@ -425,10 +435,10 @@ def procesar_venta(request):
                 prod = productos_bloqueados.get(int_pid)
 
                 if not prod:
-                    raise ValueError('Uno de los productos seleccionados ya no existe en el catÃ¡logo.')
+                    raise ValueError('Uno de los productos seleccionados ya no existe en el catálogo.')
 
-                if not prod.activo:
-                    raise ValueError(f'El producto "{prod.nombre}" ha sido desactivado y no estÃ¡ disponible para la venta.')
+                if not prod.activo or (prod.categoria and not prod.categoria.activa):
+                    raise ValueError(f'El producto "{prod.nombre}" ha sido desactivado y no está disponible para la venta.')
 
                 if prod.cantidad < cant:
                     raise ValueError(
@@ -474,7 +484,7 @@ def procesar_venta(request):
                 prod.cantidad -= cant
                 prod.save(update_fields=['cantidad'])
 
-            # 6. Al tener Ã©xito, vaciar carrito y rotar token de idempotencia
+            # 6. Al tener éxito, vaciar carrito y rotar token de idempotencia
             request.session['carrito'] = {}
             request.session['ultima_venta_id'] = venta.venta_id
             request.session['pos_token'] = uuid.uuid4().hex
@@ -482,12 +492,12 @@ def procesar_venta(request):
     except ValueError as e:
         messages.error(request, str(e))
         return redirect('pos')
-    except Exception as e:
-        logger.exception('Error crÃ­tico durante la transacciÃ³n de procesar_venta:')
-        messages.error(request, 'OcurriÃ³ un error inesperado al procesar la venta. Verifique los datos e intente de nuevo.')
+    except Exception:
+        logger.exception('Error crítico durante la transacción de procesar_venta:')
+        messages.error(request, 'Ocurrió un error inesperado al procesar la venta. Verifique los datos e intente de nuevo.')
         return redirect('pos')
 
-    # Enviar factura por correo si el checklist estÃ¡ activado
+    # Enviar factura por correo si el checklist está activado
     enviar_correo = bool(request.POST.get('enviar_correo'))
     if enviar_correo and cliente.correo:
         from config.servicios_email import enviar_factura_venta_correo
@@ -497,11 +507,13 @@ def procesar_venta(request):
         else:
             messages.warning(request, f'Venta #{venta.venta_id} registrada. (Aviso de correo: {msg_correo})')
     elif enviar_correo and not cliente.correo:
-        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrÃ³nico registrado).')
+        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrónico registrado).')
     else:
         messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
 
     return _respuesta_pdf(venta)
+
+
 @login_required
 @cajero_o_admin_required
 def ticket_pdf(request, venta_id=None):
@@ -520,9 +532,11 @@ def ticket_pdf(request, venta_id=None):
     return _respuesta_pdf(venta)
 
 
-@login_required
-@admin_required
-def reportes(request):
+def _construir_transacciones_reporte(request):
+    """
+    Construye de forma centralizada la lista de transacciones y totales para la vista
+    de reportes y para las exportaciones a CSV y Excel.
+    """
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
     tipo_filtro = request.GET.get('tipo', 'todos')
@@ -555,6 +569,7 @@ def reportes(request):
             transacciones.append({
                 'ticket': f"V-{v.venta_id}",
                 'fecha': v.fecha,
+                'fecha_str': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'usuario': v.usuario.username if v.usuario else "Sistema",
                 'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
                 'concepto': articulos,
@@ -582,6 +597,7 @@ def reportes(request):
             transacciones.append({
                 'ticket': f"R-{r.renta_id}",
                 'fecha': r.fecha,
+                'fecha_str': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'usuario': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
                 'concepto': concepto,
@@ -593,6 +609,29 @@ def reportes(request):
             })
 
     transacciones.sort(key=lambda x: x['fecha'], reverse=True)
+    return {
+        'transacciones': transacciones,
+        'total_ventas': total_ventas,
+        'total_rentas': total_rentas,
+        'fecha_inicio_str': fecha_inicio_str,
+        'fecha_fin_str': fecha_fin_str,
+        'tipo_filtro': tipo_filtro,
+        'usuario_id_str': usuario_id_str,
+    }
+
+
+@login_required
+@admin_required
+def reportes(request):
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
+    total_ventas = datos['total_ventas']
+    total_rentas = datos['total_rentas']
+    fecha_inicio_str = datos['fecha_inicio_str']
+    fecha_fin_str = datos['fecha_fin_str']
+    tipo_filtro = datos['tipo_filtro']
+    usuario_id_str = datos['usuario_id_str']
+
     total_global = total_ventas + total_rentas
     num_transacciones = len(transacciones)
     ticket_promedio = (total_global / Decimal(num_transacciones)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if num_transacciones else Decimal('0.00')
@@ -627,65 +666,8 @@ def reportes(request):
 @login_required
 @admin_required
 def reportes_exportar_csv(request):
-    fecha_inicio_str = request.GET.get('fecha_inicio')
-    fecha_fin_str = request.GET.get('fecha_fin')
-    tipo_filtro = request.GET.get('tipo', 'todos')
-    usuario_id_str = request.GET.get('usuario')
-
-    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
-    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
-
-    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
-    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
-
-    if usuario_id_str and usuario_id_str.isdigit():
-        uid = int(usuario_id_str)
-        ventas_qs = ventas_qs.filter(usuario_id=uid)
-        rentas_qs = rentas_qs.filter(usuario_id=uid)
-
-    filas = []
-    if tipo_filtro in ['todos', 'ventas']:
-        for v in ventas_qs:
-            items_nombres = []
-            for d in v.detalles.all():
-                prod_nombre = d.producto.nombre if d.producto else "Producto"
-                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
-            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-            filas.append({
-                'fecha_obj': v.fecha,
-                'ticket': f"V-{v.venta_id}",
-                'tipo': "Venta POS",
-                'fecha': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': v.usuario.username if v.usuario else "Sistema",
-                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
-                'concepto': articulos,
-                'total': f"${(v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
-            })
-
-    if tipo_filtro in ['todos', 'rentas']:
-        for r in rentas_qs:
-            detalles = list(r.detalles.all())
-            if detalles:
-                equipos_info = []
-                for det in detalles:
-                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
-                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
-                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
-                concepto = ", ".join(equipos_info)
-            else:
-                concepto = "Renta de Equipo"
-            filas.append({
-                'fecha_obj': r.fecha,
-                'ticket': f"R-{r.renta_id}",
-                'tipo': "Renta de Equipo",
-                'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': r.usuario.username if r.usuario else "Sistema",
-                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': concepto,
-                'total': f"${r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
-            })
-
-    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.csv"'
@@ -693,8 +675,8 @@ def reportes_exportar_csv(request):
 
     writer = csv.writer(response)
     writer.writerow(['Ticket', 'Tipo de Ingreso', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total'])
-    for f in filas:
-        writer.writerow([f['ticket'], f['tipo'], f['fecha'], f['cajero'], f['cliente'], f['concepto'], f['total']])
+    for f in transacciones:
+        writer.writerow([f['ticket'], f['tipo'], f['fecha_str'], f['usuario'], f['cliente'], f['concepto'], f"${f['total']}"])
 
     return response
 
@@ -702,65 +684,8 @@ def reportes_exportar_csv(request):
 @login_required
 @admin_required
 def reportes_exportar_excel(request):
-    fecha_inicio_str = request.GET.get('fecha_inicio')
-    fecha_fin_str = request.GET.get('fecha_fin')
-    tipo_filtro = request.GET.get('tipo', 'todos')
-    usuario_id_str = request.GET.get('usuario')
-
-    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
-    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
-
-    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
-    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
-
-    if usuario_id_str and usuario_id_str.isdigit():
-        uid = int(usuario_id_str)
-        ventas_qs = ventas_qs.filter(usuario_id=uid)
-        rentas_qs = rentas_qs.filter(usuario_id=uid)
-
-    filas = []
-    if tipo_filtro in ['todos', 'ventas']:
-        for v in ventas_qs:
-            items_nombres = []
-            for d in v.detalles.all():
-                prod_nombre = d.producto.nombre if d.producto else "Producto"
-                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
-            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-            filas.append({
-                'fecha_obj': v.fecha,
-                'ticket': f"V-{v.venta_id}",
-                'tipo': "Venta POS",
-                'fecha': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': v.usuario.username if v.usuario else "Sistema",
-                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
-                'concepto': articulos,
-                'total': float((v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            })
-
-    if tipo_filtro in ['todos', 'rentas']:
-        for r in rentas_qs:
-            detalles = list(r.detalles.all())
-            if detalles:
-                equipos_info = []
-                for det in detalles:
-                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
-                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
-                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
-                concepto = ", ".join(equipos_info)
-            else:
-                concepto = "Renta de Equipo"
-            filas.append({
-                'fecha_obj': r.fecha,
-                'ticket': f"R-{r.renta_id}",
-                'tipo': "Renta de Equipo",
-                'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': r.usuario.username if r.usuario else "Sistema",
-                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': concepto,
-                'total': float(r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            })
-
-    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -779,14 +704,14 @@ def reportes_exportar_excel(request):
         cell.fill = header_fill
         cell.alignment = header_alignment
 
-    for row_idx, f in enumerate(filas, start=2):
+    for row_idx, f in enumerate(transacciones, start=2):
         ws.cell(row=row_idx, column=1, value=f['ticket'])
         ws.cell(row=row_idx, column=2, value=f['tipo'])
-        ws.cell(row=row_idx, column=3, value=f['fecha'])
-        ws.cell(row=row_idx, column=4, value=f['cajero'])
+        ws.cell(row=row_idx, column=3, value=f['fecha_str'])
+        ws.cell(row=row_idx, column=4, value=f['usuario'])
         ws.cell(row=row_idx, column=5, value=f['cliente'])
         ws.cell(row=row_idx, column=6, value=f['concepto'])
-        total_cell = ws.cell(row=row_idx, column=7, value=f['total'])
+        total_cell = ws.cell(row=row_idx, column=7, value=float(f['total']))
         total_cell.number_format = '$#,##0.00'
 
     for col in ws.columns:
@@ -800,4 +725,3 @@ def reportes_exportar_excel(request):
     response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.xlsx"'
     wb.save(response)
     return response
-

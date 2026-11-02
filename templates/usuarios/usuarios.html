@@ -55,7 +55,8 @@
                         <td class="text-muted">{{ usuario.correo }}</td>
                         <td>
                             <span
-                                class="badge {% if usuario.rol.nombre == 'ADMINISTRADOR' %}bg-dark{% elif usuario.rol.nombre == 'CAJERO' %}bg-primary{% else %}bg-secondary{% endif %}">
+                                class="badge {% if usuario.es_admin %}bg-dark{% elif usuario.es_cajero %}bg-primary{%
+                                else %}bg-secondary{% endif %}">
                                 {{ usuario.rol.nombre }}
                             </span>
                             {% if usuario.es_asistente %}
@@ -81,7 +82,9 @@
                                 {% csrf_token %}
                                 <input type="hidden" name="usuario_id" value="{{ usuario.usuario_id }}">
                                 {% if usuario.activo %}
-                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar" {% if usuario.usuario_id == request.user.usuario_id %}disabled title="No puedes desactivar tu propia cuenta en sesión"{% endif %}>
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar" {% if
+                                    usuario.usuario_id==request.user.usuario_id %}disabled
+                                    title="No puedes desactivar tu propia cuenta en sesión" {% endif %}>
                                     <i class="bi bi-toggle-on"></i>
                                 </button>
                                 {% else %}
@@ -121,8 +124,8 @@
         btn.addEventListener('click', function () {
             document.getElementById('editarUsuarioId').value = btn.dataset.id;
             document.getElementById('editarUsuarioNombre').value = btn.dataset.nombre;
-            document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
-            document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
+            document.getElementById('editarUsuarioUsername').value = this.dataset.username;
+            document.getElementById('editarUsuarioCorreo').value = this.dataset.correo;
             document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
             // Limpiar campo de nueva contraseña
             const passInput = document.getElementById('editarUsuarioPassword');

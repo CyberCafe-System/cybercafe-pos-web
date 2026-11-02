@@ -77,5 +77,6 @@ def componente_toggle(request):
         componente = get_object_or_404(Componente, pk=request.POST.get('componente_id'))
         componente.activo = not componente.activo
         componente.save(update_fields=['activo'])
+        estado_txt = 'activado' if componente.activo else 'desactivado'
+        messages.success(request, f'Componente "{componente.nombre}" {estado_txt} correctamente.')
     return redirect('componentes')
-

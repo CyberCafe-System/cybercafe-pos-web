@@ -87,13 +87,13 @@ def renta_extender(request):
             if minutos_extra <= 0:
                 raise ValueError("El tiempo adicional debe ser mayor a 0.")
 
-            # Anti-double-submit (doble click rÃ¡pido)
+            # Anti-double-submit (doble click rápido)
             last_ext = request.session.get('last_extender_renta')
             if last_ext and last_ext.get('detalle_id') == str(detalle_id) and last_ext.get('minutos') == minutos_extra:
                 if timezone.now().timestamp() - last_ext.get('ts', 0) < 3.0:
                     renta_prev = Renta.objects.filter(pk=last_ext.get('renta_id')).first()
                     if renta_prev:
-                        messages.warning(request, 'La solicitud de extensiÃ³n ya fue procesada anteriormente.')
+                        messages.warning(request, 'La solicitud de extensión ya fue procesada anteriormente.')
                         return _respuesta_factura_renta(renta_prev)
 
             with transaction.atomic():
@@ -105,7 +105,6 @@ def renta_extender(request):
                     pk=detalle_id,
                     estado='ACTIVA',
                 )
-                equipo = detalle.equipo
                 tarifa = Decimal(str(equipo.tarifa_por_hora))
                 horas_extra = Decimal(minutos_extra) / Decimal('60')
                 costo_extra = (tarifa * horas_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)

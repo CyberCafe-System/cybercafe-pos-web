@@ -5,9 +5,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import IntegrityError
+from django.db.models import ProtectedError
 from django.shortcuts import get_object_or_404, redirect, render
 
 from componentes.models import Componente
+from rentas.models import DetalleRenta
 from usuarios.decorators import admin_required
 from .forms import EquipoForm
 from .models import Equipo
@@ -86,15 +88,21 @@ def equipo_edit(request):
 def equipo_delete(request):
     if request.method == 'POST':
         equipo = get_object_or_404(Equipo, pk=request.POST.get('equipo_id'))
+        if DetalleRenta.objects.filter(equipo=equipo).exists():
+            messages.error(
+                request,
+                f'No se puede eliminar "{equipo.nombre}" porque tiene rentas o historial asociado. '
+                'Si está fuera de servicio, cámbialo a estado En Mantenimiento o Defectuoso.'
+            )
+            return redirect('equipos')
         try:
-            # Desvincular componentes asignados
+            nombre = equipo.nombre
             equipo.componentes.update(equipo=None)
             equipo.delete()
-            messages.success(request, f'Equipo {equipo.nombre} eliminado correctamente.')
-        except ProtectedError:
+            messages.success(request, f'Equipo "{nombre}" eliminado correctamente.')
+        except (ProtectedError, IntegrityError):
             messages.error(request, 'No se puede eliminar el equipo porque tiene rentas o registros asociados.')
         except Exception:
             logger.exception('Error al eliminar el equipo')
             messages.error(request, 'Ocurrió un error al eliminar el equipo. Intenta nuevamente.')
     return redirect('equipos')
-

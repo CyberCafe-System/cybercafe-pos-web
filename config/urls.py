@@ -46,6 +46,7 @@ urlpatterns = [
     path('revisiones/', revisiones_views.revisiones_list, name='revisiones'),
     path('revisiones/crear/', revisiones_views.crear_revision, name='crear_revision'),
     path('revisiones/reiniciar/<int:revision_id>/', revisiones_views.reiniciar_revision, name='reiniciar_revision'),
+    path('revisiones/editar/<int:revision_id>/', revisiones_views.editar_revision, name='editar_revision'),
     path('reportes/', pos_views.reportes, name='reportes'),
     path('reportes/exportar_csv/', pos_views.reportes_exportar_csv, name='reportes_exportar_csv'),
     path('reportes/exportar_excel/', pos_views.reportes_exportar_excel, name='reportes_exportar_excel'),

@@ -18,7 +18,7 @@ import environ
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env(
-    DEBUG=(bool, False),
+    DEBUG=(bool, True),
     EMAIL_PORT=(int, 25),
     EMAIL_USE_TLS=(bool, False),
     EMAIL_USE_SSL=(bool, False),
@@ -34,9 +34,9 @@ if not SECRET_KEY:
     raise environ.ImproperlyConfigured('SECRET_KEY_TOKEN must not be empty.')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=True)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'testserver'])
 
 
 # Application definition
@@ -197,9 +197,3 @@ SESSION_SAVE_EVERY_REQUEST = True
 # Media files (imágenes de productos subidas)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
-
-#configuracion de auth
-
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'inicio'
-LOGOUT_REDIRECT_URL = 'login'
