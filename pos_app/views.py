@@ -1,5 +1,7 @@
 import csv
 import datetime
+import logging
+import uuid
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import groupby
 
@@ -10,6 +12,7 @@ from openpyxl.utils import get_column_letter
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -27,6 +30,8 @@ from .ticket import generar_factura_pdf
 
 IVA = Decimal('0.13')
 CENTAVOS = Decimal('0.01')
+
+logger = logging.getLogger(__name__)
 
 
 def _rango_fecha_local(dia):
@@ -276,6 +281,10 @@ def pos(request):
     ]
 
     items, subtotal, iva, total = _resumen_carrito(_obtener_carrito(request))
+    pos_token = request.session.get('pos_token')
+    if not pos_token:
+        pos_token = uuid.uuid4().hex
+        request.session['pos_token'] = pos_token
     contexto = {
         'productos': productos,
         'categorias_dict': categorias_dict,
@@ -287,6 +296,7 @@ def pos(request):
         'clientes': Cliente.objects.order_by('nombre', 'apellido'),
         'iva_porcentaje': int(IVA * 100),
         'ultima_venta_id': request.session.get('ultima_venta_id'),
+        'pos_token': pos_token,
     }
     return render(request, 'pos/pos.html', contexto)
 
@@ -370,37 +380,114 @@ def procesar_venta(request):
     if request.method != 'POST':
         return redirect('pos')
 
-    items, subtotal, iva, _total = _resumen_carrito(_obtener_carrito(request))
-    if not items:
-        messages.error(request, 'El carrito está vacío. Agrega productos antes de procesar el pago.')
+    token_enviado = (request.POST.get('pos_token') or '').strip()
+    token_sesion = request.session.get('pos_token')
+
+    # Validacion de idempotencia contra doble submit
+    if not token_enviado or token_enviado != token_sesion:
+        ultima_venta_id = request.session.get('ultima_venta_id')
+        if ultima_venta_id:
+            venta_previa = Venta.objects.filter(pk=ultima_venta_id).first()
+            if venta_previa:
+                messages.warning(
+                    request,
+                    f'Esta solicitud ya fue procesada anteriormente (Factura #{venta_previa.venta_id}).'
+                )
+                return _respuesta_pdf(venta_previa)
+        messages.error(request, 'La solicitud de cobro ya expirÃ³ o no es vÃ¡lida. Intente nuevamente.')
         return redirect('pos')
 
-    cliente = get_object_or_404(Cliente, pk=request.POST.get('cliente_id'))
+    carrito = _obtener_carrito(request)
+    if not carrito:
+        messages.error(request, 'El carrito estÃ¡ vacÃ­o. Agrega productos antes de procesar el pago.')
+        return redirect('pos')
 
-    venta = Venta.objects.create(
-        cliente=cliente,
-        usuario=request.user,
-        fecha=timezone.now(),
-        subtotal=subtotal,
-        iva=iva,
-    )
+    cliente_id = request.POST.get('cliente_id')
+    cliente = get_object_or_404(Cliente, pk=cliente_id)
 
-    for item in items:
-        producto = item['producto']
-        DetalleVenta.objects.create(
-            venta=venta,
-            producto=producto,
-            precio_unitario=producto.precio_venta,
-            cantidad=item['cantidad'],
-            subtotal=item['subtotal'],
-        )
-        producto.cantidad = max(producto.cantidad - item['cantidad'], 0)
-        producto.save(update_fields=['cantidad'])
+    try:
+        with transaction.atomic():
+            # 1. Obtener y ordenar IDs de productos para evitar deadlocks en locks simultÃ¡neos
+            ids_productos = sorted([int(pid) for pid in carrito.keys()])
 
-    request.session['carrito'] = {}
-    request.session['ultima_venta_id'] = venta.venta_id
+            # 2. Bloquear filas de productos en BD con select_for_update()
+            productos_bloqueados = {
+                p.producto_id: p
+                for p in Producto.objects.select_for_update().filter(producto_id__in=ids_productos)
+            }
 
-    # Enviar factura por correo si el checklist está activado
+            # 3. Revalidar stock y estado activo de todos los productos (prevenciÃ³n TOCTOU)
+            items_procesar = []
+            subtotal_recalculado = Decimal('0.00')
+
+            for str_pid, cant in carrito.items():
+                int_pid = int(str_pid)
+                prod = productos_bloqueados.get(int_pid)
+
+                if not prod:
+                    raise ValueError('Uno de los productos seleccionados ya no existe en el catÃ¡logo.')
+
+                if not prod.activo:
+                    raise ValueError(f'El producto "{prod.nombre}" ha sido desactivado y no estÃ¡ disponible para la venta.')
+
+                if prod.cantidad < cant:
+                    raise ValueError(
+                        f'Inventario insuficiente para "{prod.nombre}". '
+                        f'Stock actual disponible: {prod.cantidad}, cantidad requerida: {cant}.'
+                    )
+
+                item_subtotal = (Decimal(str(prod.precio_venta)) * Decimal(str(cant))).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP
+                )
+                subtotal_recalculado += item_subtotal
+                items_procesar.append({
+                    'producto': prod,
+                    'cantidad': cant,
+                    'precio_unitario': prod.precio_venta,
+                    'subtotal': item_subtotal,
+                })
+
+            iva_recalculado = (subtotal_recalculado * IVA).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            # 4. Crear la cabecera de la venta
+            venta = Venta.objects.create(
+                cliente=cliente,
+                usuario=request.user,
+                fecha=timezone.now(),
+                subtotal=subtotal_recalculado,
+                iva=iva_recalculado,
+            )
+
+            # 5. Crear detalles de venta y descontar inventario sobre filas bloqueadas
+            for item in items_procesar:
+                prod = item['producto']
+                cant = item['cantidad']
+
+                DetalleVenta.objects.create(
+                    venta=venta,
+                    producto=prod,
+                    precio_unitario=item['precio_unitario'],
+                    cantidad=cant,
+                    subtotal=item['subtotal'],
+                )
+
+                prod.cantidad -= cant
+                prod.save(update_fields=['cantidad'])
+
+            # 6. Al tener Ã©xito, vaciar carrito y rotar token de idempotencia
+            request.session['carrito'] = {}
+            request.session['ultima_venta_id'] = venta.venta_id
+            request.session['pos_token'] = uuid.uuid4().hex
+
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect('pos')
+    except Exception as e:
+        logger.exception('Error crÃ­tico durante la transacciÃ³n de procesar_venta:')
+        messages.error(request, 'OcurriÃ³ un error inesperado al procesar la venta. Verifique los datos e intente de nuevo.')
+        return redirect('pos')
+
+    # Enviar factura por correo si el checklist estÃ¡ activado
     enviar_correo = bool(request.POST.get('enviar_correo'))
     if enviar_correo and cliente.correo:
         from config.servicios_email import enviar_factura_venta_correo
@@ -410,13 +497,11 @@ def procesar_venta(request):
         else:
             messages.warning(request, f'Venta #{venta.venta_id} registrada. (Aviso de correo: {msg_correo})')
     elif enviar_correo and not cliente.correo:
-        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrónico registrado).')
+        messages.info(request, f'Venta #{venta.venta_id} registrada. (El cliente no tiene correo electrÃ³nico registrado).')
     else:
         messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
 
     return _respuesta_pdf(venta)
-
-
 @login_required
 @cajero_o_admin_required
 def ticket_pdf(request, venta_id=None):

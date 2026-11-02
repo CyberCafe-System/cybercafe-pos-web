@@ -1,3 +1,5 @@
+import logging
+logger = logging.getLogger(__name__)
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models, transaction
@@ -171,8 +173,11 @@ def crear_revision(request):
 
         try:
             with transaction.atomic():
+                detalle_prev = get_object_or_404(DetalleRenta, pk=detalle_id)
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
-                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                 )
 
@@ -189,7 +194,7 @@ def crear_revision(request):
                 if estado_si_daniado not in estados_validos:
                     estado_si_daniado = 'DANIOS_MENORES'
 
-                equipo = detalle.equipo
+                # equipo ya se encuentra bloqueado con select_for_update
                 if inspeccion_pasada:
                     equipo.estado = 'DISPONIBLE'
                 else:
@@ -281,7 +286,7 @@ def reiniciar_revision(request, revision_id):
                     pk=revision_id,
                 )
                 detalle = revision.detalle_renta
-                equipo = detalle.equipo
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle.equipo_id)
 
                 # 1. Validación: Verificar que el equipo NO haya sido rentado de nuevo posteriormente
                 renta_posterior = DetalleRenta.objects.filter(
@@ -354,7 +359,7 @@ def editar_revision(request, revision_id):
                 revision.save(update_fields=['observaciones', 'inspeccion_pasada'])
 
                 # Si cambia el resultado de la inspección, actualizamos el estado del equipo
-                equipo = revision.detalle_renta.equipo
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=revision.detalle_renta.equipo_id)
                 if inspeccion_pasada:
                     equipo.estado = 'DISPONIBLE'
                 else:

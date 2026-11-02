@@ -87,9 +87,21 @@ def renta_extender(request):
             if minutos_extra <= 0:
                 raise ValueError("El tiempo adicional debe ser mayor a 0.")
 
+            # Anti-double-submit (doble click rÃ¡pido)
+            last_ext = request.session.get('last_extender_renta')
+            if last_ext and last_ext.get('detalle_id') == str(detalle_id) and last_ext.get('minutos') == minutos_extra:
+                if timezone.now().timestamp() - last_ext.get('ts', 0) < 3.0:
+                    renta_prev = Renta.objects.filter(pk=last_ext.get('renta_id')).first()
+                    if renta_prev:
+                        messages.warning(request, 'La solicitud de extensiÃ³n ya fue procesada anteriormente.')
+                        return _respuesta_factura_renta(renta_prev)
+
             with transaction.atomic():
+                detalle_prev = get_object_or_404(DetalleRenta, pk=detalle_id, estado='ACTIVA')
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
-                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                     estado='ACTIVA',
                 )
@@ -109,6 +121,12 @@ def renta_extender(request):
 
             messages.success(request, f'Se agregaron +{minutos_extra} min a {equipo.nombre}. Cobro registrado. Nuevo total: ${detalle.subtotal}')
             request.session['ultima_renta_id'] = renta.renta_id
+            request.session['last_extender_renta'] = {
+                'detalle_id': str(detalle_id),
+                'minutos': minutos_extra,
+                'ts': timezone.now().timestamp(),
+                'renta_id': renta.renta_id,
+            }
             return _respuesta_factura_renta(renta)
         except ValueError as e:
             messages.error(request, str(e))
@@ -261,10 +279,19 @@ def renta_finalizar(request):
         detalle_id = request.POST.get('detalle_renta_id')
         try:
             with transaction.atomic():
+                detalle_prev = get_object_or_404(DetalleRenta, pk=detalle_id)
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
-                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                 )
+
+                # Idempotencia: Si ya fue finalizada y pagada previamente
+                if detalle.estado == 'FINALIZADA' and detalle.renta.estado_de_pago == 'PAGADO':
+                    messages.info(request, f'La renta #{detalle.renta.renta_id} ya fue cobrada y finalizada anteriormente.')
+                    request.session['ultima_renta_id'] = detalle.renta.renta_id
+                    return _respuesta_factura_renta(detalle.renta)
 
                 # Si estaba activa, finalizamos el tiempo y enviamos a revisión
                 if detalle.estado == 'ACTIVA':
