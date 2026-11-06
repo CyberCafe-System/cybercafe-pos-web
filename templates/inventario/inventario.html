@@ -101,7 +101,7 @@
                             <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-ajustar-stock"
                                 data-bs-toggle="modal" data-bs-target="#modalAjustarStock"
                                 data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
-                                data-stock="{{ producto.cantidad }}" title="Ajustar Stock (Kardex)">
+                                data-stock="{{ producto.cantidad }}" title="Ajuste de Inventario">
                                 <i class="bi bi-arrow-left-right"></i>
                             </button>
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto"
@@ -109,7 +109,7 @@
                                 data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
                                 data-categoria="{{ producto.categoria_id }}"
                                 data-precio-compra="{{ producto.precio_compra|floatformat:2 }}"
-                                data-precio-venta="{{ producto.precio_venta|floatformat:2 }}" data-cantidad="{{ producto.cantidad }}"
+                                data-precio-venta="{{ producto.precio_venta|floatformat:2 }}"
                                 data-imagen="{{ producto.imagen|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -152,16 +152,16 @@
 {% include 'inventario/crear.html' %}
 {% include 'inventario/modificar.html' %}
 
-<!-- Modal Ajustar Stock (Kardex) -->
+<!-- Modal Ajustar Stock -->
 <div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-4">
-            <form method="POST" action="{% url 'ajustar_stock' %}">
+            <form method="POST" action="{% url 'ajustar_stock' %}" id="formAjustarStock">
                 {% csrf_token %}
                 <input type="hidden" name="producto_id" id="ajustarProductoId">
                 <div class="modal-header bg-dark text-white rounded-top-4">
                     <h5 class="modal-title fw-bold">
-                        <i class="bi bi-arrow-left-right me-2 text-warning"></i>Ajuste de Inventario (Kardex)
+                        <i class="bi bi-arrow-left-right me-2 text-warning"></i>Ajuste de Inventario
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
@@ -176,14 +176,36 @@
                             <span class="badge bg-primary fs-6" id="ajustarProductoStockActual">0</span>
                         </div>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label fw-semibold small text-muted text-uppercase">Cantidad a sumar (+) o restar (-)</label>
-                        <input type="number" name="delta" class="form-control font-monospace fw-bold" placeholder="Ej: 10 para entrada, -2 para merma" required>
-                        <small class="text-muted">Usa números positivos para entradas y negativos para salidas o mermas.</small>
+                        <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">
+                            Tipo de movimiento <span class="text-danger">*</span>
+                        </label>
+                        <div class="btn-group w-100 shadow-xs" role="group" aria-label="Tipo de ajuste de inventario">
+                            <input type="radio" class="btn-check" name="tipo_ajuste" id="tipoAjusteSuma" value="SUMA" checked autocomplete="off">
+                            <label class="btn btn-outline-success fw-semibold py-2" for="tipoAjusteSuma">
+                                <i class="bi bi-plus-circle me-1"></i>Sumar Stock (+)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="tipo_ajuste" id="tipoAjusteResta" value="RESTA" autocomplete="off">
+                            <label class="btn btn-outline-danger fw-semibold py-2" for="tipoAjusteResta">
+                                <i class="bi bi-dash-circle me-1"></i>Restar Stock (-)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase" for="inputCantidadAjuste">
+                            Cantidad de unidades <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="delta" id="inputCantidadAjuste" class="form-control font-monospace fw-bold"
+                            min="1" step="1" inputmode="numeric" pattern="[0-9]+"
+                            placeholder="Ej: 10" required>
+                        <small class="text-muted" id="ayudaCantidadAjuste">Ingresa únicamente números enteros positivos (sin signos ni decimales).</small>
                     </div>
                     <div class="mb-2">
                         <label class="form-label fw-semibold small text-muted text-uppercase">Motivo del ajuste <span class="text-danger">*</span></label>
-                        <textarea name="motivo" class="form-control" rows="2" minlength="5" placeholder="Ej: Abastecimiento de proveedor / Merma por vencimiento" required></textarea>
+                        <textarea name="motivo" id="inputMotivoAjuste" class="form-control" rows="2" minlength="5" placeholder="Ej: Abastecimiento de proveedor / Merma por vencimiento" required></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
@@ -198,11 +220,45 @@
 </div>
 
 <script>
+    function restringirSoloEnterosPositivos(inputEl) {
+        if (!inputEl) return;
+        inputEl.addEventListener('keydown', function (e) {
+            if (['e', 'E', '-', '+', '.', ','].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+        inputEl.addEventListener('input', function () {
+            const limpio = this.value.replace(/[^0-9]/g, '');
+            if (this.value !== limpio) {
+                this.value = limpio;
+            }
+        });
+        inputEl.addEventListener('paste', function (e) {
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+            if (/[^0-9]/.test(pasteData)) {
+                e.preventDefault();
+                const soloDigitos = pasteData.replace(/[^0-9]/g, '');
+                if (soloDigitos) {
+                    this.value = soloDigitos;
+                }
+            }
+        });
+    }
+
+    restringirSoloEnterosPositivos(document.getElementById('inputCantidadAjuste'));
+    restringirSoloEnterosPositivos(document.getElementById('inputCantidadCrearProducto'));
+
     document.querySelectorAll('.btn-ajustar-stock').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('ajustarProductoId').value = btn.dataset.id;
             document.getElementById('ajustarProductoNombre').textContent = btn.dataset.nombre;
             document.getElementById('ajustarProductoStockActual').textContent = btn.dataset.stock;
+            const radioSuma = document.getElementById('tipoAjusteSuma');
+            if (radioSuma) radioSuma.checked = true;
+            const inputCant = document.getElementById('inputCantidadAjuste');
+            if (inputCant) inputCant.value = '';
+            const inputMotivo = document.getElementById('inputMotivoAjuste');
+            if (inputMotivo) inputMotivo.value = '';
         });
     });
 
@@ -213,7 +269,6 @@
             document.getElementById('editarProductoCategoria').value = btn.dataset.categoria;
             document.getElementById('editarProductoPrecioCompra').value = (btn.dataset.precioCompra || '').replace(',', '.');
             document.getElementById('editarProductoPrecioVenta').value = (btn.dataset.precioVenta || '').replace(',', '.');
-            document.getElementById('editarProductoCantidad').value = btn.dataset.cantidad;
             const previewImg = document.getElementById('editarProductoPreviewImg');
             const previewIcon = document.getElementById('editarProductoPreviewIcon');
             if (previewImg && previewIcon) {

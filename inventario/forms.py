@@ -89,3 +89,15 @@ class ProductoForm(forms.ModelForm):
         if commit:
             producto.save()
         return producto
+
+
+class ProductoEditForm(ProductoForm):
+    class Meta(ProductoForm.Meta):
+        fields = ('nombre', 'categoria', 'precio_compra', 'precio_venta')
+        widgets = {
+            'nombre': forms.TextInput(attrs={'class': 'form-control'}),
+            'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'precio_compra': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '99999.99'}),
+            'precio_venta': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0', 'max': '99999.99'}),
+        }
+

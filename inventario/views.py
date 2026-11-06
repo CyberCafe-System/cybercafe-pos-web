@@ -1,4 +1,5 @@
 import logging
+import re
 from decimal import Decimal
 
 from django.contrib import messages
@@ -11,7 +12,7 @@ from categorias.models import Categoria
 from usuarios.decorators import admin_required
 from usuarios.models import registrar_auditoria
 
-from .forms import ProductoForm
+from .forms import ProductoEditForm, ProductoForm
 from .models import MovimientoInventario, Producto
 
 logger = logging.getLogger(__name__)
@@ -91,31 +92,19 @@ def producto_edit(request):
             'nombre': producto.nombre,
             'precio_compra': str(producto.precio_compra),
             'precio_venta': str(producto.precio_venta),
-            'cantidad': producto.cantidad,
             'categoria_id': producto.categoria_id,
         }
 
-        form = ProductoForm(request.POST, request.FILES, instance=producto)
+        form = ProductoEditForm(request.POST, request.FILES, instance=producto)
         if form.is_valid():
             try:
                 with transaction.atomic():
                     prod_bloqueado = Producto.objects.select_for_update().get(pk=producto_id)
-                    cant_form = form.cleaned_data.get('cantidad')
-                    delta_stock = cant_form - prod_bloqueado.cantidad if cant_form is not None else 0
 
                     producto = form.save(commit=False)
+                    producto.cantidad = prod_bloqueado.cantidad
                     producto.version = prod_bloqueado.version + 1
                     producto.save()
-
-                    if delta_stock != 0:
-                        MovimientoInventario.objects.create(
-                            producto=producto,
-                            usuario=request.user,
-                            tipo='AJUSTE',
-                            delta=delta_stock,
-                            stock_resultante=producto.cantidad,
-                            motivo='Ajuste directo en edición de producto',
-                        )
 
                     registrar_auditoria(
                         usuario=request.user,
@@ -127,7 +116,6 @@ def producto_edit(request):
                             'nombre': producto.nombre,
                             'precio_compra': str(producto.precio_compra),
                             'precio_venta': str(producto.precio_venta),
-                            'cantidad': producto.cantidad,
                             'categoria_id': producto.categoria_id,
                         },
                         ip=request.META.get('REMOTE_ADDR'),
@@ -152,12 +140,20 @@ def producto_ajustar_stock(request):
     if request.method == 'POST':
         producto_id = request.POST.get('producto_id')
         motivo = (request.POST.get('motivo') or '').strip()
+        tipo_ajuste = (request.POST.get('tipo_ajuste') or 'SUMA').strip().upper()
+        raw_delta = (request.POST.get('delta') or '').strip()
         try:
-            delta = int(request.POST.get('delta', 0))
-            if delta == 0:
-                raise ValueError("El ajuste de unidades debe ser distinto de 0.")
+            if tipo_ajuste not in ('SUMA', 'RESTA'):
+                raise ValueError("Seleccione un tipo de ajuste válido (Sumar o Restar).")
+            if not re.fullmatch(r'\d+', raw_delta):
+                raise ValueError("Ingrese una cantidad entera positiva válida (solo números enteros, sin signos ni decimales).")
+            cantidad_ajuste = int(raw_delta)
+            if cantidad_ajuste <= 0:
+                raise ValueError("La cantidad a ajustar debe ser mayor a 0.")
             if not motivo:
                 raise ValueError("El motivo del ajuste de stock es obligatorio.")
+
+            delta = cantidad_ajuste if tipo_ajuste == 'SUMA' else -cantidad_ajuste
 
             with transaction.atomic():
                 prod = Producto.objects.select_for_update().get(pk=producto_id)
