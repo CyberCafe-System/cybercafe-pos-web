@@ -140,11 +140,54 @@
             document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
             document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
             document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
-            // Limpiar campo de nueva contraseña
+            // Limpiar campo de nueva contraseña y restablecer a oculto
             const passInput = document.getElementById('editarUsuarioPassword');
-            if (passInput) passInput.value = '';
+            if (passInput) {
+                passInput.value = '';
+                passInput.type = 'password';
+            }
+            const toggleEditBtn = document.querySelector('.btn-toggle-password[data-target="editarUsuarioPassword"] i');
+            if (toggleEditBtn) {
+                toggleEditBtn.classList.remove('bi-eye-slash');
+                toggleEditBtn.classList.add('bi-eye');
+            }
         });
     });
+
+    document.querySelectorAll('.btn-toggle-password').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const targetId = btn.dataset.target;
+            const input = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) {
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                }
+            } else {
+                input.type = 'password';
+                if (icon) {
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            }
+        });
+    });
+
+    const modalCrearUsuario = document.getElementById('modalCrearUsuario');
+    if (modalCrearUsuario) {
+        modalCrearUsuario.addEventListener('hidden.bs.modal', function () {
+            const passCrear = document.getElementById('crearUsuarioPassword');
+            if (passCrear) passCrear.type = 'password';
+            const toggleCrearIcon = modalCrearUsuario.querySelector('.btn-toggle-password i');
+            if (toggleCrearIcon) {
+                toggleCrearIcon.classList.remove('bi-eye-slash');
+                toggleCrearIcon.classList.add('bi-eye');
+            }
+        });
+    }
 
     const buscadorUsuarios = document.getElementById('buscadorUsuarios');
     if (buscadorUsuarios) {

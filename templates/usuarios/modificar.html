@@ -43,10 +43,15 @@
 
                     <div class="mb-2">
                         <label class="form-label fw-semibold">Nueva Contraseña</label>
-                        <input type="password" name="nueva_password" id="editarUsuarioPassword"
-                            class="form-control rounded-3" placeholder="Dejar en blanco para conservar la actual"
-                            minlength="8" maxlength="15" pattern=".{0}|(?=.*[A-Z])(?=.*\d).{8,15}"
-                            title="Si se especifica, debe tener de 8 a 15 caracteres con al menos una mayúscula y un número.">
+                        <div class="input-group">
+                            <input type="password" name="nueva_password" id="editarUsuarioPassword"
+                                class="form-control rounded-start-3" placeholder="Dejar en blanco para conservar la actual"
+                                minlength="8" maxlength="15" pattern=".{0}|(?=.*[A-Z])(?=.*\d).{8,15}"
+                                title="Si se especifica, debe tener de 8 a 15 caracteres con al menos una mayúscula y un número.">
+                            <button class="btn btn-outline-secondary rounded-end-3 btn-toggle-password" type="button" data-target="editarUsuarioPassword" title="Mostrar u ocultar contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                         <div class="form-text small text-muted mt-1">
                             <i class="bi bi-shield-check me-1 text-primary"></i>Si se modifica: contraseña de 8 a 15 caracteres con al menos una mayúscula y un número.
                         </div>

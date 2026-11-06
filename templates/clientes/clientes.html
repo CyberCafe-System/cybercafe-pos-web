@@ -42,7 +42,6 @@
                         <th>DUI</th>
                         <th>Teléfono</th>
                         <th>Correo</th>
-                        <th>Dirección</th>
                         <th>Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
@@ -55,7 +54,6 @@
                         <td><span class="badge bg-light text-dark border font-monospace">{{ cliente.dui }}</span></td>
                         <td>{{ cliente.telefono }}</td>
                         <td class="text-muted">{{ cliente.correo|default:"-" }}</td>
-                        <td class="text-muted">{{ cliente.direccion }}</td>
                         <td>
                             {% if cliente.activo %}
                             <span class="badge bg-success">Activo</span>
@@ -67,7 +65,7 @@
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-cliente" data-bs-toggle="modal"
                                 data-bs-target="#modalModificarCliente" data-id="{{ cliente.cliente_id }}"
                                 data-nombre="{{ cliente.nombre }}" data-apellido="{{ cliente.apellido }}"
-                                data-dui="{{ cliente.dui }}" data-direccion="{{ cliente.direccion }}"
+                                data-dui="{{ cliente.dui }}"
                                 data-telefono="{{ cliente.telefono }}" data-correo="{{ cliente.correo|default:'' }}"
                                 title="Editar">
                                 <i class="bi bi-pencil-square"></i>
@@ -91,14 +89,14 @@
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="6" class="text-center text-muted py-5">
                             <i class="bi bi-people fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay clientes registrados aún.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosClientes" class="d-none">
-                        <td colspan="7" class="text-center text-muted py-4">
+                        <td colspan="6" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
                             No se encontraron clientes que coincidan con la búsqueda.
                         </td>
@@ -122,7 +120,6 @@
             document.getElementById('editarClienteNombre').value = btn.dataset.nombre;
             document.getElementById('editarClienteApellido').value = btn.dataset.apellido;
             document.getElementById('editarClienteDui').value = btn.dataset.dui;
-            document.getElementById('editarClienteDireccion').value = btn.dataset.direccion;
             document.getElementById('editarClienteTelefono').value = btn.dataset.telefono;
             document.getElementById('editarClienteCorreo').value = btn.dataset.correo;
         });

@@ -42,7 +42,12 @@
 
                     <div class="mb-2">
                         <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger fw-bold">*</span></label>
-                        <input type="password" name="password" class="form-control rounded-3" placeholder="********" minlength="8" maxlength="15" pattern="(?=.*[A-Z])(?=.*\d).{8,15}" title="Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número." required>
+                        <div class="input-group">
+                            <input type="password" name="password" id="crearUsuarioPassword" class="form-control rounded-start-3" placeholder="********" minlength="8" maxlength="15" pattern="(?=.*[A-Z])(?=.*\d).{8,15}" title="Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número." required>
+                            <button class="btn btn-outline-secondary rounded-end-3 btn-toggle-password" type="button" data-target="crearUsuarioPassword" title="Mostrar u ocultar contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                         <div class="form-text small text-muted mt-1">
                             <i class="bi bi-shield-check me-1 text-success"></i>Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número.
                         </div>

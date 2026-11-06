@@ -17,7 +17,6 @@ class ClienteFormValidationTests(SimpleTestCase):
             'nombre': 'Carlos',
             'apellido': 'López',
             'dui': '01234567-8',
-            'direccion': 'San Salvador',
             'telefono': '7123456',
             'correo': 'carlos@test.com'
         }
@@ -46,7 +45,6 @@ class ClienteFormValidationTests(SimpleTestCase):
         base_data = {
             'nombre': 'Ana',
             'apellido': 'Martínez',
-            'direccion': 'Santa Ana',
             'telefono': '77889900',
         }
 
@@ -77,7 +75,6 @@ class ClienteFormValidationTests(SimpleTestCase):
             'nombre': 'Pedro',
             'apellido': 'Gómez',
             'dui': '01234567-8',
-            'direccion': 'San Miguel',
             'telefono': '71112222',
         }
         form = ClienteForm(data=data)
@@ -102,7 +99,6 @@ class ClienteViewsAjaxTests(SimpleTestCase):
         mock_cliente.dui = '09876543-2'
         mock_cliente.telefono = 70001122
         mock_cliente.correo = 'luis@test.com'
-        mock_cliente.direccion = 'Colonia Escalón'
         mock_save.return_value = mock_cliente
 
         request = self.factory.post(
@@ -113,7 +109,6 @@ class ClienteViewsAjaxTests(SimpleTestCase):
                 'dui': '09876543-2',
                 'telefono': '70001122',
                 'correo': 'luis@test.com',
-                'direccion': 'Colonia Escalón',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )
@@ -137,7 +132,6 @@ class ClienteViewsAjaxTests(SimpleTestCase):
                 'apellido': 'Flores',
                 'dui': '09876543-2',
                 'telefono': '7000112',  # Falta un dígito
-                'direccion': 'Colonia Escalón',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )
@@ -164,7 +158,6 @@ class ClienteViewsAjaxTests(SimpleTestCase):
             apellido='Santos',
             dui='01234567-9',
             telefono=77778888,
-            direccion='Sonsonate',
             correo='mario@test.com'
         )
         mock_get_obj.return_value = mock_cliente
@@ -180,7 +173,6 @@ class ClienteViewsAjaxTests(SimpleTestCase):
                 'apellido': 'Santos',
                 'dui': '01234',  # Incompleto
                 'telefono': '77778888',
-                'direccion': 'Sonsonate',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )

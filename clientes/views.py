@@ -3,6 +3,7 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db import connection
 from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -12,11 +13,35 @@ from .forms import ClienteForm
 from .models import Cliente
 
 logger = logging.getLogger(__name__)
+_DIRECCION_NULLABLE_VERIFICADA = False
+
+
+def _asegurar_columna_direccion_opcional():
+    """Garantiza que la columna direccion en MySQL permita NULL si aún no se ejecutó V014 en la API."""
+    global _DIRECCION_NULLABLE_VERIFICADA
+    if _DIRECCION_NULLABLE_VERIFICADA:
+        return
+    try:
+        if connection.vendor == 'mysql':
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT IS_NULLABLE FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'clientes' AND COLUMN_NAME = 'direccion'"
+                )
+                row = cursor.fetchone()
+                if row and row[0] == 'NO':
+                    cursor.execute(
+                        "ALTER TABLE `clientes` MODIFY COLUMN `direccion` VARCHAR(255) NULL DEFAULT NULL;"
+                    )
+        _DIRECCION_NULLABLE_VERIFICADA = True
+    except Exception:
+        logger.debug("No se pudo verificar/modificar nullable de clientes.direccion", exc_info=True)
 
 
 @login_required
 @cajero_o_admin_required
 def cliente_list(request):
+    _asegurar_columna_direccion_opcional()
     query = (request.GET.get('q') or '').strip()
     clientes_qs = Cliente.objects.all().order_by('cliente_id')
     if query:
@@ -75,6 +100,7 @@ def cliente_buscar_ajax(request):
 @login_required
 @cajero_o_admin_required
 def cliente_create(request):
+    _asegurar_columna_direccion_opcional()
     is_ajax = (
         request.headers.get('x-requested-with') == 'XMLHttpRequest'
         or 'application/json' in request.headers.get('Accept', '')
@@ -97,7 +123,6 @@ def cliente_create(request):
                             'dui': cliente.dui,
                             'telefono': cliente.telefono,
                             'correo': cliente.correo or '',
-                            'direccion': cliente.direccion,
                         },
                     })
                 return redirect('clientes')
@@ -121,6 +146,7 @@ def cliente_create(request):
 @login_required
 @cajero_o_admin_required
 def cliente_edit(request):
+    _asegurar_columna_direccion_opcional()
     is_ajax = (
         request.headers.get('x-requested-with') == 'XMLHttpRequest'
         or 'application/json' in request.headers.get('Accept', '')
@@ -144,7 +170,6 @@ def cliente_edit(request):
                             'dui': cliente.dui,
                             'telefono': cliente.telefono,
                             'correo': cliente.correo or '',
-                            'direccion': cliente.direccion,
                         },
                     })
                 return redirect('clientes')
