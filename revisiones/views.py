@@ -72,7 +72,7 @@ def revisiones_list(request):
         DetalleRenta.objects.values('equipo_id').annotate(max_id=models.Max('detalle_renta_id')).values_list('equipo_id', 'max_id')
     )
     equipos_con_renta_activa = set(
-        DetalleRenta.objects.filter(estado__in=('ACTIVA', 'PENDIENTE_REVISION')).values_list('equipo_id', flat=True)
+        DetalleRenta.objects.filter(estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION')).values_list('equipo_id', flat=True)
     )
 
     for r in revisiones:
@@ -183,7 +183,7 @@ def crear_revision(request):
                     pk=detalle_id,
                 )
 
-                if detalle.estado != 'PENDIENTE_REVISION':
+                if detalle.estado not in ('PENDIENTE_REVISION', 'TIEMPO_TERMINADO'):
                     messages.warning(
                         request,
                         f'El equipo {equipo.nombre} ya no se encuentra en estado Pendiente de Revisión '
@@ -198,7 +198,15 @@ def crear_revision(request):
 
                 # equipo ya se encuentra bloqueado con select_for_update
                 if inspeccion_pasada:
-                    equipo.estado = 'DISPONIBLE'
+                    # Verificar que no existan componentes activos en DANIOS_MENORES o REQUIERE_REEMPLAZO
+                    from componentes.models import Componente
+                    tiene_comps_danados = Componente.objects.filter(
+                        equipo=equipo,
+                        activo=True,
+                        estado__in=('DANIOS_MENORES', 'REQUIERE_REEMPLAZO'),
+                    ).exists()
+                    if not tiene_comps_danados:
+                        equipo.estado = 'DISPONIBLE'
                 else:
                     equipo.estado = estado_si_daniado
                 equipo.save(update_fields=['estado'])
@@ -232,10 +240,12 @@ def crear_revision(request):
                 # 2. Si no pasó la inspección, registrar historial acumulativo en cada componente afectado
                 if not inspeccion_pasada and lista_afectados:
                     from componentes.models import Componente
+                    from .models import RevisionComponente
                     fecha_str = timezone.localtime(revision.fecha_revision).strftime('%d/%m/%Y %I:%M %p')
                     for comp_nombre in lista_afectados:
                         c_obj = Componente.objects.filter(equipo=equipo, nombre__iexact=comp_nombre.split(' (')[0]).first()
                         if c_obj:
+                            estado_previo_comp = c_obj.estado
                             nuevo_estado = 'DANIOS_MENORES' if estado_si_daniado == 'DANIOS_MENORES' else 'REQUIERE_REEMPLAZO'
                             c_obj.estado = nuevo_estado
                             bloque_revision = (
@@ -248,6 +258,13 @@ def crear_revision(request):
                             else:
                                 c_obj.observaciones = bloque_revision
                             c_obj.save(update_fields=['estado', 'observaciones'])
+                            RevisionComponente.objects.create(
+                                revision_equipo=revision,
+                                componente=c_obj,
+                                estado_previo=estado_previo_comp,
+                                estado_nuevo=nuevo_estado,
+                                descripcion=observaciones or 'Novedad reportada en inspección técnica',
+                            )
 
             if inspeccion_pasada:
                 messages.success(
@@ -298,7 +315,7 @@ def reiniciar_revision(request, revision_id):
 
                 renta_activa = DetalleRenta.objects.filter(
                     equipo=equipo,
-                    estado__in=('ACTIVA', 'PENDIENTE_REVISION')
+                    estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION')
                 ).exclude(detalle_renta_id=detalle.detalle_renta_id).exists()
 
                 if renta_posterior or renta_activa:

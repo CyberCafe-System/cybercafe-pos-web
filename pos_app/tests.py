@@ -173,8 +173,9 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(eq_mock.estado, 'DANIOS_MENORES')
 
+    @patch('rentas.views.verificar_vencimiento_rentas_locales')
     @patch('rentas.views.obtener_rentas_activas_payload')
-    def test_api_rentas_activas_notificaciones_globales(self, mock_payload):
+    def test_api_rentas_activas_notificaciones_globales(self, mock_payload, mock_verificar):
         mock_payload.return_value = [
             {
                 'detalle_id': 42,
@@ -207,7 +208,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         ctx = contexto_global_sistema(request)
         self.assertTrue(ctx['nav_usuarios'])
         self.assertFalse(ctx['nav_inicio'])
-        self.assertEqual(ctx['modulo_titulo'], 'Usuarios')
+        self.assertEqual(ctx['modulo_titulo'], 'Usuarios y Auditoría')
         self.assertEqual(ctx['modulo_icono'], 'bi-person-badge')
         self.assertIn('PC-02', ctx['rentas_activas_global_json'])
 
@@ -225,3 +226,68 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         )
         self.assertFalse(form.is_valid())
         self.assertIn('nombre', form.errors)
+
+
+    @patch('pos_app.views.Venta.objects')
+    @patch('pos_app.views.get_object_or_404')
+    @patch('pos_app.views.Producto.objects')
+    @patch('pos_app.views.transaction.atomic')
+    def test_procesar_venta_valida_efectivo_y_cambio_y_maximo(self, mock_atomic, mock_prod_objects, mock_get_cliente, mock_venta_objects):
+        mock_venta_objects.filter.return_value.first.return_value = None
+        mock_venta_objects.select_for_update.return_value.filter.return_value.first.return_value = None
+        mock_cliente = Mock(spec=Cliente, pk=1, correo=None, activo=True)
+        mock_get_cliente.return_value = mock_cliente
+
+        session = {'pos_token': 'token-valido', 'carrito': {'10': 1}}
+        # 1. Rechaza efectivo menor al total
+        req_insuficiente = self._preparar_request(
+            '/procesar_venta/',
+            {'cliente_id': 1, 'pos_token': 'token-valido', 'efectivo_recibido': '0.50'},
+            session_data=session,
+        )
+        res_insuf = procesar_venta(req_insuficiente)
+        self.assertEqual(res_insuf.status_code, 302)
+
+        # 2. Rechaza efectivo mayor al limite de $100
+        req_excedido = self._preparar_request(
+            '/procesar_venta/',
+            {'cliente_id': 1, 'pos_token': 'token-valido', 'efectivo_recibido': '150.00'},
+            session_data=session,
+        )
+        res_exc = procesar_venta(req_excedido)
+        self.assertEqual(res_exc.status_code, 302)
+
+    @patch('pos_app.views.registrar_auditoria')
+    @patch('pos_app.views.MovimientoInventario.objects.create')
+    @patch('pos_app.views.Producto.objects')
+    @patch('pos_app.views.Venta.objects')
+    @patch('pos_app.views.transaction.atomic')
+    def test_anular_venta_por_admin_restituye_stock(self, mock_atomic, mock_venta_objs, mock_prod_objs, mock_mov_create, mock_aud):
+        from pos_app.views import anular_venta
+        venta_mock = Mock(venta_id=88, estado='PAGADA')
+        det_mock = Mock(producto_id=5, cantidad=2)
+        venta_mock.detalles.select_related.return_value = [det_mock]
+        mock_venta_objs.select_for_update.return_value.get.return_value = venta_mock
+
+        prod_mock = Mock(producto_id=5, cantidad=10, version=1)
+        mock_prod_objs.select_for_update.return_value.get.return_value = prod_mock
+
+        req = self._preparar_request('/pos/anular/88/', {'motivo': 'Cliente devolvió el producto por defecto'})
+        res = anular_venta(req, venta_id=88)
+
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(venta_mock.estado, 'ANULADA')
+        self.assertEqual(prod_mock.cantidad, 12)
+        mock_mov_create.assert_called_once()
+        mock_aud.assert_called_once()
+
+    def test_equipo_es_rentable_bloquea_si_componente_daniado(self):
+        eq = Equipo(nombre='PC-01', tipo='PC', tarifa_por_hora=Decimal('1.50'), estado='DISPONIBLE')
+        # Sin componentes
+        self.assertTrue(eq.es_rentable)
+        self.assertTrue(eq.evaluar_rentabilidad()[0])
+
+        # Estado en daños menores bloquea directamente
+        eq.estado = 'DANIOS_MENORES'
+        self.assertFalse(eq.es_rentable)
+        self.assertFalse(eq.evaluar_rentabilidad()[0])

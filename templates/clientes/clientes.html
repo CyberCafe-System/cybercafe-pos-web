@@ -43,6 +43,7 @@
                         <th>Teléfono</th>
                         <th>Correo</th>
                         <th>Dirección</th>
+                        <th>Estado</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
@@ -55,8 +56,15 @@
                         <td>{{ cliente.telefono }}</td>
                         <td class="text-muted">{{ cliente.correo|default:"-" }}</td>
                         <td class="text-muted">{{ cliente.direccion }}</td>
+                        <td>
+                            {% if cliente.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
-                            <button class="btn btn-sm btn-outline-primary btn-editar-cliente" data-bs-toggle="modal"
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-cliente" data-bs-toggle="modal"
                                 data-bs-target="#modalModificarCliente" data-id="{{ cliente.cliente_id }}"
                                 data-nombre="{{ cliente.nombre }}" data-apellido="{{ cliente.apellido }}"
                                 data-dui="{{ cliente.dui }}" data-direccion="{{ cliente.direccion }}"
@@ -64,18 +72,33 @@
                                 title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
+                            {% if request.user.es_admin %}
+                            <form method="POST" action="{% url 'desactivar_cliente' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="cliente_id" value="{{ cliente.cliente_id }}">
+                                {% if cliente.activo %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar Cliente">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activar Cliente">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            {% endif %}
                         </td>
                     </tr>
                     {% empty %}
                     <tr class="fila-vacia">
-                        <td colspan="6" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-people fs-1 d-block mb-2 text-muted opacity-50"></i>
                             No hay clientes registrados aún.
                         </td>
                     </tr>
                     {% endfor %}
                     <tr id="sinResultadosClientes" class="d-none">
-                        <td colspan="6" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="bi bi-search fs-2 d-block mb-2"></i>
                             No se encontraron clientes que coincidan con la búsqueda.
                         </td>

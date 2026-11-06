@@ -26,6 +26,9 @@
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="en_uso">
                     <i class="bi bi-hourglass-split me-1 text-warning"></i> En Uso <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_en_uso }}</span>
                 </button>
+                <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="terminados">
+                    <i class="bi bi-alarm-fill me-1 text-danger"></i> Terminados <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_tiempo_terminado }}</span>
+                </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="revision">
                     <i class="bi bi-clipboard-check me-1 text-info"></i> Revisión <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_revision }}</span>
                 </button>
@@ -56,9 +59,9 @@
 <div class="row g-4" id="grillaEquiposRentas">
     {% for equipo in equipos %}
     <div class="col-xl-3 col-lg-4 col-md-6 tarjeta-equipo"
-         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
+         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.tiempo_terminado %}terminados{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
          data-tipo="{% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}consola{% else %}pc{% endif %}"
-         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
+         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.tiempo_terminado %}{{ equipo.tiempo_terminado.renta.cliente.nombre|lower }} {{ equipo.tiempo_terminado.renta.cliente.apellido|lower }} tiempo terminado vencido{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
 
         {% if equipo.renta_activa %}
         <!-- Equipo EN USO -->
@@ -67,6 +70,7 @@
              data-equipo-id="{{ equipo.equipo_id }}"
              data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
              data-inicio-iso="{{ equipo.renta_activa.hora_inicio|date:'c' }}"
+             data-vencimiento-iso="{{ equipo.renta_activa.hora_vencimiento|date:'c' }}"
              data-tiempo-total="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }}"
              data-equipo-nombre="{{ equipo.nombre }}"
              data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
@@ -154,6 +158,93 @@
                         {% csrf_token %}
                         <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
                         <button type="submit" class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold" title="Finalizar tiempo y enviar el equipo a revisión técnica">
+                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% elif equipo.tiempo_terminado %}
+        <!-- Equipo CON TIEMPO TERMINADO (Sesión Vencida) -->
+        <div class="card shadow-sm border-0 border-top border-4 border-danger h-100 rounded-4 card-equipo-terminado position-relative"
+             id="card-equipo-{{ equipo.equipo_id }}"
+             data-equipo-id="{{ equipo.equipo_id }}"
+             data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+             data-inicio-iso="{{ equipo.tiempo_terminado.hora_inicio|date:'c' }}"
+             data-tiempo-total="{{ equipo.tiempo_terminado.tiempo_de_renta|add:equipo.tiempo_terminado.tiempo_agregado }}"
+             data-equipo-nombre="{{ equipo.nombre }}"
+             data-cliente-nombre="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+             data-tarifa="{{ equipo.tarifa_por_hora }}"
+             data-subtotal="{{ equipo.tiempo_terminado.subtotal }}">
+            
+            <div class="card-body p-3 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-danger text-white px-3 py-1 rounded-pill">
+                        <i class="bi bi-alarm-fill me-1"></i> Tiempo Terminado
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                <i class="bi bi-clock-history text-danger mb-1" style="font-size: 2.4rem;"></i>
+
+                <h5 class="fw-bold mb-0 text-dark">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-person-fill text-primary"></i> {{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}
+                </p>
+
+                <!-- Panel de aviso de tiempo agotado -->
+                <div class="bg-danger bg-opacity-10 p-2 rounded-3 mb-3 border border-danger border-opacity-25 text-start">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-danger fw-bold" style="font-size: 0.78rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Sesión Vencida
+                        </span>
+                        <span class="badge bg-danger text-white font-monospace">00:00</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center text-muted mt-1" style="font-size: 0.72rem;">
+                        <span>Venció: {{ equipo.tiempo_terminado.hora_vencimiento|date:"h:i A" }}</span>
+                        <span>Cobrado: <strong class="text-dark font-monospace">${{ equipo.tiempo_terminado.subtotal }}</strong></span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción para Tiempo Terminado -->
+                <div class="mt-auto d-flex gap-1 flex-wrap justify-content-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 btn-info-equipo"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
+                            data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}"
+                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="Tiempo Terminado"
+                            data-cliente="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+                            data-inicio="{{ equipo.tiempo_terminado.hora_inicio|date:'d/m/Y h:i A' }}"
+                            data-tiempo="{{ equipo.tiempo_terminado.tiempo_de_renta|add:equipo.tiempo_terminado.tiempo_agregado }} min"
+                            data-total="${{ equipo.tiempo_terminado.subtotal }}"
+                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                            title="Ver Periféricos e Información">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+
+                    <a href="{% url 'factura_renta_id' equipo.tiempo_terminado.renta.renta_id %}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Ver Factura PDF Pagada">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+
+                    {% if request.user.es_admin or request.user.es_cajero %}
+                    <button type="button" class="btn btn-sm btn-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
+                            data-bs-toggle="modal" data-bs-target="#modalExtenderRenta"
+                            data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+                            data-equipo-nombre="{{ equipo.nombre }}"
+                            data-cliente-nombre="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+                            data-tarifa="{{ equipo.tarifa_por_hora }}"
+                            title="Agregar más tiempo a la sesión">
+                        <i class="bi bi-plus-circle me-1"></i>+ Tiempo
+                    </button>
+
+                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1" onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar a Revisión Técnica?');">
+                        {% csrf_token %}
+                        <input type="hidden" name="detalle_renta_id" value="{{ equipo.tiempo_terminado.detalle_renta_id }}">
+                        <button type="submit" class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold" title="Enviar a revisión técnica">
                             <i class="bi bi-clipboard-check me-1"></i> A Revisión
                         </button>
                     </form>
@@ -263,7 +354,7 @@
 
                 <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
                 <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
-                <p class="text-muted small mb-3">Equipo no disponible para renta</p>
+                <p class="text-muted small mb-3">{{ equipo.bloqueo_motivo|default:"Equipo no disponible para renta" }}</p>
 
                 <div class="mt-auto">
                     <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
@@ -569,7 +660,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const inicioMs = new Date(inicioIso).getTime();
             const duracionMs = tiempoTotalMin * 60 * 1000;
-            const finMs = inicioMs + duracionMs;
+            const vencimientoIso = card.dataset.vencimientoIso;
+            const finMs = (vencimientoIso && !isNaN(new Date(vencimientoIso).getTime()))
+                ? new Date(vencimientoIso).getTime()
+                : (inicioMs + duracionMs);
             const restanteMs = finMs - ahoraMs;
             const restanteSegundos = Math.floor(restanteMs / 1000);
 
@@ -656,16 +750,69 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // -------------------------------------------------------------
-    // 4. MODAL EXTENDER RENTA (+15, +30, +1 hr, +2 hr)
+    // 4. MODAL EXTENDER RENTA (+15, +30, +1 hr, +2 hr) CON CALCULADORA DE EFECTIVO
     // -------------------------------------------------------------
     let extenderTarifaActual = 0;
+    let extenderCostoActual = 0;
+    const efectivoMaxExt = parseFloat('{{ efectivo_maximo|default:100.00|unlocalize }}') || 100;
+
+    function actualizarVueltoExtender() {
+        const inputPaga = document.getElementById('inputPagaConExtender');
+        const vueltoTexto = document.getElementById('extenderVueltoTexto');
+        const btnConfirmar = document.getElementById('btnConfirmarExtenderRenta');
+        if (!inputPaga || !vueltoTexto) return;
+
+        const val = inputPaga.value.trim();
+        if (val === '') {
+            vueltoTexto.textContent = '$0.00';
+            vueltoTexto.className = 'fs-4 font-monospace text-dark';
+            if (btnConfirmar) btnConfirmar.disabled = true;
+            return;
+        }
+
+        let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+        let total = Math.round((extenderCostoActual + Number.EPSILON) * 100) / 100;
+        pagaCon = Math.round((pagaCon + Number.EPSILON) * 100) / 100;
+
+        if (pagaCon < 0) {
+            pagaCon = 0;
+            inputPaga.value = '0.00';
+        }
+        if (pagaCon > efectivoMaxExt) {
+            vueltoTexto.textContent = `Máx $${efectivoMaxExt.toFixed(2)}`;
+            vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+            if (btnConfirmar) btnConfirmar.disabled = true;
+            return;
+        }
+
+        const diff = Math.round(((pagaCon - total) + Number.EPSILON) * 100) / 100;
+        if (diff >= 0) {
+            vueltoTexto.textContent = `$${diff.toFixed(2)}`;
+            vueltoTexto.className = 'fs-4 font-monospace text-success fw-bold';
+            if (btnConfirmar) btnConfirmar.disabled = false;
+        } else {
+            vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
+            vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+            if (btnConfirmar) btnConfirmar.disabled = true;
+        }
+    }
+
     document.querySelectorAll('.btn-abrir-extender').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('extenderDetalleId').value = this.dataset.detalleId;
             document.getElementById('extenderEquipoNombre').textContent = this.dataset.equipoNombre;
             document.getElementById('extenderClienteNombre').textContent = this.dataset.clienteNombre;
-            extenderTarifaActual = parseFloat(this.dataset.tarifa) || 0;
+            extenderTarifaActual = parseFloat((this.dataset.tarifa || '0').replace(',', '.')) || 0;
             document.getElementById('extenderTarifa').textContent = `$${extenderTarifaActual.toFixed(2)}/hr`;
+
+            const extTokenEl = document.getElementById('extToken');
+            if (extTokenEl) {
+                extTokenEl.value = 'ext_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+            }
+            const inputPaga = document.getElementById('inputPagaConExtender');
+            if (inputPaga) {
+                inputPaga.value = '';
+            }
 
             // Reset a +30 min por defecto
             actualizarSeleccionExtender(30);
@@ -674,9 +821,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function actualizarSeleccionExtender(minutos) {
         document.getElementById('extenderMinutosExtra').value = minutos;
-        document.getElementById('extenderBadgeMin').textContent = `+${minutos} min`;
-        const costo = (extenderTarifaActual * (minutos / 60)).toFixed(2);
-        document.getElementById('extenderCostoExtra').textContent = `+$${costo}`;
+        const badgeMinEl = document.getElementById('extenderBadgeMin');
+        if (badgeMinEl) {
+            badgeMinEl.textContent = `+${minutos} min`;
+        }
+        extenderCostoActual = Math.round(((extenderTarifaActual * (minutos / 60)) + Number.EPSILON) * 100) / 100;
+        const costoEl = document.getElementById('extenderCostoExtra');
+        if (costoEl) {
+            costoEl.textContent = `$${extenderCostoActual.toFixed(2)}`;
+        }
 
         document.querySelectorAll('.btn-preset-extender').forEach(b => {
             const isMatch = parseInt(b.dataset.min) === minutos;
@@ -684,11 +837,32 @@ document.addEventListener('DOMContentLoaded', function () {
             b.classList.toggle('active', isMatch);
             b.classList.toggle('btn-outline-secondary', !isMatch);
         });
+        actualizarVueltoExtender();
     }
 
     document.querySelectorAll('.btn-preset-extender').forEach(function (btn) {
         btn.addEventListener('click', function () {
             actualizarSeleccionExtender(parseInt(this.dataset.min));
+        });
+    });
+
+    const inputPagaExtEl = document.getElementById('inputPagaConExtender');
+    if (inputPagaExtEl) {
+        inputPagaExtEl.addEventListener('input', actualizarVueltoExtender);
+    }
+
+    document.querySelectorAll('.btn-billete-extender').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const monto = this.dataset.monto;
+            const inputPaga = document.getElementById('inputPagaConExtender');
+            if (!inputPaga) return;
+            if (monto === 'exacto') {
+                inputPaga.value = extenderCostoActual.toFixed(2);
+            } else {
+                inputPaga.value = (parseFloat(monto) || 0).toFixed(2);
+            }
+            actualizarVueltoExtender();
+            inputPaga.focus();
         });
     });
 
@@ -982,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('infoEquipoEstado').textContent = btn.dataset.estado;
 
             const seccionRenta = document.getElementById('seccionInfoRenta');
-            if (btn.dataset.estado === 'En Uso' || btn.dataset.estado === 'Pendiente de Revisión') {
+            if (btn.dataset.estado === 'En Uso' || btn.dataset.estado === 'Tiempo Terminado' || btn.dataset.estado === 'Pendiente de Revisión') {
                 seccionRenta.classList.remove('d-none');
                 document.getElementById('infoEquipoCliente').textContent = btn.dataset.cliente;
                 document.getElementById('infoEquipoInicio').textContent = btn.dataset.inicio;

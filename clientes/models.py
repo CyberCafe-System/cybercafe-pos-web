@@ -5,10 +5,11 @@ class Cliente(models.Model):
     cliente_id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=255, verbose_name="Nombre")
     apellido = models.CharField(max_length=255, verbose_name="Apellido")
-    dui = models.CharField(max_length=10, verbose_name="DUI")
+    dui = models.CharField(max_length=10, unique=True, verbose_name="DUI")
     direccion = models.CharField(max_length=255, verbose_name="Dirección")
     telefono = models.IntegerField(verbose_name="Teléfono")
     correo = models.EmailField(max_length=255, null=True, blank=True, verbose_name="Correo")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         managed = False

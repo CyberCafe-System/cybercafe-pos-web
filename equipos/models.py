@@ -30,3 +30,35 @@ class Equipo(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.tipo})"
+
+    def evaluar_rentabilidad(self):
+        """
+        Evalúa si el equipo puede rentarse según las reglas de negocio:
+        - El estado del equipo debe ser DISPONIBLE.
+        - Ningún componente activo asignado puede estar en REQUIERE_REEMPLAZO ni DANIOS_MENORES.
+        """
+        if self.estado != 'DISPONIBLE':
+            return False, f"El equipo se encuentra en estado '{self.get_estado_display()}'."
+
+        try:
+            comps_bloqueantes = self.componentes.filter(
+                activo=True,
+                estado__in=['REQUIERE_REEMPLAZO', 'DANIOS_MENORES']
+            )
+            if comps_bloqueantes.exists():
+                nombres = ", ".join([f"{c.nombre} ({c.get_estado_display()})" for c in comps_bloqueantes])
+                return False, f"Tiene componentes con reporte: {nombres}"
+        except Exception:
+            pass
+
+        return True, "Disponible"
+
+    @property
+    def es_rentable(self) -> bool:
+        if hasattr(self, '_es_rentable_override'):
+            return self._es_rentable_override
+        return self.evaluar_rentabilidad()[0]
+
+    @es_rentable.setter
+    def es_rentable(self, valor: bool):
+        self._es_rentable_override = bool(valor)

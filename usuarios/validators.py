@@ -6,12 +6,12 @@ from django.contrib.auth.password_validation import validate_password
 class SeguridadIntermediaPasswordValidator:
     """
     Validador de seguridad para contraseñas de usuarios:
-    - Longitud de 8 a 15 caracteres.
+    - Longitud mínima de 8 caracteres.
     - Debe contener al menos una letra mayúscula.
     - Debe contener al menos un dígito numérico (0-9).
     """
 
-    def __init__(self, min_length=8, max_length=15):
+    def __init__(self, min_length=8, max_length=128):
         self.min_length = min_length
         self.max_length = max_length
 
@@ -38,17 +38,14 @@ class SeguridadIntermediaPasswordValidator:
             )
 
     def get_help_text(self):
-        return f'Tu contraseña debe tener de {self.min_length} a {self.max_length} caracteres, con al menos una mayúscula y un número.'
+        return f'Tu contraseña debe tener al menos {self.min_length} caracteres, con al menos una mayúscula y un número.'
 
 
 def validar_password_intermedia(password, user=None):
     """
     Ejecuta el conjunto completo de validaciones de seguridad de contraseñas de Django
-    (incluyendo similitud con usuario, longitud de 8 a 15 caracteres, mayúscula, número, no ser común).
+    (incluyendo similitud con usuario, longitud mínima, mayúscula, número, no ser común).
     """
-    # 1. Validación de seguridad intermedia explícita con mensajes claros en español
-    validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=15)
+    validator = SeguridadIntermediaPasswordValidator(min_length=8, max_length=128)
     validator.validate(password, user=user)
-
-    # 2. Validadores configurados en Django settings (Common, Similarity, Numeric)
     validate_password(password, user=user)

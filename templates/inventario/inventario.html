@@ -92,6 +92,12 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-ajustar-stock"
+                                data-bs-toggle="modal" data-bs-target="#modalAjustarStock"
+                                data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
+                                data-stock="{{ producto.cantidad }}" title="Ajustar Stock (Kardex)">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto"
                                 data-bs-toggle="modal" data-bs-target="#modalModificarProducto"
                                 data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
@@ -140,7 +146,60 @@
 {% include 'inventario/crear.html' %}
 {% include 'inventario/modificar.html' %}
 
+<!-- Modal Ajustar Stock (Kardex) -->
+<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST" action="{% url 'ajustar_stock' %}">
+                {% csrf_token %}
+                <input type="hidden" name="producto_id" id="ajustarProductoId">
+                <div class="modal-header bg-dark text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-arrow-left-right me-2 text-warning"></i>Ajuste de Inventario (Kardex)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="bg-light p-3 rounded-3 mb-3 border d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted d-block">Producto seleccionado:</small>
+                            <strong class="text-dark fs-6" id="ajustarProductoNombre">--</strong>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Stock actual:</small>
+                            <span class="badge bg-primary fs-6" id="ajustarProductoStockActual">0</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Cantidad a sumar (+) o restar (-)</label>
+                        <input type="number" name="delta" class="form-control font-monospace fw-bold" placeholder="Ej: 10 para entrada, -2 para merma" required>
+                        <small class="text-muted">Usa números positivos para entradas y negativos para salidas o mermas.</small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Motivo del ajuste <span class="text-danger">*</span></label>
+                        <textarea name="motivo" class="form-control" rows="2" minlength="5" placeholder="Ej: Abastecimiento de proveedor / Merma por vencimiento" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Aplicar Ajuste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
+    document.querySelectorAll('.btn-ajustar-stock').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('ajustarProductoId').value = btn.dataset.id;
+            document.getElementById('ajustarProductoNombre').textContent = btn.dataset.nombre;
+            document.getElementById('ajustarProductoStockActual').textContent = btn.dataset.stock;
+        });
+    });
+
     document.querySelectorAll('.btn-editar-producto').forEach(function (btn) {
         btn.addEventListener('click', function () {
             document.getElementById('editarProductoId').value = btn.dataset.id;

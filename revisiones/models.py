@@ -49,3 +49,35 @@ class RevisionEquipo(models.Model):
             else f"Detalle #{self.detalle_renta_id}"
         )
         return f"Revisión #{self.revision_equipo_id} - {equipo_nombre} ({resultado})"
+
+
+class RevisionComponente(models.Model):
+    id = models.AutoField(primary_key=True)
+    revision_equipo = models.ForeignKey(
+        RevisionEquipo,
+        db_column='revision_equipo_id',
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name='componentes_revisados',
+        verbose_name='Revisión de Equipo',
+    )
+    componente = models.ForeignKey(
+        'componentes.Componente',
+        db_column='componente_id',
+        on_delete=models.CASCADE,
+        db_constraint=False,
+        related_name='revisiones_componente',
+        verbose_name='Componente',
+    )
+    estado_previo = models.CharField(max_length=50, verbose_name='Estado Previo')
+    estado_nuevo = models.CharField(max_length=50, verbose_name='Estado Nuevo')
+    descripcion = models.TextField(null=True, blank=True, verbose_name='Descripción de la novedad')
+
+    class Meta:
+        managed = False
+        db_table = 'revision_componentes'
+        verbose_name = 'revisión de componente'
+        verbose_name_plural = 'revisiones de componentes'
+
+    def __str__(self):
+        return f"Componente #{self.componente_id} en Rev #{self.revision_equipo_id}: {self.estado_previo} -> {self.estado_nuevo}"

@@ -122,6 +122,15 @@
                             {% endif %}
                         </td>
                         <td class="text-end">
+                            {% if equipo.estado == 'DANIOS_MENORES' or equipo.estado == 'DEFECTUOSO' %}
+                            <form method="POST" action="{% url 'habilitar_equipo' %}" class="d-inline me-1" onsubmit="return confirm('¿Confirmas haber verificado físicamente el equipo {{ equipo.nombre }} para habilitarlo como Disponible?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="equipo_id" value="{{ equipo.equipo_id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Verificar y Habilitar Equipo">
+                                    <i class="bi bi-check2-circle"></i> Habilitar
+                                </button>
+                            </form>
+                            {% endif %}
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-equipo" data-bs-toggle="modal"
                                 data-bs-target="#modalModificarEquipo" data-id="{{ equipo.equipo_id }}"
                                 data-nombre="{{ equipo.nombre }}" data-tipo="{{ equipo.tipo }}"

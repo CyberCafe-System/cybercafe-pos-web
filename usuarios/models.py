@@ -146,3 +146,211 @@ class Usuario(AbstractBaseUser):
 
     def __str__(self):
         return self.username
+
+
+class Auditoria(models.Model):
+    auditoria_id = models.AutoField(primary_key=True)
+    usuario = models.ForeignKey(
+        Usuario,
+        db_column='usuario_id',
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        related_name='auditorias',
+        verbose_name='Usuario Responsable',
+    )
+    fecha = models.DateTimeField(auto_now_add=True, verbose_name='Fecha y Hora')
+    accion = models.CharField(max_length=50, verbose_name='Acción')
+    entidad = models.CharField(max_length=50, verbose_name='Entidad Afectada')
+    entidad_id = models.IntegerField(verbose_name='ID de Entidad')
+    valor_previo = models.JSONField(null=True, blank=True, verbose_name='Valor Previo')
+    valor_nuevo = models.JSONField(null=True, blank=True, verbose_name='Valor Nuevo')
+    origen = models.CharField(max_length=10, default='WEB', verbose_name='Origen')
+    ip = models.CharField(max_length=45, null=True, blank=True, verbose_name='Dirección IP')
+
+    class Meta:
+        managed = False
+        db_table = 'auditoria'
+        verbose_name = 'registro de auditoría'
+        verbose_name_plural = 'registros de auditoría'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        fecha_txt = self.fecha.strftime('%d/%m/%Y %H:%M') if self.fecha else ''
+        usuario_txt = self.usuario.username if self.usuario else 'Sistema'
+        return f"[{fecha_txt}] {usuario_txt}: {self.accion} {self.entidad} #{self.entidad_id}"
+
+    @property
+    def datos_previos(self) -> dict:
+        val = self.valor_previo
+        if not val:
+            return {}
+        if isinstance(val, dict):
+            return val
+        if isinstance(val, str):
+            try:
+                import json
+                parsed = json.loads(val)
+                return parsed if isinstance(parsed, dict) else {}
+            except Exception:
+                return {}
+        return {}
+
+    @property
+    def datos_nuevos(self) -> dict:
+        val = self.valor_nuevo
+        if not val:
+            return {}
+        if isinstance(val, dict):
+            return val
+        if isinstance(val, str):
+            try:
+                import json
+                parsed = json.loads(val)
+                return parsed if isinstance(parsed, dict) else {}
+            except Exception:
+                return {}
+        return {}
+
+    @property
+    def motivo_operacion(self) -> str | None:
+        return self.datos_nuevos.get('motivo') or self.datos_previos.get('motivo')
+
+    @property
+    def nombre_referencia(self) -> str | None:
+        """Retorna el nombre o identificador humano del recurso si existe en los payloads."""
+        return (
+            self.datos_nuevos.get('nombre')
+            or self.datos_previos.get('nombre')
+            or self.datos_nuevos.get('username')
+            or self.datos_previos.get('username')
+        )
+
+    @classmethod
+    def _formatear_valor_campo(cls, clave: str, valor):
+        if valor is None:
+            return '—'
+        if isinstance(valor, bool):
+            return 'Sí (Activo)' if valor else 'No (Inactivo)'
+        if clave in ('precio_venta', 'precio_compra', 'tarifa', 'total', 'subtotal', 'iva', 'costo'):
+            try:
+                return f"${float(valor):.2f}"
+            except Exception:
+                return str(valor)
+        if clave == 'rol_id':
+            roles = {1: 'Administrador', 2: 'Cajero', 3: 'Asistente'}
+            return roles.get(int(valor) if str(valor).isdigit() else valor, f"Rol #{valor}")
+        if 'password' in clave.lower():
+            return '••••••••'
+        return str(valor)
+
+    @property
+    def comparativa_cambios(self) -> list[dict]:
+        """
+        Retorna la lista de atributos modificados o creados con nombres legibles:
+        [{'campo': 'Nombre', 'anterior': 'X', 'nuevo': 'Y', 'cambio': True}]
+        """
+        prev = self.datos_previos
+        nuev = self.datos_nuevos
+        if not prev and not nuev:
+            return []
+
+        todas_claves = list(dict.fromkeys(list(prev.keys()) + list(nuev.keys())))
+        cambios = []
+        for clave in todas_claves:
+            if clave == 'motivo':
+                continue
+            v_ant = prev.get(clave)
+            v_nue = nuev.get(clave)
+            formato_ant = self._formatear_valor_campo(clave, v_ant)
+            formato_nue = self._formatear_valor_campo(clave, v_nue)
+
+            campo_nombre = clave.replace('_', ' ').capitalize()
+            es_diferente = (v_ant != v_nue)
+
+            cambios.append({
+                'clave': clave,
+                'campo': campo_nombre,
+                'anterior': formato_ant,
+                'nuevo': formato_nue,
+                'es_cambio': es_diferente and (clave in prev) and (clave in nuev),
+                'es_alta': (clave not in prev and clave in nuev),
+                'es_baja': (clave in prev and clave not in nuev),
+            })
+        return cambios
+
+    @property
+    def resumen_visual(self) -> list[dict]:
+        """Genera chips/pills visuales limpios para mostrar en la celda de la tabla."""
+        badges = []
+        nuev = self.datos_nuevos
+        prev = self.datos_previos
+
+        # 1. Delta de Kardex
+        if 'delta' in nuev:
+            try:
+                d = int(nuev['delta'])
+                signo = '+' if d > 0 else ''
+                color = 'success' if d > 0 else 'danger'
+                icono = 'bi-box-arrow-in-down' if d > 0 else 'bi-box-arrow-up'
+                badges.append({'icono': icono, 'texto': f"{signo}{d} unid.", 'color': color})
+            except Exception:
+                badges.append({'icono': 'bi-arrow-left-right', 'texto': f"Delta: {nuev['delta']}", 'color': 'secondary'})
+
+        # 2. Stock resultante
+        if 'stock' in nuev:
+            badges.append({'icono': 'bi-boxes', 'texto': f"Stock: {nuev['stock']}", 'color': 'primary'})
+
+        # 3. Diferencias directas clave
+        for campo in ('rol_id', 'estado', 'cantidad', 'tarifa', 'precio_venta'):
+            if campo in prev and campo in nuev and prev[campo] != nuev[campo]:
+                v_a = self._formatear_valor_campo(campo, prev[campo])
+                v_n = self._formatear_valor_campo(campo, nuev[campo])
+                c_nom = campo.replace('_id', '').replace('_', ' ').capitalize()
+                badges.append({
+                    'icono': 'bi-arrow-right-short',
+                    'texto': f"{c_nom}: {v_a} → {v_n}",
+                    'color': 'warning text-dark',
+                })
+
+        # 4. Si fue creación pura
+        if not prev and nuev:
+            if 'precio_venta' in nuev:
+                badges.append({'icono': 'bi-tag', 'texto': f"${nuev['precio_venta']}", 'color': 'success'})
+            if 'cantidad' in nuev and 'delta' not in nuev:
+                badges.append({'icono': 'bi-box-seam', 'texto': f"Stock: {nuev['cantidad']}", 'color': 'secondary'})
+            if 'tarifa' in nuev:
+                badges.append({'icono': 'bi-cash', 'texto': f"${nuev['tarifa']}/hr", 'color': 'success'})
+            if 'rol_id' in nuev:
+                r_nom = self._formatear_valor_campo('rol_id', nuev['rol_id'])
+                badges.append({'icono': 'bi-person-badge', 'texto': r_nom, 'color': 'info text-dark'})
+
+        # 5. Activo
+        if 'activo' in nuev:
+            act = nuev['activo']
+            badges.append({
+                'icono': 'bi-check-circle' if act else 'bi-x-circle',
+                'texto': 'Habilitado' if act else 'Inhabilitado',
+                'color': 'success' if act else 'secondary',
+            })
+
+        return badges
+
+
+def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, valor_previo=None, valor_nuevo=None, origen='WEB', ip=None):
+    """
+    Registra un evento append-only en la tabla de auditoría.
+    Falla de manera silenciosa para no bloquear operaciones principales ante errores de auditoría.
+    """
+    try:
+        Auditoria.objects.create(
+            usuario=usuario,
+            accion=accion,
+            entidad=entidad,
+            entidad_id=entidad_id,
+            valor_previo=valor_previo,
+            valor_nuevo=valor_nuevo,
+            origen=origen,
+            ip=ip,
+        )
+    except Exception:
+        pass
