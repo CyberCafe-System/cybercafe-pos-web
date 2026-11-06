@@ -58,8 +58,7 @@
                                     required>
                                     <option value="" data-tarifa="0">Seleccione un equipo disponible</option>
                                     {% for eq in equipos_rentables %}
-                                    <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{
-                                        eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
+                                    <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{ eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
                                     {% endfor %}
                                     {% for eq in equipos %}
                                     {% if not eq.activo %}
@@ -114,10 +113,8 @@
                                         data-correo="{{ cl.correo|default:'' }}"
                                         data-search="{{ cl.nombre|lower }} {{ cl.apellido|lower }} {{ cl.dui|default:'' }} {{ cl.correo|default:''|lower }}">
                                         <div>
-                                            <strong class="d-block text-dark small">{{ cl.nombre }} {{ cl.apellido
-                                                }}</strong>
-                                            <small class="text-muted">DUI: {{ cl.dui|default:"N/A" }} {% if cl.correo
-                                                %}· {{ cl.correo }}{% endif %}</small>
+                                            <strong class="d-block text-dark small">{{ cl.nombre }} {{ cl.apellido }}</strong>
+                                            <small class="text-muted">DUI: {{ cl.dui|default:"N/A" }} {% if cl.correo %}· {{ cl.correo }}{% endif %}</small>
                                         </div>
                                         <i class="bi bi-chevron-right text-muted small"></i>
                                     </button>

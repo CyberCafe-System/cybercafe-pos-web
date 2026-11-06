@@ -8,11 +8,17 @@
         <p class="text-muted small mb-0">Supervisión en tiempo real del uso de computadoras, consolas y estaciones de
             juego.</p>
     </div>
-    {% if request.user.es_admin or request.user.es_cajero %}
-    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta" id="btnNuevaRentaTop">
-        <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
-    </button>
-    {% endif %}
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        {% if request.user.es_admin or request.user.es_cajero %}
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta" id="btnNuevaRentaTop">
+            <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Barra Unificada: Filtros por Pestañas + Buscador Compacto -->
@@ -72,15 +78,7 @@
     <div class="col-xl-3 col-lg-4 col-md-6 tarjeta-equipo"
         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.tiempo_terminado %}terminados{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
         data-tipo="{% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}consola{% else %}pc{% endif %}"
-        data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.tiempo_terminado %}{{ equipo.tiempo_terminado.renta.cliente.nombre|lower }} {{ equipo.tiempo_terminado.renta.cliente.apellido|lower }} tiempo terminado vencido{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
-        data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if not equipo.activo %}desactivado inactivo
-        {% endif %}{% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{
-        equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.tiempo_terminado %}{{
-        equipo.tiempo_terminado.renta.cliente.nombre|lower }} {{ equipo.tiempo_terminado.renta.cliente.apellido|lower }}
-        tiempo terminado vencido{% elif equipo.revision_pendiente %}{{
-        equipo.revision_pendiente.renta.cliente.nombre|lower }} {{
-        equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable
-        %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
+        data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if not equipo.activo %}desactivado inactivo {% endif %}{% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.tiempo_terminado %}{{ equipo.tiempo_terminado.renta.cliente.nombre|lower }} {{ equipo.tiempo_terminado.renta.cliente.apellido|lower }} tiempo terminado vencido{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
 
         {% if equipo.renta_activa %}
         <!-- Equipo EN USO -->
@@ -110,8 +108,7 @@
                 {% endif %}
 
                 <h5 class="fw-bold mb-0 text-dark">{{ equipo.nombre }}</h5>
-                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{
-                    equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}</p>
+                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}</p>
 
                 <!-- Reloj en vivo y barra de progreso -->
                 <div class="bg-light p-2 rounded-3 mb-3 border timer-box text-start">
@@ -131,8 +128,7 @@
                     <div class="d-flex justify-content-between align-items-center text-muted mt-1"
                         style="font-size: 0.72rem;">
                         <span>Inicio: {{ equipo.renta_activa.hora_inicio|date:"h:i A" }}</span>
-                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal
-                                }}</strong>
+                        <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong>
                             <span
                                 class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1"
                                 style="font-size: 0.65rem;">
@@ -216,8 +212,7 @@
 
                 <h5 class="fw-bold mb-0 text-dark">{{ equipo.nombre }}</h5>
                 <p class="text-muted small mb-2">
-                    <i class="bi bi-person-fill text-primary"></i> {{ equipo.tiempo_terminado.renta.cliente.nombre }} {{
-                    equipo.tiempo_terminado.renta.cliente.apellido }}
+                    <i class="bi bi-person-fill text-primary"></i> {{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}
                 </p>
 
                 <!-- Panel de aviso de tiempo agotado -->
@@ -232,8 +227,7 @@
                     <div class="d-flex justify-content-between align-items-center text-muted mt-1"
                         style="font-size: 0.72rem;">
                         <span>Venció: {{ equipo.tiempo_terminado.hora_vencimiento|date:"h:i A" }}</span>
-                        <span>Cobrado: <strong class="text-dark font-monospace">${{ equipo.tiempo_terminado.subtotal
-                                }}</strong></span>
+                        <span>Cobrado: <strong class="text-dark font-monospace">${{ equipo.tiempo_terminado.subtotal }}</strong></span>
                     </div>
                 </div>
 
@@ -299,9 +293,7 @@
 
                 <i class="bi bi-clipboard2-pulse text-info mb-2" style="font-size: 2.8rem;"></i>
                 <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
-                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{
-                    equipo.revision_pendiente.renta.cliente.nombre }} {{
-                    equipo.revision_pendiente.renta.cliente.apellido }}</p>
+                <p class="text-muted small mb-2"><i class="bi bi-person-fill text-primary"></i> {{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}</p>
 
                 <div class="bg-light p-2 rounded-3 mb-3 text-start small">
                     <div class="d-flex justify-content-between mb-1">
@@ -349,8 +341,7 @@
                     </a>
                     {% endif %}
 
-                    {% if equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_admin or
-                    equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_cajero %}
+                    {% if equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_admin or equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_cajero %}
                     <!-- Botón Cobrar si pago quedó pendiente -->
                     <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1 shadow-sm btn-abrir-cobro"
                         data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
@@ -376,50 +367,46 @@
         </div>
 
         {% elif not equipo.es_rentable %}
-        <!-- Equipo NO RENTABLE (mantenimiento / defectuoso) -->
-        <div class="card shadow-sm border-0 border-top border-4 border-secondary h-100 rounded-4">
-            <!-- Equipo NO RENTABLE (desactivado / mantenimiento / defectuoso) -->
-            <div
-                class="card shadow-sm border-0 border-top border-4 {% if not equipo.activo %}border-dark{% else %}border-secondary{% endif %} h-100 rounded-4">
-                <div class="card-body p-4 d-flex flex-column text-center">
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        {% if not equipo.activo %}
-                        <span class="badge bg-dark px-3 py-1 rounded-pill">
-                            <i class="bi bi-slash-circle me-1"></i> Desactivado
-                        </span>
-                        {% else %}
-                        <span class="badge bg-secondary px-3 py-1 rounded-pill">
-                            <i class="bi bi-tools me-1"></i> {{ equipo.get_estado_display }}
-                        </span>
-                        {% endif %}
-                        <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
-                    </div>
-
+        <!-- Equipo NO RENTABLE (desactivado / mantenimiento / defectuoso) -->
+        <div
+            class="card shadow-sm border-0 border-top border-4 {% if not equipo.activo %}border-dark{% else %}border-secondary{% endif %} h-100 rounded-4">
+            <div class="card-body p-4 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-3">
                     {% if not equipo.activo %}
-                    <i class="bi bi-slash-circle text-secondary mb-2" style="font-size: 2.8rem;"></i>
+                    <span class="badge bg-dark px-3 py-1 rounded-pill">
+                        <i class="bi bi-slash-circle me-1"></i> Desactivado
+                    </span>
                     {% else %}
-                    <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
+                    <span class="badge bg-secondary px-3 py-1 rounded-pill">
+                        <i class="bi bi-tools me-1"></i> {{ equipo.get_estado_display }}
+                    </span>
                     {% endif %}
-                    <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
-                    <p class="text-muted small mb-3">{{ equipo.bloqueo_motivo|default:"Equipo no disponible para renta"
-                        }}</p>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
 
-                    <div class="mt-auto">
-                        <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
-                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
-                            data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="{{ equipo.get_estado_display }}"
-                            data-estado="{% if not equipo.activo %}Desactivado ({{ equipo.get_estado_display }}){% else %}{{ equipo.get_estado_display }}{% endif %}"
-                            data-cliente="--" data-inicio="--" data-tiempo="--" data-total="--"
-                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
-                            title="Ver Periféricos">
-                            <i class="bi bi-info-circle me-1"></i> Componentes
-                        </button>
-                    </div>
+                {% if not equipo.activo %}
+                <i class="bi bi-slash-circle text-secondary mb-2" style="font-size: 2.8rem;"></i>
+                {% else %}
+                <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
+                {% endif %}
+                <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-3">{{ equipo.bloqueo_motivo|default:"Equipo no disponible para renta" }}</p>
+
+                <div class="mt-auto">
+                    <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
+                        data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                        data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                        data-estado="{% if not equipo.activo %}Desactivado ({{ equipo.get_estado_display }}){% else %}{{ equipo.get_estado_display }}{% endif %}"
+                        data-cliente="--" data-inicio="--" data-tiempo="--" data-total="--"
+                        data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                        title="Ver Periféricos">
+                        <i class="bi bi-info-circle me-1"></i> Componentes
+                    </button>
                 </div>
             </div>
+        </div>
 
-            {% else %}
+        {% else %}
             <!-- Equipo DISPONIBLE -->
             <div class="card shadow-sm border-0 border-top border-4 border-success h-100 rounded-4">
                 <div class="card-body p-4 d-flex flex-column text-center">

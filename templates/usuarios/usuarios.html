@@ -8,6 +8,10 @@
         <p class="text-muted small mb-0">Control de cuentas de acceso, roles y contraseñas del personal.</p>
     </div>
     <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
         <a href="{% url 'auditoria' %}" class="btn btn-outline-dark">
             <i class="bi bi-shield-lock me-1"></i> Auditoría
         </a>
