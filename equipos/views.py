@@ -3,8 +3,8 @@ import logging
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db import IntegrityError
-from django.db.models import ProtectedError, Q
+from django.db import connection
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from componentes.models import Componente
@@ -15,11 +15,35 @@ from .forms import EquipoForm
 from .models import Equipo
 
 logger = logging.getLogger(__name__)
+_EQUIPO_ACTIVO_VERIFICADO = False
+
+
+def asegurar_columna_activo_equipo():
+    """Garantiza que la columna activo exista en la tabla equipos en MySQL si aún no se ejecutó V014 en la API."""
+    global _EQUIPO_ACTIVO_VERIFICADO
+    if _EQUIPO_ACTIVO_VERIFICADO:
+        return
+    try:
+        if connection.vendor == 'mysql':
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                    "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'equipos' AND COLUMN_NAME = 'activo'"
+                )
+                row = cursor.fetchone()
+                if not row or row[0] == 0:
+                    cursor.execute(
+                        "ALTER TABLE `equipos` ADD COLUMN `activo` TINYINT(1) NOT NULL DEFAULT 1 AFTER `estado`;"
+                    )
+        _EQUIPO_ACTIVO_VERIFICADO = True
+    except Exception:
+        logger.debug("No se pudo verificar/agregar columna equipos.activo", exc_info=True)
 
 
 @login_required
 @admin_required
 def equipo_list(request):
+    asegurar_columna_activo_equipo()
     equipos_qs = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
     paginator = Paginator(equipos_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -189,32 +213,37 @@ def equipo_habilitar(request):
 
 @login_required
 @admin_required
-def equipo_delete(request):
+def equipo_toggle(request):
+    asegurar_columna_activo_equipo()
     if request.method == 'POST':
         equipo = get_object_or_404(Equipo, pk=request.POST.get('equipo_id'))
-        if DetalleRenta.objects.filter(equipo=equipo).exists():
+        if equipo.activo and DetalleRenta.objects.filter(
+            equipo=equipo,
+            estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION'),
+        ).exists():
             messages.error(
                 request,
-                f'No se puede eliminar "{equipo.nombre}" porque tiene rentas o historial asociado. '
-                'Si está fuera de servicio, cámbialo a estado En Mantenimiento o Defectuoso.'
+                f'No se puede desactivar el equipo "{equipo.nombre}" mientras tenga una sesión de renta en curso o pendiente de revisión.'
             )
             return redirect('equipos')
+
         try:
-            nombre = equipo.nombre
-            equipo.componentes.update(equipo=None)
-            equipo.delete()
+            estado_prev = equipo.activo
+            equipo.activo = not equipo.activo
+            equipo.save(update_fields=['activo'])
+            accion_audit = 'ACTIVAR_EQUIPO' if equipo.activo else 'DESACTIVAR_EQUIPO'
+            estado_txt = 'activado' if equipo.activo else 'desactivado'
             registrar_auditoria(
                 usuario=request.user,
-                accion='ELIMINAR_EQUIPO',
+                accion=accion_audit,
                 entidad='Equipo',
                 entidad_id=equipo.equipo_id,
-                valor_previo={'nombre': nombre},
+                valor_previo={'activo': estado_prev},
+                valor_nuevo={'activo': equipo.activo, 'nombre': equipo.nombre},
                 ip=request.META.get('REMOTE_ADDR'),
             )
-            messages.success(request, f'Equipo "{nombre}" eliminado correctamente.')
-        except (ProtectedError, IntegrityError):
-            messages.error(request, 'No se puede eliminar el equipo porque tiene registros vinculados.')
+            messages.success(request, f'Equipo "{equipo.nombre}" {estado_txt} correctamente.')
         except Exception:
-            logger.exception('Error al eliminar el equipo')
-            messages.error(request, 'Ocurrió un error al eliminar el equipo. Intenta nuevamente.')
+            logger.exception('Error al cambiar el estado activo del equipo')
+            messages.error(request, 'Ocurrió un error al actualizar el estado del equipo. Intenta nuevamente.')
     return redirect('equipos')

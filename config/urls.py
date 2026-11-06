@@ -94,7 +94,7 @@ urlpatterns = [
     path('crear_equipo/', equipos_views.equipo_create, name='crear_equipo'),
     path('modificar_equipo/', equipos_views.equipo_edit, name='modificar_equipo'),
     path('habilitar_equipo/', equipos_views.equipo_habilitar, name='habilitar_equipo'),
-    path('eliminar_equipo/', equipos_views.equipo_delete, name='eliminar_equipo'),
+    path('desactivar_equipo/', equipos_views.equipo_toggle, name='desactivar_equipo'),
 
     # Componentes
     path('crear_componente/', componentes_views.componente_create, name='crear_componente'),

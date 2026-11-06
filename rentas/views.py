@@ -12,6 +12,7 @@ from django.utils import timezone
 from clientes.models import Cliente
 from config.context_processors import obtener_rentas_activas_payload
 from equipos.models import Equipo
+from equipos.views import asegurar_columna_activo_equipo
 from usuarios.decorators import cajero_o_admin_required
 from usuarios.models import Usuario
 
@@ -95,6 +96,7 @@ def api_rentas_activas(request):
 @login_required
 @cajero_o_admin_required
 def renta_list(request):
+    asegurar_columna_activo_equipo()
     verificar_vencimiento_rentas_locales()
 
     equipos = list(Equipo.objects.prefetch_related('componentes').all().order_by('nombre'))

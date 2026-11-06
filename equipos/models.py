@@ -21,6 +21,7 @@ class Equipo(models.Model):
     imagen = models.CharField(max_length=255, null=True, blank=True, verbose_name="Imagen")
     tipo = models.CharField(max_length=50, choices=TIPO_CHOICES, default='PC')
     estado = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='DISPONIBLE')
+    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         managed = False
@@ -34,10 +35,14 @@ class Equipo(models.Model):
     def evaluar_rentabilidad(self):
         """
         Evalúa si el equipo puede rentarse según las reglas de negocio:
+        - El equipo debe estar activo (activo=True).
         - El estado del equipo debe ser DISPONIBLE.
         - Ningún componente asignado puede estar desactivado (activo=False).
         - Ningún componente asignado puede estar en REQUIERE_REEMPLAZO ni DANIOS_MENORES.
         """
+        if not self.activo:
+            return False, "El equipo se encuentra desactivado."
+
         if self.estado != 'DISPONIBLE':
             return False, f"El equipo se encuentra en estado '{self.get_estado_display()}'."
 

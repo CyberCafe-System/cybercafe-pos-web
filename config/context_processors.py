@@ -57,7 +57,7 @@ def contexto_global_sistema(request):
     nav_inventario = url_name in ('inventario', 'crear_producto', 'modificar_producto', 'desactivar_producto', 'ajustar_stock')
     nav_categorias = url_name in ('categorias', 'crear_categoria', 'modificar_categoria', 'desactivar_categoria')
     nav_revisiones = ('revision' in url_name)
-    nav_equipos = url_name in ('equipos', 'crear_equipo', 'modificar_equipo', 'eliminar_equipo', 'habilitar_equipo')
+    nav_equipos = url_name in ('equipos', 'crear_equipo', 'modificar_equipo', 'desactivar_equipo', 'habilitar_equipo')
     nav_componentes = url_name in ('componentes', 'crear_componente', 'modificar_componente', 'desactivar_componente')
     nav_clientes = url_name in ('clientes', 'crear_cliente', 'modificar_cliente', 'desactivar_cliente')
     nav_usuarios = url_name in ('usuarios', 'crear_usuario', 'modificar_usuario', 'desactivar_usuario', 'auditoria')
