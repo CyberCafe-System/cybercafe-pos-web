@@ -79,17 +79,17 @@
                         </td>
                         <td>
                             {% if 'ANULAR' in a.accion %}
-                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>{{ a.accion }}</span>
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>{{ a.accion_legible }}</span>
                             {% elif 'CREAR' in a.accion %}
-                            <span class="badge bg-success"><i class="bi bi-plus-circle me-1"></i>{{ a.accion }}</span>
-                            {% elif 'HABILITAR' in a.accion %}
-                            <span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i>{{ a.accion }}</span>
+                            <span class="badge bg-success"><i class="bi bi-plus-circle me-1"></i>{{ a.accion_legible }}</span>
+                            {% elif 'HABILITAR' in a.accion or 'ACTIVAR' in a.accion %}
+                            <span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i>{{ a.accion_legible }}</span>
                             {% elif 'AJUSTAR' in a.accion %}
-                            <span class="badge bg-primary"><i class="bi bi-arrow-left-right me-1"></i>{{ a.accion }}</span>
+                            <span class="badge bg-primary"><i class="bi bi-arrow-left-right me-1"></i>{{ a.accion_legible }}</span>
                             {% elif 'MODIFICAR' in a.accion %}
-                            <span class="badge bg-warning text-dark"><i class="bi bi-pencil-square me-1"></i>{{ a.accion }}</span>
+                            <span class="badge bg-warning text-dark"><i class="bi bi-pencil-square me-1"></i>{{ a.accion_legible }}</span>
                             {% else %}
-                            <span class="badge bg-secondary">{{ a.accion }}</span>
+                            <span class="badge bg-secondary">{{ a.accion_legible }}</span>
                             {% endif %}
                         </td>
                         <td>
@@ -105,6 +105,7 @@
                                     data-fecha="{{ a.fecha|date:'d/m/Y H:i:s' }}"
                                     data-usuario="{{ a.usuario.username|default:'Sistema' }}"
                                     data-accion="{{ a.accion }}"
+                                    data-accion-legible="{{ a.accion_legible }}"
                                     data-entidad="{{ a.entidad }} #{{ a.entidad_id }}"
                                     data-referencia="{{ a.nombre_referencia|default:'' }}"
                                     data-motivo="{{ a.motivo_operacion|default:'' }}"
@@ -118,26 +119,26 @@
                             <div id="cambiosAudit{{ a.auditoria_id }}" class="d-none">
                                 {% if a.comparativa_cambios %}
                                 <div class="table-responsive">
-                                    <table class="table table-bordered table-sm align-middle mb-0">
+                                    <table class="table table-bordered table-sm align-middle mb-0" style="table-layout: fixed; width: 100%;">
                                         <thead class="table-light small">
                                             <tr>
-                                                <th style="width: 32%;">Campo</th>
-                                                <th style="width: 34%;">Valor Anterior</th>
-                                                <th style="width: 34%;">Valor Nuevo</th>
+                                                <th style="width: 24%;">Campo</th>
+                                                <th style="width: 38%;">Valor Anterior</th>
+                                                <th style="width: 38%;">Valor Nuevo</th>
                                             </tr>
                                         </thead>
                                         <tbody class="small">
                                             {% for c in a.comparativa_cambios %}
                                             <tr {% if c.es_cambio %}class="table-warning bg-opacity-25"{% elif c.es_alta %}class="table-success bg-opacity-25"{% endif %}>
-                                                <td class="fw-semibold text-dark">{{ c.campo }}</td>
-                                                <td>
+                                                <td class="fw-semibold text-dark text-break">{{ c.campo }}</td>
+                                                <td style="word-break: break-word; overflow-wrap: anywhere;">
                                                     {% if c.es_cambio %}
                                                     <span class="text-danger fw-semibold">{{ c.anterior }}</span>
                                                     {% else %}
                                                     <span class="text-muted">{{ c.anterior }}</span>
                                                     {% endif %}
                                                 </td>
-                                                <td>
+                                                <td style="word-break: break-word; overflow-wrap: anywhere;">
                                                     {% if c.es_cambio %}
                                                     <span class="text-success fw-bold">{{ c.nuevo }}</span>
                                                     {% elif c.es_alta %}
@@ -154,20 +155,6 @@
                                 {% else %}
                                 <div class="text-muted small text-center py-2">Sin detalles adicionales registrados.</div>
                                 {% endif %}
-                            </div>
-
-                            <!-- Contenedor oculto con el payload técnico JSON -->
-                            <div id="jsonAudit{{ a.auditoria_id }}" class="d-none">
-                                <div class="row g-2">
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted mb-1">Payload Previo:</label>
-                                        <pre class="bg-light p-2 rounded-3 border text-muted small mb-0" style="max-height: 140px; overflow-y: auto;"><code>{{ a.datos_previos|default:"{}" }}</code></pre>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label small fw-bold text-muted mb-1">Payload Nuevo:</label>
-                                        <pre class="bg-light p-2 rounded-3 border text-dark small mb-0" style="max-height: 140px; overflow-y: auto;"><code>{{ a.datos_nuevos|default:"{}" }}</code></pre>
-                                    </div>
-                                </div>
                             </div>
                             {% else %}
                             <span class="text-muted small">— Sin cambios —</span>
@@ -196,7 +183,7 @@
 
 <!-- Modal de Detalle de Auditoría (Ventana compacta emergente) -->
 <div class="modal fade" id="modalDetalleAuditoria" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width: 580px;">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 680px;">
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <div class="modal-header bg-dark text-white py-3 px-4">
                 <div class="d-flex align-items-center gap-2">
@@ -217,27 +204,27 @@
                     <div class="col-sm-6 col-md-3">
                         <div class="bg-light p-2 rounded-3 border text-start h-100">
                             <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Usuario</span>
-                            <strong class="text-dark d-flex align-items-center gap-1" id="modalAuditUsuario">
+                            <strong class="text-dark d-flex align-items-center gap-1 text-break" id="modalAuditUsuario">
                                 <i class="bi bi-person-fill text-primary"></i> <span>--</span>
                             </strong>
                         </div>
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <div class="bg-light p-2 rounded-3 border text-start h-100">
-                            <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Acción</span>
-                            <span class="badge bg-secondary" id="modalAuditAccion">--</span>
+                            <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="font-size: 0.72rem;">Acción</span>
+                            <span class="badge bg-secondary text-wrap text-start lh-sm" style="max-width: 100%; word-break: break-word;" id="modalAuditAccion">--</span>
                         </div>
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <div class="bg-light p-2 rounded-3 border text-start h-100">
                             <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Entidad</span>
-                            <strong class="text-dark" id="modalAuditEntidad">--</strong>
+                            <strong class="text-dark text-break" id="modalAuditEntidad">--</strong>
                         </div>
                     </div>
                     <div class="col-sm-6 col-md-3">
                         <div class="bg-light p-2 rounded-3 border text-start h-100">
                             <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Origen / Conexión</span>
-                            <span class="text-muted small font-monospace d-block" id="modalAuditOrigen">--</span>
+                            <span class="text-muted small font-monospace d-block text-break" id="modalAuditOrigen">--</span>
                         </div>
                     </div>
                 </div>
@@ -263,7 +250,7 @@
                 </div>
 
                 <!-- Tabla Comparativa de Atributos -->
-                <div class="mb-3">
+                <div class="mb-0">
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="fw-bold text-dark mb-0">
                             <i class="bi bi-arrow-left-right me-1 text-primary"></i> Comparativa de Atributos
@@ -272,22 +259,6 @@
                     </div>
                     <div id="modalAuditCuerpoCambios">
                         <!-- Inyectado dinámicamente con JS -->
-                    </div>
-                </div>
-
-                <!-- Acordeón / Colapso de Payload Técnico JSON -->
-                <div class="accordion accordion-flush border rounded-3 overflow-hidden" id="accordionTecnicoAudit">
-                    <div class="accordion-item">
-                        <h2 class="accordion-header">
-                            <button class="accordion-button collapsed py-2 px-3 bg-light text-muted small fw-semibold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseJsonAudit">
-                                <i class="bi bi-code-slash me-2"></i>Ver Payload Técnico (JSON crudo)
-                            </button>
-                        </h2>
-                        <div id="collapseJsonAudit" class="accordion-collapse collapse" data-bs-parent="#accordionTecnicoAudit">
-                            <div class="accordion-body p-3 bg-white" id="modalAuditCuerpoJson">
-                                <!-- Inyectado dinámicamente con JS -->
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -308,7 +279,8 @@ document.addEventListener('DOMContentLoaded', function () {
             const auditId = this.dataset.id;
             const fecha = this.dataset.fecha;
             const usuario = this.dataset.usuario;
-            const accion = this.dataset.accion;
+            const accion = this.dataset.accion || '';
+            const accionLegible = this.dataset.accionLegible || accion.replace(/_/g, ' ');
             const entidad = this.dataset.entidad;
             const referencia = (this.dataset.referencia || '').trim();
             const motivo = (this.dataset.motivo || '').trim();
@@ -321,20 +293,20 @@ document.addEventListener('DOMContentLoaded', function () {
             document.getElementById('modalAuditUsuario').innerHTML = `<i class="bi bi-person-fill text-primary me-1"></i>${usuario}`;
             
             const badgeAccion = document.getElementById('modalAuditAccion');
-            badgeAccion.textContent = accion;
+            badgeAccion.textContent = accionLegible;
+            let colorClase = 'bg-secondary';
             if (accion.includes('ANULAR')) {
-                badgeAccion.className = 'badge bg-danger';
+                colorClase = 'bg-danger';
             } else if (accion.includes('CREAR')) {
-                badgeAccion.className = 'badge bg-success';
-            } else if (accion.includes('HABILITAR')) {
-                badgeAccion.className = 'badge bg-info text-dark';
+                colorClase = 'bg-success';
+            } else if (accion.includes('HABILITAR') || accion.includes('ACTIVAR')) {
+                colorClase = 'bg-info text-dark';
             } else if (accion.includes('AJUSTAR')) {
-                badgeAccion.className = 'badge bg-primary';
+                colorClase = 'bg-primary';
             } else if (accion.includes('MODIFICAR')) {
-                badgeAccion.className = 'badge bg-warning text-dark';
-            } else {
-                badgeAccion.className = 'badge bg-secondary';
+                colorClase = 'bg-warning text-dark';
             }
+            badgeAccion.className = `badge ${colorClase} text-wrap text-start lh-sm`;
 
             document.getElementById('modalAuditEntidad').textContent = entidad;
             document.getElementById('modalAuditOrigen').textContent = `${origen} (${ip})`;
@@ -366,13 +338,6 @@ document.addEventListener('DOMContentLoaded', function () {
             const dstCambios = document.getElementById('modalAuditCuerpoCambios');
             if (srcCambios && dstCambios) {
                 dstCambios.innerHTML = srcCambios.innerHTML;
-            }
-
-            // Inyectar JSON técnico
-            const srcJson = document.getElementById('jsonAudit' + auditId);
-            const dstJson = document.getElementById('modalAuditCuerpoJson');
-            if (srcJson && dstJson) {
-                dstJson.innerHTML = srcJson.innerHTML;
             }
         });
     });

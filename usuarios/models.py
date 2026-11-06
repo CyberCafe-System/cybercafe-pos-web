@@ -225,13 +225,68 @@ class Auditoria(models.Model):
             or self.datos_previos.get('username')
         )
 
+    ETIQ_ACCIONES = {
+        'CREAR_USUARIO': 'Crear usuario',
+        'MODIFICAR_USUARIO': 'Modificar usuario',
+        'ACTIVAR_USUARIO': 'Activar usuario',
+        'DESACTIVAR_USUARIO': 'Desactivar usuario',
+        'CREAR_EQUIPO': 'Crear equipo',
+        'MODIFICAR_EQUIPO': 'Modificar equipo',
+        'HABILITAR_EQUIPO': 'Habilitar equipo',
+        'ELIMINAR_EQUIPO': 'Eliminar equipo',
+        'ACTIVAR_EQUIPO': 'Activar equipo',
+        'DESACTIVAR_EQUIPO': 'Desactivar equipo',
+        'CREAR_PRODUCTO': 'Crear producto',
+        'MODIFICAR_PRODUCTO': 'Modificar producto',
+        'AJUSTAR_STOCK': 'Ajustar stock',
+        'ACTIVAR_PRODUCTO': 'Activar producto',
+        'DESACTIVAR_PRODUCTO': 'Desactivar producto',
+        'ANULAR_VENTA': 'Anular venta',
+        'REINICIAR_REVISION': 'Revocar revisión',
+    }
+
+    ETIQ_CAMPOS = {
+        'rol_id': 'Rol',
+        'correo': 'Correo electrónico',
+        'username': 'Usuario',
+        'nombre': 'Nombre',
+        'estado': 'Estado',
+        'tarifa': 'Tarifa por hora',
+        'tarifa_por_hora': 'Tarifa por hora',
+        'precio_venta': 'Precio de venta',
+        'precio_compra': 'Precio de compra',
+        'cantidad': 'Cantidad',
+        'stock': 'Stock',
+        'delta': 'Ajuste de unidades',
+        'activo': 'Estado',
+        'anulada_por': 'Anulada por',
+    }
+
+    ETIQ_ESTADOS = {
+        'DISPONIBLE': 'Disponible',
+        'DANIOS_MENORES': 'Daños menores',
+        'DEFECTUOSO': 'Defectuoso',
+        'EN_MANTENIMIENTO': 'En mantenimiento',
+        'REQUIERE_REEMPLAZO': 'Requiere reemplazo',
+        'PAGADA': 'Pagada',
+        'COMPLETADA': 'Completada',
+        'ANULADA': 'Anulada',
+    }
+
+    @property
+    def accion_legible(self) -> str:
+        raw = (self.accion or '').strip().upper()
+        if raw in self.ETIQ_ACCIONES:
+            return self.ETIQ_ACCIONES[raw]
+        return raw.replace('_', ' ').capitalize()
+
     @classmethod
     def _formatear_valor_campo(cls, clave: str, valor):
         if valor is None:
             return '—'
         if isinstance(valor, bool):
-            return 'Sí (Activo)' if valor else 'No (Inactivo)'
-        if clave in ('precio_venta', 'precio_compra', 'tarifa', 'total', 'subtotal', 'iva', 'costo'):
+            return 'Activo' if valor else 'Inactivo'
+        if clave in ('precio_venta', 'precio_compra', 'tarifa', 'tarifa_por_hora', 'total', 'subtotal', 'iva', 'costo'):
             try:
                 return f"${float(valor):.2f}"
             except Exception:
@@ -241,7 +296,10 @@ class Auditoria(models.Model):
             return roles.get(int(valor) if str(valor).isdigit() else valor, f"Rol #{valor}")
         if 'password' in clave.lower():
             return '••••••••'
-        return str(valor)
+        val_str = str(valor)
+        if val_str.upper() in cls.ETIQ_ESTADOS:
+            return cls.ETIQ_ESTADOS[val_str.upper()]
+        return val_str
 
     @property
     def comparativa_cambios(self) -> list[dict]:
@@ -264,7 +322,7 @@ class Auditoria(models.Model):
             formato_ant = self._formatear_valor_campo(clave, v_ant)
             formato_nue = self._formatear_valor_campo(clave, v_nue)
 
-            campo_nombre = clave.replace('_', ' ').capitalize()
+            campo_nombre = self.ETIQ_CAMPOS.get(clave, clave.replace('_', ' ').capitalize())
             es_diferente = (v_ant != v_nue)
 
             cambios.append({
