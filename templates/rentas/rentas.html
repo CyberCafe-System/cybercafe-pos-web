@@ -174,16 +174,14 @@
                     </button>
 
                     <!-- Botón Finalizar y Enviar a Revisión (Cobro ya realizado al inicio) -->
-                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1"
-                        onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar el puesto a Revisión Técnica?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
-                        <button type="submit"
-                            class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold"
-                            title="Finalizar tiempo y enviar el equipo a revisión técnica">
-                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
-                        </button>
-                    </form>
+                    <button type="button"
+                        class="btn btn-sm btn-info text-dark rounded-pill flex-grow-1 py-1 px-2 shadow-xs fw-semibold btn-abrir-enviar-revision"
+                        data-bs-toggle="modal" data-bs-target="#modalConfirmarEnviarRevision"
+                        data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        title="Finalizar tiempo y enviar el equipo a revisión técnica">
+                        <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -264,17 +262,14 @@
                         <i class="bi bi-plus-circle me-1"></i>+ Tiempo
                     </button>
 
-                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1"
-                        onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar a Revisión Técnica?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="detalle_renta_id"
-                            value="{{ equipo.tiempo_terminado.detalle_renta_id }}">
-                        <button type="submit"
-                            class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold"
-                            title="Enviar a revisión técnica">
-                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
-                        </button>
-                    </form>
+                    <button type="button"
+                        class="btn btn-sm btn-info text-dark rounded-pill flex-grow-1 py-1 px-2 shadow-xs fw-semibold btn-abrir-enviar-revision"
+                        data-bs-toggle="modal" data-bs-target="#modalConfirmarEnviarRevision"
+                        data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        title="Enviar a revisión técnica">
+                        <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -532,6 +527,36 @@
     {% include 'rentas/crear.html' %}
     {% include 'rentas/extender.html' %}
     {% include 'rentas/cobrar.html' %}
+
+    <!-- Modal Confirmar Enviar a Revisión Técnica (Estilo Modal Limpiar Carrito) -->
+    <div class="modal fade" id="modalConfirmarEnviarRevision" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                    <h5 class="modal-title fw-bold fs-6">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Finalizar Sesión y Enviar a Revisión
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-clipboard-check text-danger display-4 mb-3 d-block"></i>
+                    <h6 class="fw-bold mb-2">¿Finalizar sesión de <span id="confirmarRevisionEquipoNombre" class="text-danger">--</span> y enviar el puesto a Revisión Técnica?</h6>
+                    <p class="text-muted small mb-0">Esta acción dará por concluido el tiempo de uso del cliente y marcará el puesto como pendiente de inspección técnica.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="POST" action="{% url 'enviar_revision' %}" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="detalle_renta_id" id="confirmarRevisionDetalleId">
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">
+                            <i class="bi bi-clipboard-check me-1"></i> Sí, enviar a revisión
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     <style>
@@ -754,8 +779,17 @@
             actualizarTemporizadores();
 
             // -------------------------------------------------------------
-            // 3. ASIGNACIÓN DIRECTA DE RENTA
+            // 3. ASIGNACIÓN DIRECTA DE RENTA Y MODAL DE ENVIAR A REVISIÓN
             // -------------------------------------------------------------
+            document.querySelectorAll('.btn-abrir-enviar-revision').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const detalleInput = document.getElementById('confirmarRevisionDetalleId');
+                    const equipoSpan = document.getElementById('confirmarRevisionEquipoNombre');
+                    if (detalleInput) detalleInput.value = this.dataset.detalleId || '';
+                    if (equipoSpan) equipoSpan.textContent = this.dataset.equipoNombre || '--';
+                });
+            });
+
             document.querySelectorAll('.btn-asignar-equipo-directo').forEach(function (btn) {
                 btn.addEventListener('click', function () {
                     const eqId = this.dataset.equipoId;

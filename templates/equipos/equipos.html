@@ -143,15 +143,12 @@
                         </td>
                         <td class="text-end">
                             {% if equipo.estado == 'DANIOS_MENORES' or equipo.estado == 'DEFECTUOSO' or equipo.estado == 'EN_MANTENIMIENTO' %}
-                            <form method="POST" action="{% url 'habilitar_equipo' %}" class="d-inline me-1"
-                                onsubmit="return confirm('¿Confirmas haber verificado físicamente el equipo {{ equipo.nombre }} para habilitarlo como Disponible?');">
-                                {% csrf_token %}
-                                <input type="hidden" name="equipo_id" value="{{ equipo.equipo_id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-success"
-                                    title="Verificar y Habilitar Equipo">
-                                    <i class="bi bi-check2-circle"></i> Habilitar
-                                </button>
-                            </form>
+                            <button type="button" class="btn btn-sm btn-outline-success me-1 btn-confirmar-habilitar-equipo"
+                                data-bs-toggle="modal" data-bs-target="#modalConfirmarHabilitarEquipo"
+                                data-id="{{ equipo.equipo_id }}" data-nombre="{{ equipo.nombre }}"
+                                title="Verificar y Habilitar Equipo">
+                                <i class="bi bi-check2-circle"></i> Habilitar
+                            </button>
                             {% endif %}
                             <button class="btn btn-sm btn-outline-primary me-1 btn-editar-equipo" data-bs-toggle="modal"
                                 data-bs-target="#modalModificarEquipo" data-id="{{ equipo.equipo_id }}"
@@ -217,8 +214,47 @@
     </div>
 </div>
 
+<!-- Modal Confirmar Habilitar Equipo (Estilo Modal Limpiar Carrito) -->
+<div class="modal fade" id="modalConfirmarHabilitarEquipo" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                <h5 class="modal-title fw-bold fs-6">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Habilitar Equipo
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-check2-circle text-danger display-4 mb-3 d-block"></i>
+                <h6 class="fw-bold mb-2">¿Confirmas haber verificado físicamente el equipo <span id="confirmarHabilitarEquipoNombre" class="text-danger">--</span> para habilitarlo como Disponible?</h6>
+                <p class="text-muted small mb-0">El equipo cambiará su estado físico a Disponible y podrá ser asignado nuevamente en el módulo de Rentas.</p>
+            </div>
+            <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center gap-2">
+                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                <form method="POST" action="{% url 'habilitar_equipo' %}" class="m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="equipo_id" id="confirmarHabilitarEquipoId">
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">
+                        <i class="bi bi-check2-circle me-1"></i> Sí, habilitar equipo
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <script>
+    // Modal confirmar habilitar equipo
+    document.querySelectorAll('.btn-confirmar-habilitar-equipo').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const idInput = document.getElementById('confirmarHabilitarEquipoId');
+            const nombreSpan = document.getElementById('confirmarHabilitarEquipoNombre');
+            if (idInput) idInput.value = this.dataset.id || '';
+            if (nombreSpan) nombreSpan.textContent = this.dataset.nombre || '--';
+        });
+    });
     // Buscador
     const buscadorEq = document.getElementById('buscadorEquipos');
     if (buscadorEq) {
