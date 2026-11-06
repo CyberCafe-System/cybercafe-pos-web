@@ -152,7 +152,7 @@ def auditoria_list(request):
     if usuario_id and usuario_id.isdigit():
         auditorias_qs = auditorias_qs.filter(usuario_id=int(usuario_id))
 
-    paginator = Paginator(auditorias_qs, 20)
+    paginator = Paginator(auditorias_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
     usuarios = Usuario.objects.all().order_by('username')
 
