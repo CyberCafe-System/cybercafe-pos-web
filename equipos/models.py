@@ -35,14 +35,19 @@ class Equipo(models.Model):
         """
         Evalúa si el equipo puede rentarse según las reglas de negocio:
         - El estado del equipo debe ser DISPONIBLE.
-        - Ningún componente activo asignado puede estar en REQUIERE_REEMPLAZO ni DANIOS_MENORES.
+        - Ningún componente asignado puede estar desactivado (activo=False).
+        - Ningún componente asignado puede estar en REQUIERE_REEMPLAZO ni DANIOS_MENORES.
         """
         if self.estado != 'DISPONIBLE':
             return False, f"El equipo se encuentra en estado '{self.get_estado_display()}'."
 
         try:
+            comps_inactivos = self.componentes.filter(activo=False)
+            if comps_inactivos.exists():
+                nombres = ", ".join([f"{c.nombre} (Desactivado)" for c in comps_inactivos])
+                return False, f"Tiene componentes desactivados: {nombres}"
+
             comps_bloqueantes = self.componentes.filter(
-                activo=True,
                 estado__in=['REQUIERE_REEMPLAZO', 'DANIOS_MENORES']
             )
             if comps_bloqueantes.exists():

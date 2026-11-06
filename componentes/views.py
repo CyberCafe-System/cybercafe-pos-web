@@ -40,7 +40,15 @@ def componente_create(request):
         form = ComponenteForm(request.POST)
         if form.is_valid():
             try:
-                form.save()
+                comp = form.save()
+                if comp.equipo and comp.equipo.estado == 'DISPONIBLE' and (not comp.activo or comp.estado == 'REQUIERE_REEMPLAZO'):
+                    comp.equipo.estado = 'DEFECTUOSO' if comp.estado == 'REQUIERE_REEMPLAZO' else 'EN_MANTENIMIENTO'
+                    comp.equipo.save(update_fields=['estado'])
+                    messages.warning(
+                        request,
+                        f'El equipo "{comp.equipo.nombre}" fue cambiado a "{comp.equipo.get_estado_display()}" '
+                        f'porque el componente "{comp.nombre}" requiere reemplazo o está desactivado.'
+                    )
                 messages.success(request, 'Componente registrado correctamente.')
             except Exception:
                 logger.exception('Error al guardar el componente')
@@ -59,7 +67,15 @@ def componente_edit(request):
         form = ComponenteForm(request.POST, instance=componente)
         if form.is_valid():
             try:
-                form.save()
+                comp = form.save()
+                if comp.equipo and comp.equipo.estado == 'DISPONIBLE' and (not comp.activo or comp.estado == 'REQUIERE_REEMPLAZO'):
+                    comp.equipo.estado = 'DEFECTUOSO' if comp.estado == 'REQUIERE_REEMPLAZO' else 'EN_MANTENIMIENTO'
+                    comp.equipo.save(update_fields=['estado'])
+                    messages.warning(
+                        request,
+                        f'El equipo "{comp.equipo.nombre}" fue cambiado a "{comp.equipo.get_estado_display()}" '
+                        f'porque el componente "{comp.nombre}" requiere reemplazo o está desactivado.'
+                    )
                 messages.success(request, 'Componente actualizado correctamente.')
             except Exception:
                 logger.exception('Error al actualizar el componente')
@@ -74,9 +90,17 @@ def componente_edit(request):
 @admin_required
 def componente_toggle(request):
     if request.method == 'POST':
-        componente = get_object_or_404(Componente, pk=request.POST.get('componente_id'))
+        componente = get_object_or_404(Componente.objects.select_related('equipo'), pk=request.POST.get('componente_id'))
         componente.activo = not componente.activo
         componente.save(update_fields=['activo'])
         estado_txt = 'activado' if componente.activo else 'desactivado'
         messages.success(request, f'Componente "{componente.nombre}" {estado_txt} correctamente.')
+        if not componente.activo and componente.equipo and componente.equipo.estado == 'DISPONIBLE':
+            componente.equipo.estado = 'EN_MANTENIMIENTO'
+            componente.equipo.save(update_fields=['estado'])
+            messages.warning(
+                request,
+                f'El equipo "{componente.equipo.nombre}" dejó de estar Disponible y pasó a En Mantenimiento '
+                f'porque tiene el componente "{componente.nombre}" desactivado.'
+            )
     return redirect('componentes')

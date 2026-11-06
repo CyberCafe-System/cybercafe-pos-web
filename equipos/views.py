@@ -4,7 +4,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import IntegrityError
-from django.db.models import ProtectedError
+from django.db.models import ProtectedError, Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from componentes.models import Componente
@@ -23,12 +23,15 @@ def equipo_list(request):
     equipos_qs = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
     paginator = Paginator(equipos_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
+    # En edición mostramos los componentes libres operativos y también los ya asignados a algún equipo
+    # (incluyendo si alguno asignado está desactivado o requiere reemplazo para poder verlo/desvincularlo)
     componentes = Componente.objects.select_related('equipo').filter(
-        activo=True
-    ).exclude(
-        estado='REQUIERE_REEMPLAZO'
+        Q(equipo__isnull=False) | (Q(activo=True) & ~Q(estado='REQUIERE_REEMPLAZO'))
     ).order_by('tipo', 'nombre')
-    componentes_libres = [c for c in componentes if c.equipo_id is None]
+    componentes_libres = [
+        c for c in componentes
+        if c.equipo_id is None and c.activo and c.estado != 'REQUIERE_REEMPLAZO'
+    ]
     return render(request, 'equipos/equipos.html', {
         'equipos': page_obj,
         'page_obj': page_obj,
@@ -78,13 +81,37 @@ def equipo_edit(request):
         form = EquipoForm(request.POST, instance=equipo)
         if form.is_valid():
             try:
-                equipo = form.save()
+                equipo = form.save(commit=False)
                 componentes_ids = request.POST.getlist('componentes')
                 # Desvincular los que ya no están seleccionados para este equipo
                 equipo.componentes.exclude(pk__in=componentes_ids).update(equipo=None)
                 # Vincular los seleccionados
                 if componentes_ids:
                     Componente.objects.filter(pk__in=componentes_ids).update(equipo=equipo)
+
+                # Validar que si intenta dejar el equipo en DISPONIBLE no tenga componentes en reemplazo o desactivados
+                if equipo.estado == 'DISPONIBLE':
+                    comps_reemplazo = equipo.componentes.filter(estado='REQUIERE_REEMPLAZO')
+                    comps_inactivos = equipo.componentes.filter(activo=False)
+                    if comps_reemplazo.exists() or comps_inactivos.exists():
+                        motivos = []
+                        if comps_reemplazo.exists():
+                            nombres_r = ", ".join([c.nombre for c in comps_reemplazo])
+                            motivos.append(f"requieren reemplazo obligatorio ({nombres_r})")
+                        if comps_inactivos.exists():
+                            nombres_i = ", ".join([c.nombre for c in comps_inactivos])
+                            motivos.append(f"se encuentran desactivados ({nombres_i})")
+
+                        equipo.estado = estado_prev if estado_prev != 'DISPONIBLE' else 'EN_MANTENIMIENTO'
+                        equipo.save()
+                        messages.error(
+                            request,
+                            f'No se puede colocar el equipo "{equipo.nombre}" como Disponible para renta porque tiene '
+                            f'componentes que {" y ".join(motivos)}. Debe activarlos, reemplazarlos o desvincularlos primero.'
+                        )
+                        return redirect('equipos')
+
+                equipo.save()
 
                 registrar_auditoria(
                     usuario=request.user,
@@ -111,19 +138,27 @@ def equipo_habilitar(request):
     """
     Permite al Administrador inspeccionar físicamente y habilitar un equipo
     en DEFECTUOSO o DANIOS_MENORES para dejarlo DISPONIBLE.
-    Bloquea la habilitación si algún componente activo asignado tiene REQUIERE_REEMPLAZO.
+    Bloquea la habilitación si algún componente asignado tiene REQUIERE_REEMPLAZO o está desactivado.
     """
     if request.method == 'POST':
         equipo = get_object_or_404(Equipo, pk=request.POST.get('equipo_id'))
 
-        # Verificar si hay componentes que requieren reemplazo
-        comps_reemplazo = equipo.componentes.filter(activo=True, estado='REQUIERE_REEMPLAZO')
-        if comps_reemplazo.exists():
-            nombres = ", ".join([c.nombre for c in comps_reemplazo])
+        # Verificar si hay componentes que requieren reemplazo o están desactivados
+        comps_reemplazo = equipo.componentes.filter(estado='REQUIERE_REEMPLAZO')
+        comps_inactivos = equipo.componentes.filter(activo=False)
+        if comps_reemplazo.exists() or comps_inactivos.exists():
+            motivos = []
+            if comps_reemplazo.exists():
+                nombres_r = ", ".join([c.nombre for c in comps_reemplazo])
+                motivos.append(f"requieren reemplazo obligatorio ({nombres_r})")
+            if comps_inactivos.exists():
+                nombres_i = ", ".join([c.nombre for c in comps_inactivos])
+                motivos.append(f"se encuentran desactivados ({nombres_i})")
+
             messages.error(
                 request,
                 f'No se puede habilitar el equipo "{equipo.nombre}" porque los siguientes componentes '
-                f'requieren reemplazo obligatorio: {nombres}. Debe reemplazarlos o desvincularlos primero.'
+                f'{" y ".join(motivos)}. Debe reemplazarlos, activarlos o desvincularlos primero.'
             )
             return redirect('equipos')
 

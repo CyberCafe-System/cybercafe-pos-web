@@ -90,8 +90,7 @@
                                 data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
                                 data-serie="{{ comp.numero_serie|default:'' }}" data-tipo="{{ comp.tipo }}"
                                 data-estado="{{ comp.estado }}" data-equipo="{{ comp.equipo_id|default:'' }}"
-                                data-descripcion="{{ comp.descripcion|default:'' }}"
-                                data-observaciones="{{ comp.observaciones|default:'' }}" title="Editar">
+                                data-descripcion="{{ comp.descripcion|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <form method="POST" action="{% url 'desactivar_componente' %}" class="d-inline">
@@ -145,7 +144,6 @@
             document.getElementById('editCompTipo').value = this.dataset.tipo;
             document.getElementById('editCompEstado').value = this.dataset.estado;
             document.getElementById('editCompEquipo').value = this.dataset.equipo;
-            document.getElementById('editCompObservaciones').value = this.dataset.observaciones;
 
             // Extraer Marca y Modelo desde descripcion ("Marca: X | Modelo: Y")
             const desc = this.dataset.descripcion || '';

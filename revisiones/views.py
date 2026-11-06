@@ -198,14 +198,14 @@ def crear_revision(request):
 
                 # equipo ya se encuentra bloqueado con select_for_update
                 if inspeccion_pasada:
-                    # Verificar que no existan componentes activos en DANIOS_MENORES o REQUIERE_REEMPLAZO
+                    # Verificar que no existan componentes en DANIOS_MENORES, REQUIERE_REEMPLAZO o desactivados
                     from componentes.models import Componente
-                    tiene_comps_danados = Componente.objects.filter(
+                    tiene_comps_bloqueantes = Componente.objects.filter(
                         equipo=equipo,
-                        activo=True,
-                        estado__in=('DANIOS_MENORES', 'REQUIERE_REEMPLAZO'),
+                    ).filter(
+                        models.Q(activo=False) | models.Q(estado__in=('DANIOS_MENORES', 'REQUIERE_REEMPLAZO'))
                     ).exists()
-                    if not tiene_comps_danados:
+                    if not tiene_comps_bloqueantes:
                         equipo.estado = 'DISPONIBLE'
                 else:
                     equipo.estado = estado_si_daniado

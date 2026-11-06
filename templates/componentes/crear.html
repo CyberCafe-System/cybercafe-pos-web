@@ -52,7 +52,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-0">
                         <label class="form-label fw-semibold">Asignar a Equipo</label>
                         <select name="equipo" class="form-select">
                             <option value="">— Sin asignar (Bodega) —</option>
@@ -60,11 +60,6 @@
                             <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }})</option>
                             {% endfor %}
                         </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Observaciones</label>
-                        <textarea name="observaciones" class="form-control" rows="2" placeholder="Anotaciones adicionales sobre el estado o condición"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
