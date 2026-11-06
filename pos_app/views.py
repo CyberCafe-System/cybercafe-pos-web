@@ -626,6 +626,14 @@ def anular_venta(request, venta_id):
                 messages.warning(request, f'La venta #{venta_id} ya se encuentra anulada.')
                 return redirect('reportes')
 
+            fecha_venta_local = timezone.localtime(venta.fecha).date() if timezone.is_aware(venta.fecha) else venta.fecha.date()
+            if fecha_venta_local != timezone.localdate():
+                messages.error(
+                    request,
+                    f'No se puede anular la venta #{venta_id} porque pertenece a una fecha anterior ({fecha_venta_local.strftime("%d/%m/%Y")}). Solo se permiten anulaciones del mismo día.'
+                )
+                return redirect('reportes')
+
             venta.estado = 'ANULADA'
             venta.anulada_por = request.user
             venta.anulada_en = timezone.now()
@@ -724,10 +732,13 @@ def _construir_transacciones_reporte(request):
             if not es_anulada:
                 total_ventas += monto_v
 
+            fecha_local = timezone.localtime(v.fecha) if timezone.is_aware(v.fecha) else v.fecha
+            es_mismo_dia = (fecha_local.date() == timezone.localdate())
+
             transacciones.append({
                 'ticket': f"V-{v.venta_id}",
                 'fecha': v.fecha,
-                'fecha_str': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
+                'fecha_str': fecha_local.strftime('%d/%m/%Y %I:%M %p'),
                 'usuario': v.usuario.username if v.usuario else "Sistema",
                 'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
                 'concepto': articulos,
@@ -735,6 +746,7 @@ def _construir_transacciones_reporte(request):
                 'tipo': 'Venta POS',
                 'estado': 'Anulada' if es_anulada else 'Pagada',
                 'es_anulada': es_anulada,
+                'es_mismo_dia': es_mismo_dia,
                 'es_venta': True,
                 'venta_id': v.venta_id,
                 'renta_id': None,

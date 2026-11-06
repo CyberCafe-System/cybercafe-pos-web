@@ -342,7 +342,7 @@
                                     class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Ticket PDF">
                                     <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
                                 </a>
-                                {% if request.user.es_admin and not t.es_anulada %}
+                                {% if request.user.es_admin and not t.es_anulada and t.es_mismo_dia %}
                                 <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 btn-anular-venta"
                                     data-bs-toggle="modal" data-bs-target="#modalAnularVenta" data-venta-id="{{ t.venta_id }}" title="Anular venta">
                                     <i class="bi bi-x-circle"></i>
@@ -508,7 +508,7 @@
         }
     });
 </script>
-{% endblock %}
+
 <!-- Modal Anular Venta (Admin Only) -->
 <div class="modal fade" id="modalAnularVenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -557,3 +557,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% endblock %}

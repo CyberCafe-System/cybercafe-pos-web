@@ -6,7 +6,7 @@ class Cliente(models.Model):
     nombre = models.CharField(max_length=255, verbose_name="Nombre")
     apellido = models.CharField(max_length=255, verbose_name="Apellido")
     dui = models.CharField(max_length=10, unique=True, verbose_name="DUI")
-    direccion = models.CharField(max_length=255, verbose_name="Dirección")
+    direccion = models.CharField(max_length=255, null=True, blank=True, default=None, verbose_name="Dirección")
     telefono = models.IntegerField(verbose_name="Teléfono")
     correo = models.EmailField(max_length=255, null=True, blank=True, verbose_name="Correo")
     activo = models.BooleanField(default=True, verbose_name="Activo")
