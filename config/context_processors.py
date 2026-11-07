@@ -1,7 +1,10 @@
 import json
+import logging
 
 from django.utils import timezone
 from rentas.models import DetalleRenta
+
+logger = logging.getLogger(__name__)
 
 
 def obtener_rentas_activas_payload():
@@ -36,6 +39,7 @@ def obtener_rentas_activas_payload():
             })
         return resultado
     except Exception:
+        logger.debug("No se pudo obtener payload de rentas activas en context processor", exc_info=True)
         return []
 
 

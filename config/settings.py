@@ -187,13 +187,13 @@ PASSWORD_HASHERS = [
 
 # Configuración de sesión (Límite de 1 hora)
 SESSION_COOKIE_AGE = 3600
-SESSION_SAVE_EVERY_REQUEST = True
+SESSION_SAVE_EVERY_REQUEST = False
 SESSION_COOKIE_HTTPONLY = True
 
 # Seguridad de cookies en producción
 if not DEBUG:
-    SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=False)
-    CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=False)
+    SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
+    CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
     SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True

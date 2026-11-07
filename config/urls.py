@@ -19,7 +19,7 @@ from usuarios import views as usuarios_views
 from usuarios.forms import WebAuthenticationForm
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL.lstrip('/'), admin.site.urls),
 
     # --- RUTAS DE ACCESO ---
     path(

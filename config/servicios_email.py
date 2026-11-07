@@ -1,8 +1,11 @@
 import logging
+import os
 from decimal import Decimal
+from pathlib import Path
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.conf import settings
 from django.utils import timezone
+from django.utils.html import escape as html_escape
 
 logger = logging.getLogger(__name__)
 
@@ -11,15 +14,10 @@ REMITENTE_DEFAULT = 'The COFFEE LAN <thecoffeelan@gmail.com>'
 
 def _obtener_conexion_email():
     """
-    Retorna la conexión de correo configurada.
-    Si el servidor Django no ha sido reiniciado tras editar el .env, lee directamente
-    el archivo .env para obtener EMAIL_HOST_PASSWORD en tiempo real.
+    Retorna la conexión de correo configurada de manera thread-safe.
     """
-    import os
-    from pathlib import Path
-
     password = getattr(settings, 'EMAIL_HOST_PASSWORD', '') or os.environ.get('EMAIL_HOST_PASSWORD', '')
-    
+
     if not password:
         env_path = getattr(settings, 'BASE_DIR', Path('.')) / '.env'
         if env_path.exists():
@@ -31,8 +29,6 @@ def _obtener_conexion_email():
                             val = line.split('=', 1)[1].strip().strip('"').strip("'")
                             if val:
                                 password = val
-                                os.environ['EMAIL_HOST_PASSWORD'] = password
-                                setattr(settings, 'EMAIL_HOST_PASSWORD', password)
                                 break
             except Exception as e:
                 logger.warning("No se pudo leer .env dinámicamente: %s", e)
@@ -72,9 +68,11 @@ def enviar_factura_venta_correo(venta, destinatario_email=None):
         nombre_adjunto = f"Factura_Venta_V-{venta.venta_id}.pdf"
         
         # 2. Datos para el cuerpo
-        nombre_cliente = f"{cliente.nombre} {cliente.apellido}" if cliente else "Estimado/a Cliente"
+        nombre_cliente_raw = f"{cliente.nombre} {cliente.apellido}" if cliente else "Estimado/a Cliente"
+        nombre_cliente = html_escape(nombre_cliente_raw)
         fecha_str = timezone.localtime(venta.fecha).strftime('%d/%m/%Y %I:%M %p')
-        cajero_str = venta.usuario.username if venta.usuario else "Sistema"
+        cajero_raw = venta.usuario.username if venta.usuario else "Sistema"
+        cajero_str = html_escape(cajero_raw)
         total_str = f"${venta.total:,.2f}"
         subtotal_str = f"${venta.subtotal:,.2f}"
         iva_str = f"${venta.iva:,.2f}"
@@ -82,7 +80,8 @@ def enviar_factura_venta_correo(venta, destinatario_email=None):
         detalles_html = ""
         detalles_txt = ""
         for det in venta.detalles.all():
-            prod_nom = det.producto.nombre if det.producto else "Producto"
+            prod_nom_raw = det.producto.nombre if det.producto else "Producto"
+            prod_nom = html_escape(prod_nom_raw)
             cant = det.cantidad
             pu = f"${det.precio_unitario:,.2f}"
             st = f"${det.subtotal:,.2f}"
@@ -94,12 +93,12 @@ def enviar_factura_venta_correo(venta, destinatario_email=None):
                 <td style="padding: 8px 12px; border-bottom: 1px solid #f0e6dd; text-align: right; font-weight: bold; color: #6F4E37;">{st}</td>
             </tr>
             """
-            detalles_txt += f"  - {cant}x {prod_nom} ({pu} c/u) = {st}\n"
+            detalles_txt += f"  - {cant}x {prod_nom_raw} ({pu} c/u) = {st}\n"
 
         # 3. Asunto y cuerpo en texto plano
         asunto = f"Factura de Compra #{venta.venta_id} - The COFFEE LAN"
         texto_plano = f"""
-Hola, {nombre_cliente}.
+Hola, {nombre_cliente_raw}.
 
 ¡Gracias por tu compra en The COFFEE LAN!
 Adjunto a este correo encontrarás tu factura digital en formato PDF correspondiente al ticket #V-{venta.venta_id}.
@@ -108,7 +107,7 @@ Resumen de la Venta:
 ------------------------------------------
 Ticket: #V-{venta.venta_id}
 Fecha: {fecha_str}
-Atendido por: {cajero_str}
+Atendido por: {cajero_raw}
 
 Artículos:
 {detalles_txt}
@@ -249,16 +248,19 @@ def enviar_factura_renta_correo(renta, destinatario_email=None):
         nombre_adjunto = f"Comprobante_Renta_R-{renta.renta_id}.pdf"
         
         # 2. Datos para el cuerpo
-        nombre_cliente = f"{cliente.nombre} {cliente.apellido}" if cliente else "Estimado/a Cliente"
+        nombre_cliente_raw = f"{cliente.nombre} {cliente.apellido}" if cliente else "Estimado/a Cliente"
+        nombre_cliente = html_escape(nombre_cliente_raw)
         fecha_str = timezone.localtime(renta.fecha).strftime('%d/%m/%Y %I:%M %p')
-        cajero_str = renta.usuario.username if renta.usuario else "Sistema"
+        cajero_raw = renta.usuario.username if renta.usuario else "Sistema"
+        cajero_str = html_escape(cajero_raw)
         total_str = f"${renta.total:,.2f}"
         
         detalles_html = ""
         detalles_txt = ""
         for det in renta.detalles.all():
-            eq_nom = det.equipo.nombre if det.equipo else "Equipo"
-            eq_tipo = det.equipo.get_tipo_display() if det.equipo else "Sesión"
+            eq_nom_raw = det.equipo.nombre if det.equipo else "Equipo"
+            eq_nom = html_escape(eq_nom_raw)
+            eq_tipo = html_escape(det.equipo.get_tipo_display() if det.equipo else "Sesión")
             mins = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
             st = f"${det.subtotal:,.2f}"
             detalles_html += f"""
@@ -270,11 +272,11 @@ def enviar_factura_renta_correo(renta, destinatario_email=None):
                 <td style="padding: 10px 12px; border-bottom: 1px solid #f0e6dd; text-align: right; font-weight: bold; color: #6F4E37;">{st}</td>
             </tr>
             """
-            detalles_txt += f"  - {eq_nom} ({mins} min) = {st}\n"
+            detalles_txt += f"  - {eq_nom_raw} ({mins} min) = {st}\n"
 
         asunto = f"Comprobante de Renta #{renta.renta_id} - The COFFEE LAN"
         texto_plano = f"""
-Hola, {nombre_cliente}.
+Hola, {nombre_cliente_raw}.
 
 ¡Gracias por utilizar nuestras instalaciones en The COFFEE LAN!
 Adjunto a este correo encontrarás el comprobante digital en formato PDF correspondiente a tu sesión de renta #{renta.renta_id}.
@@ -283,7 +285,7 @@ Resumen de la Sesión:
 ------------------------------------------
 Ticket de Renta: #R-{renta.renta_id}
 Fecha: {fecha_str}
-Atendido por: {cajero_str}
+Atendido por: {cajero_raw}
 
 Equipos Utilizados:
 {detalles_txt}
