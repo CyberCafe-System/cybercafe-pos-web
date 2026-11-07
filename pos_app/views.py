@@ -14,8 +14,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import DecimalField, F, Sum
-from django.db.models.functions import Coalesce, TruncDate
+from django.db.models import Case, DecimalField, F, Sum, When
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -169,29 +169,50 @@ def inicio(request):
     chart_ventas_data = []
     chart_rentas_data = []
 
-    tz_actual = timezone.get_current_timezone()
-    ventas_por_dia = dict(
+    agregaciones_ventas_semana = {}
+    agregaciones_rentas_semana = {}
+    for i in range(7):
+        dia = inicio_semana + timezone.timedelta(days=i)
+        ini_dia, fin_dia = _rango_fecha_local(dia)
+        agregaciones_ventas_semana[f'd_{i}'] = Coalesce(
+            Sum(
+                Case(
+                    When(
+                        fecha__range=(ini_dia, fin_dia),
+                        then=F('subtotal') + F('iva'),
+                    ),
+                    default=Decimal('0.00'),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal('0.00'),
+        )
+        agregaciones_rentas_semana[f'd_{i}'] = Coalesce(
+            Sum(
+                Case(
+                    When(fecha__range=(ini_dia, fin_dia), then=F('total')),
+                    default=Decimal('0.00'),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal('0.00'),
+        )
+
+    totales_ventas_semana = (
         Venta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
         .exclude(estado='ANULADA')
-        .annotate(dia=TruncDate('fecha', tzinfo=tz_actual))
-        .values('dia')
-        .annotate(total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00')))
-        .values_list('dia', 'total')
+        .aggregate(**agregaciones_ventas_semana)
     )
-    rentas_por_dia = dict(
+    totales_rentas_semana = (
         Renta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
-        .annotate(dia=TruncDate('fecha', tzinfo=tz_actual))
-        .values('dia')
-        .annotate(total=Coalesce(Sum('total'), Decimal('0.00')))
-        .values_list('dia', 'total')
+        .aggregate(**agregaciones_rentas_semana)
     )
 
     for i in range(7):
-        dia = inicio_semana + timezone.timedelta(days=i)
         chart_dias_labels.append(dias_semana_es[i])
 
-        v_sub = ventas_por_dia.get(dia, Decimal('0.00')) or Decimal('0.00')
-        r_sub = rentas_por_dia.get(dia, Decimal('0.00')) or Decimal('0.00')
+        v_sub = totales_ventas_semana.get(f'd_{i}', Decimal('0.00')) or Decimal('0.00')
+        r_sub = totales_rentas_semana.get(f'd_{i}', Decimal('0.00')) or Decimal('0.00')
 
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
