@@ -1,0 +1,216 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-person-badge me-2"></i>Gestión de Usuarios</h3>
+        <p class="text-muted small mb-0">Control de cuentas de acceso, roles y contraseñas del personal.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <a href="{% url 'auditoria' %}" class="btn btn-outline-dark">
+            <i class="bi bi-shield-lock me-1"></i> Auditoría
+        </a>
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearUsuario">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Usuario
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0"
+                        placeholder="Buscar usuario...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Username</strong>, <strong
+                            class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre Completo</th>
+                        <th>Username</th>
+                        <th>Correo</th>
+                        <th>Rol</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr class="fila-usuario"
+                        data-busqueda="{{ usuario.username|lower }} {{ usuario.nombre|lower }} {{ usuario.correo|lower }}">
+                        <td class="fw-semibold text-dark">{{ usuario.nombre }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">{{ usuario.username }}</span>
+                        </td>
+                        <td class="text-muted">{{ usuario.correo }}</td>
+                        <td>
+                            {% if usuario.es_admin %}
+                            <span class="badge bg-dark">{{ usuario.rol.nombre }}</span>
+                            {% elif usuario.es_cajero %}
+                            <span class="badge bg-primary">{{ usuario.rol.nombre }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ usuario.rol.nombre }}</span>
+                            {% endif %}
+                            {% if usuario.es_asistente %}
+                            <span class="badge bg-info text-dark ms-1"><i class="bi bi-phone"></i> Solo App Móvil</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if usuario.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-usuario"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarUsuario"
+                                data-id="{{ usuario.usuario_id }}" data-username="{{ usuario.username }}"
+                                data-nombre="{{ usuario.nombre }}" data-correo="{{ usuario.correo }}"
+                                data-rol="{{ usuario.rol_id }}" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <form method="POST" action="{% url 'desactivar_usuario' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="usuario_id" value="{{ usuario.usuario_id }}">
+                                {% if usuario.activo %}
+                                {% if usuario.es_usuario_actual %}
+                                <button type="button" class="btn btn-sm btn-outline-warning" disabled
+                                    title="No puedes desactivar tu propia cuenta en sesión">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% endif %}
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activar">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="fila-vacia">
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-person-badge fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay usuarios registrados aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="sinResultadosUsuarios" class="d-none">
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron usuarios que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/paginacion.html' %}
+    </div>
+</div>
+
+{% include 'usuarios/crear.html' %}
+{% include 'usuarios/modificar.html' %}
+
+<script>
+    document.querySelectorAll('.btn-editar-usuario').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('editarUsuarioId').value = btn.dataset.id;
+            document.getElementById('editarUsuarioNombre').value = btn.dataset.nombre;
+            document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
+            document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
+            document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
+            // Limpiar campo de nueva contraseña y restablecer a oculto
+            const passInput = document.getElementById('editarUsuarioPassword');
+            if (passInput) {
+                passInput.value = '';
+                passInput.type = 'password';
+            }
+            const toggleEditBtn = document.querySelector('.btn-toggle-password[data-target="editarUsuarioPassword"] i');
+            if (toggleEditBtn) {
+                toggleEditBtn.classList.remove('bi-eye-slash');
+                toggleEditBtn.classList.add('bi-eye');
+            }
+        });
+    });
+
+    document.querySelectorAll('.btn-toggle-password').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const targetId = btn.dataset.target;
+            const input = document.getElementById(targetId);
+            const icon = btn.querySelector('i');
+            if (!input) return;
+            if (input.type === 'password') {
+                input.type = 'text';
+                if (icon) {
+                    icon.classList.remove('bi-eye');
+                    icon.classList.add('bi-eye-slash');
+                }
+            } else {
+                input.type = 'password';
+                if (icon) {
+                    icon.classList.remove('bi-eye-slash');
+                    icon.classList.add('bi-eye');
+                }
+            }
+        });
+    });
+
+    const modalCrearUsuario = document.getElementById('modalCrearUsuario');
+    if (modalCrearUsuario) {
+        modalCrearUsuario.addEventListener('hidden.bs.modal', function () {
+            const passCrear = document.getElementById('crearUsuarioPassword');
+            if (passCrear) passCrear.type = 'password';
+            const toggleCrearIcon = modalCrearUsuario.querySelector('.btn-toggle-password i');
+            if (toggleCrearIcon) {
+                toggleCrearIcon.classList.remove('bi-eye-slash');
+                toggleCrearIcon.classList.add('bi-eye');
+            }
+        });
+    }
+
+    const buscadorUsuarios = document.getElementById('buscadorUsuarios');
+    if (buscadorUsuarios) {
+        const filas = document.querySelectorAll('.fila-usuario');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosUsuarios');
+
+        buscadorUsuarios.addEventListener('input', function () {
+            const termino = buscadorUsuarios.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+</script>
+
+{% endblock %}

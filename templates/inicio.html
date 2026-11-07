@@ -1,0 +1,396 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<!-- Encabezado del Dashboard -->
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+    <div>
+        <h3 class="fw-bold mb-0 text-dark">Panel de Operaciones y Estadísticas</h3>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        {% if request.user.es_admin %}
+        <a href="{% url 'reportes' %}" class="btn btn-dark rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-2 small fw-semibold">
+            <i class="bi bi-grid-fill"></i>
+            <span>Resumen General</span>
+        </a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Las 4 Tarjetas de Estadísticas Principales -->
+<div class="row g-3 mb-4">
+    <!-- Tarjeta 1: Ingresos de Hoy -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1a110b 0%, #452f23 100%); border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        INGRESOS DE HOY
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        ${{ ingresos_hoy|floatformat:2 }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-cash-coin"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 2: Equipos en Uso -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background-color: #c57616; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        EQUIPOS EN USO
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ equipos_ocupados }} / {{ total_equipos }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-pc-display"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 3: Ventas POS Hoy -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background-color: #159b59; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        VENTAS POS HOY
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ ventas_hoy }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-bag"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tarjeta 4: Clientes Activos -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="background-color: #0d6efd; border-radius: 14px;">
+            <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                <div>
+                    <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                        CLIENTES ACTIVOS
+                    </span>
+                    <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                        {{ total_clientes }}
+                    </h2>
+                </div>
+                <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sección de Gráficas Operativas -->
+<div class="row g-4 mb-4">
+    <!-- Gráfica 1: Ingresos Diarios (Ventas POS vs Rentas) -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div
+                class="card-header bg-white border-0 pt-4 px-4 pb-2 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-bar-chart-line text-warning me-2"></i>Ingresos de los Últimos 7 Días
+                    </h5>
+                    <small class="text-muted">Facturación del Lunes {{ inicio_semana|date:"d/m" }} al Domingo {{ fin_semana|date:"d/m" }}.</small>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-light text-dark border rounded-pill px-3 py-2 font-monospace">
+                        Total semana: <strong class="text-coffee">${{ total_semana|floatformat:2 }}</strong>
+                    </span>
+                </div>
+            </div>
+            <div class="card-body px-4 pb-4 pt-2">
+                <div class="d-flex gap-3 mb-2 small text-muted">
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #b06b05;"></span>
+                        <span>Ventas POS (${{ total_semana_ventas|floatformat:2 }})</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="d-inline-block rounded-circle"
+                            style="width: 10px; height: 10px; background-color: #0d6efd;"></span>
+                        <span>Rentas Equipos (${{ total_semana_rentas|floatformat:2 }})</span>
+                    </div>
+                </div>
+                <div style="position: relative; height: 280px; width: 100%;">
+                    <canvas id="graficaIngresos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráfica 2: Top Productos Más Vendidos -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm border-0 rounded-4 h-100">
+            <div class="card-header bg-white border-0 pt-4 px-4 pb-2">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-trophy text-warning me-2"></i>Top 5 Productos Vendidos
+                </h5>
+            </div>
+            <div class="card-body px-4 pb-4 pt-2 d-flex flex-column align-items-center justify-content-center">
+                <div style="position: relative; height: 300px; width: 100%; max-width: 320px;" class="my-auto">
+                    <canvas id="graficaTopProductos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla de Últimas Transacciones -->
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div
+        class="card-header bg-white border-0 pt-4 px-4 pb-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <div>
+            <h5 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-clock-history text-coffee me-2"></i>Últimas Operaciones Realizadas
+            </h5>
+            <small class="text-muted">Historial en vivo de rentas iniciadas y tickets de venta facturados.</small>
+        </div>
+        {% if request.user.es_admin %}
+        <a href="{% url 'reportes' %}" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+            <i class="bi bi-journal-text me-1"></i> Ver Reporte Completo
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-4 pt-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>N° Ticket</th>
+                        <th>Tipo</th>
+                        <th>Cliente</th>
+                        <th>Concepto / Detalle</th>
+                        <th>Atendido por</th>
+                        <th>Hora</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Estado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for trans in ultimas_ventas %}
+                    <tr>
+                        <td class="fw-bold font-monospace text-dark">
+                            {{ trans.id }}
+                        </td>
+                        <td>
+                            {% if trans.es_venta %}
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #f7ede2; color: #855204; font-weight: 500;">
+                                <i class="bi bi-cart4 me-1"></i>Venta POS
+                            </span>
+                            {% else %}
+                            <span class="badge rounded-pill px-2 py-1"
+                                style="background-color: #eff6ff; color: #1d4ed8; font-weight: 500;">
+                                <i class="bi bi-pc-display me-1"></i>Renta
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="fw-semibold text-dark">{{ trans.cliente_nombre }}</span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ trans.concepto }}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border font-monospace">
+                                {{ trans.usuario.username|default:"Sistema" }}
+                            </span>
+                        </td>
+                        <td class="text-muted small">
+                            {{ trans.fecha_hora|date:"d/m H:i A" }}
+                        </td>
+                        <td class="fw-bold font-monospace text-end text-success">
+                            ${{ trans.total }}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge rounded-pill px-3 py-1"
+                                style="background-color: #ecfdf5; color: #047857; font-weight: 600;">
+                                {{ trans.estado }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-receipt fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay transacciones registradas el día de hoy todavía.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<!-- Contenedor seguro de datos para gráficas (inmune a autoformateadores) -->
+<div id="chart-meta-data" class="d-none"
+    data-dias='{{ chart_dias_labels }}'
+    data-ventas='{{ chart_ventas_data }}'
+    data-rentas='{{ chart_rentas_data }}'
+    data-top-labels='{{ chart_top_labels }}'
+    data-top-data='{{ chart_top_data }}'
+    data-tiene-top="{% if tiene_datos_top %}1{% else %}0{% endif %}">
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const metaEl = document.getElementById('chart-meta-data');
+    const diasLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-dias') : '[]');
+    const ventasData = JSON.parse(metaEl ? metaEl.getAttribute('data-ventas') : '[]');
+    const rentasData = JSON.parse(metaEl ? metaEl.getAttribute('data-rentas') : '[]');
+    const topLabels = JSON.parse(metaEl ? metaEl.getAttribute('data-top-labels') : '[]');
+    const topData = JSON.parse(metaEl ? metaEl.getAttribute('data-top-data') : '[]');
+    const tieneDatosTop = metaEl ? (metaEl.getAttribute('data-tiene-top') === '1') : false;
+
+    // 1. Gráfica de Ingresos de la Semana (Lunes a Domingo)
+    const ctxIngresos = document.getElementById('graficaIngresos');
+    if (ctxIngresos) {
+        new Chart(ctxIngresos.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: diasLabels,
+                datasets: [
+                    {
+                        label: 'Ventas POS ($)',
+                        data: ventasData,
+                        backgroundColor: '#b06b05',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
+                    },
+                    {
+                        label: 'Rentas de Equipos ($)',
+                        data: rentasData,
+                        backgroundColor: '#0d6efd',
+                        borderRadius: 8,
+                        borderSkipped: false,
+                        barPercentage: 0.6,
+                        categoryPercentage: 0.7
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f1b18',
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    label += '$' + context.parsed.y.toFixed(2);
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function (value) {
+                                return '$' + value;
+                            }
+                        },
+                        grid: {
+                            color: '#f0edea'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 2. Gráfica Donut: Top Productos Vendidos
+    const ctxTop = document.getElementById('graficaTopProductos');
+    if (ctxTop) {
+        const paletaColores = ['#241e1b', '#c57616', '#159b59', '#0d6efd', '#6c757d'];
+        const colores = tieneDatosTop ? paletaColores.slice(0, topLabels.length) : ['#e9ecef'];
+
+        new Chart(ctxTop.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: topLabels,
+                datasets: [{
+                    data: topData,
+                    backgroundColor: colores,
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '52%',
+                plugins: {
+                    legend: {
+                        display: tieneDatosTop,
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 20,
+                            boxHeight: 12,
+                            usePointStyle: false,
+                            padding: 16,
+                            font: {
+                                size: 13,
+                                weight: '600',
+                                family: "'Poppins', sans-serif"
+                            },
+                            color: '#2b2521'
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1f1b18',
+                        padding: 10,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function (context) {
+                                if (!tieneDatosTop) return ' Sin ventas registradas';
+                                return ` ${context.label}: ${context.raw} unidades`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+</script>
+{% endblock %}

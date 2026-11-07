@@ -1,0 +1,21 @@
+<div class="modal fade" id="modalFinalizarRenta" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{% url 'finalizar_renta' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title">Finalizar y Cobrar</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="renta_id" value="">
+                    <p class="fs-4 text-center">Total a cobrar: <strong>$2.50</strong></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Cobro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

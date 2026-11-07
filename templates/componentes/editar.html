@@ -1,0 +1,73 @@
+<!-- Modal Editar Componente -->
+<div class="modal fade" id="modalModificarComponente" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header bg-dark text-white rounded-top-4">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Modificar Componente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <form method="POST" action="{% url 'modificar_componente' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+                    <input type="hidden" name="componente_id" id="editCompId">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre del Componente <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" id="editCompNombre" class="form-control" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Marca</label>
+                            <input type="text" name="marca" id="editCompMarca" class="form-control" placeholder="Ej. Logitech">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Modelo</label>
+                            <input type="text" name="modelo" id="editCompModelo" class="form-control" placeholder="Ej. G203">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Número de Serie</label>
+                        <input type="text" name="numero_serie" id="editCompSerie" class="form-control">
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Tipo <span class="text-danger fw-bold">*</span></label>
+                            <select name="tipo" id="editCompTipo" class="form-select" required>
+                                <option value="MOUSE">Mouse</option>
+                                <option value="TECLADO">Teclado</option>
+                                <option value="MONITOR">Monitor</option>
+                                <option value="CONTROL">Control</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Estado Físico <span class="text-danger fw-bold">*</span></label>
+                            <select name="estado" id="editCompEstado" class="form-select" required>
+                                <option value="DISPONIBLE">Disponible</option>
+                                <option value="DANIOS_MENORES">Daños Menores</option>
+                                <option value="REQUIERE_REEMPLAZO">Requiere Reemplazo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Asignar a Equipo</label>
+                        <select name="equipo" id="editCompEquipo" class="form-select">
+                            <option value="">— Sin asignar (Bodega) —</option>
+                            {% for equipo in equipos %}
+                            <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee"><i class="bi bi-arrow-repeat me-1"></i> Actualizar Componente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,353 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-shield-lock me-2 text-primary"></i>Registro de Auditoría</h3>
+        <p class="text-muted small mb-0">Trazabilidad completa de operaciones críticas, mutaciones y cancelaciones del sistema.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <a href="{% url 'usuarios' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Volver a Usuarios
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted">Filtrar por Entidad</label>
+                <select name="entidad" class="form-select">
+                    <option value="">Todas las entidades</option>
+                    <option value="Venta" {% if entidad_sel == 'Venta' %}selected{% endif %}>Venta</option>
+                    <option value="Producto" {% if entidad_sel == 'Producto' %}selected{% endif %}>Producto</option>
+                    <option value="Equipo" {% if entidad_sel == 'Equipo' %}selected{% endif %}>Equipo</option>
+                    <option value="Usuario" {% if entidad_sel == 'Usuario' %}selected{% endif %}>Usuario</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold text-muted">Filtrar por Usuario</label>
+                <select name="usuario" class="form-select">
+                    <option value="">Todos los usuarios</option>
+                    {% for u in usuarios %}
+                    <option value="{{ u.usuario_id }}" {% if usuario_sel == u.usuario_id %}selected{% endif %}>
+                        {{ u.username }} ({{ u.nombre }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-coffee w-100">
+                    <i class="bi bi-funnel me-1"></i> Filtrar
+                </button>
+                <a href="{% url 'auditoria' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        {% if auditorias %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Fecha y Hora</th>
+                        <th>Usuario</th>
+                        <th>Acción</th>
+                        <th>Entidad</th>
+                        <th class="text-center">Detalle / Cambios</th>
+                        <th class="text-end">Origen / IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in auditorias %}
+                    <tr>
+                        <td class="text-nowrap small text-muted">
+                            <i class="bi bi-clock me-1"></i>{{ a.fecha|date:"d/m/Y H:i:s" }}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="rounded-circle bg-light border p-1 text-coffee d-inline-flex align-items-center justify-content-center" style="width: 28px; height: 28px;">
+                                    <i class="bi bi-person-fill small"></i>
+                                </span>
+                                <span class="fw-semibold text-dark">{{ a.usuario.username|default:"Sistema" }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            {% if 'ANULAR' in a.accion %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>{{ a.accion_legible }}</span>
+                            {% elif 'CREAR' in a.accion %}
+                            <span class="badge bg-success"><i class="bi bi-plus-circle me-1"></i>{{ a.accion_legible }}</span>
+                            {% elif 'HABILITAR' in a.accion or 'ACTIVAR' in a.accion %}
+                            <span class="badge bg-info text-dark"><i class="bi bi-check-circle me-1"></i>{{ a.accion_legible }}</span>
+                            {% elif 'AJUSTAR' in a.accion %}
+                            <span class="badge bg-primary"><i class="bi bi-arrow-left-right me-1"></i>{{ a.accion_legible }}</span>
+                            {% elif 'MODIFICAR' in a.accion %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-pencil-square me-1"></i>{{ a.accion_legible }}</span>
+                            {% else %}
+                            <span class="badge bg-secondary">{{ a.accion_legible }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border px-2 py-1">
+                                <i class="bi bi-layers me-1 text-primary"></i>{{ a.entidad }} #{{ a.entidad_id }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            {% if a.valor_previo or a.valor_nuevo or a.motivo_operacion %}
+                            <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 btn-ver-auditoria shadow-xs"
+                                    data-bs-toggle="modal" data-bs-target="#modalDetalleAuditoria"
+                                    data-id="{{ a.auditoria_id }}"
+                                    data-fecha="{{ a.fecha|date:'d/m/Y H:i:s' }}"
+                                    data-usuario="{{ a.usuario.username|default:'Sistema' }}"
+                                    data-accion="{{ a.accion }}"
+                                    data-accion-legible="{{ a.accion_legible }}"
+                                    data-entidad="{{ a.entidad }} #{{ a.entidad_id }}"
+                                    data-referencia="{{ a.nombre_referencia|default:'' }}"
+                                    data-motivo="{{ a.motivo_operacion|default:'' }}"
+                                    data-origen="{{ a.origen }}"
+                                    data-ip="{{ a.ip|default:'Local' }}"
+                                    title="Ver los detalles de este registro">
+                                <i class="bi bi-eye me-1"></i> Ver Detalles
+                            </button>
+
+                            <!-- Contenedor oculto con la tabla de cambios formateada -->
+                            <div id="cambiosAudit{{ a.auditoria_id }}" class="d-none">
+                                {% if a.comparativa_cambios %}
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm align-middle mb-0" style="table-layout: fixed; width: 100%;">
+                                        <thead class="table-light small">
+                                            <tr>
+                                                <th style="width: 24%;">Campo</th>
+                                                <th style="width: 38%;">Valor Anterior</th>
+                                                <th style="width: 38%;">Valor Nuevo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="small">
+                                            {% for c in a.comparativa_cambios %}
+                                            <tr {% if c.es_cambio %}class="table-warning bg-opacity-25"{% elif c.es_alta %}class="table-success bg-opacity-25"{% endif %}>
+                                                <td class="fw-semibold text-dark text-break">{{ c.campo }}</td>
+                                                <td style="word-break: break-word; overflow-wrap: anywhere;">
+                                                    {% if c.es_cambio %}
+                                                    <span class="text-danger fw-semibold">{{ c.anterior }}</span>
+                                                    {% else %}
+                                                    <span class="text-muted">{{ c.anterior }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td style="word-break: break-word; overflow-wrap: anywhere;">
+                                                    {% if c.es_cambio %}
+                                                    <span class="text-success fw-bold">{{ c.nuevo }}</span>
+                                                    {% elif c.es_alta %}
+                                                    <span class="text-success fw-semibold">{{ c.nuevo }}</span>
+                                                    {% else %}
+                                                    <span class="text-dark">{{ c.nuevo }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="text-muted small text-center py-2">Sin detalles adicionales registrados.</div>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <span class="text-muted small">— Sin cambios —</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end small text-muted font-monospace">
+                            <div><i class="bi bi-globe me-1"></i>{{ a.origen }}</div>
+                            {% if a.ip %}<small class="text-secondary">{{ a.ip }}</small>{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% include 'includes/paginacion.html' %}
+
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-journal-text display-4 mb-2"></i>
+            <p class="mb-0">No se encontraron registros de auditoría para los filtros aplicados.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal de Detalle de Auditoría (Ventana compacta emergente) -->
+<div class="modal fade" id="modalDetalleAuditoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 680px;">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header bg-dark text-white py-3 px-4">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="rounded-circle bg-white bg-opacity-10 p-2 d-flex align-items-center justify-content-center">
+                        <i class="bi bi-shield-check text-warning fs-5"></i>
+                    </div>
+                    <div>
+                        <h6 class="modal-title fw-bold mb-0" id="modalAuditTitulo">Detalle de Registro de Auditoría</h6>
+                        <small class="text-white-50" id="modalAuditSubtitulo">Trazabilidad inmutable de la operación</small>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <!-- Tarjetas de Metadatos Clave -->
+                <div class="row g-2 mb-3">
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-light p-2 rounded-3 border text-start h-100">
+                            <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Usuario</span>
+                            <strong class="text-dark d-flex align-items-center gap-1 text-break" id="modalAuditUsuario">
+                                <i class="bi bi-person-fill text-primary"></i> <span>--</span>
+                            </strong>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-light p-2 rounded-3 border text-start h-100">
+                            <span class="text-muted small d-block text-uppercase fw-semibold mb-1" style="font-size: 0.72rem;">Acción</span>
+                            <span class="badge bg-secondary text-wrap text-start lh-sm" style="max-width: 100%; word-break: break-word;" id="modalAuditAccion">--</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-light p-2 rounded-3 border text-start h-100">
+                            <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Entidad</span>
+                            <strong class="text-dark text-break" id="modalAuditEntidad">--</strong>
+                        </div>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <div class="bg-light p-2 rounded-3 border text-start h-100">
+                            <span class="text-muted small d-block text-uppercase fw-semibold" style="font-size: 0.72rem;">Origen / Conexión</span>
+                            <span class="text-muted small font-monospace d-block text-break" id="modalAuditOrigen">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recurso afectado si tiene nombre -->
+                <div class="alert alert-light border mb-3 d-none align-items-center gap-2 py-2 px-3" id="modalAuditAlertaRecurso">
+                    <i class="bi bi-box-seam text-coffee fs-5"></i>
+                    <div>
+                        <small class="text-muted d-block" style="font-size: 0.75rem;">Elemento modificado:</small>
+                        <strong class="text-dark" id="modalAuditRecursoTexto">--</strong>
+                    </div>
+                </div>
+
+                <!-- Motivo de la Operación si aplica -->
+                <div class="alert alert-warning border border-warning-subtle mb-3 d-none py-2 px-3" id="modalAuditAlertaMotivo">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-chat-quote-fill text-warning fs-5"></i>
+                        <div>
+                            <span class="fw-bold text-dark d-block" style="font-size: 0.8rem;">Motivo / Justificación:</span>
+                            <span class="text-dark" id="modalAuditMotivoTexto">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla Comparativa de Atributos -->
+                <div class="mb-0">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="fw-bold text-dark mb-0">
+                            <i class="bi bi-arrow-left-right me-1 text-primary"></i> Comparativa de Atributos
+                        </h6>
+                        <small class="text-muted"><span class="badge bg-warning text-dark me-1">Amarillo: Modificado</span> <span class="badge bg-success">Verde: Nuevo</span></small>
+                    </div>
+                    <div id="modalAuditCuerpoCambios">
+                        <!-- Inyectado dinámicamente con JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.btn-ver-auditoria').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const auditId = this.dataset.id;
+            const fecha = this.dataset.fecha;
+            const usuario = this.dataset.usuario;
+            const accion = this.dataset.accion || '';
+            const accionLegible = this.dataset.accionLegible || accion.replace(/_/g, ' ');
+            const entidad = this.dataset.entidad;
+            const referencia = (this.dataset.referencia || '').trim();
+            const motivo = (this.dataset.motivo || '').trim();
+            const origen = this.dataset.origen;
+            const ip = this.dataset.ip;
+
+            // Rellenar cabecera y metadatos
+            document.getElementById('modalAuditTitulo').textContent = `Auditoría #${auditId} — ${entidad}`;
+            document.getElementById('modalAuditSubtitulo').textContent = `Registrado el ${fecha}`;
+            document.getElementById('modalAuditUsuario').innerHTML = `<i class="bi bi-person-fill text-primary me-1"></i>${usuario}`;
+            
+            const badgeAccion = document.getElementById('modalAuditAccion');
+            badgeAccion.textContent = accionLegible;
+            let colorClase = 'bg-secondary';
+            if (accion.includes('ANULAR')) {
+                colorClase = 'bg-danger';
+            } else if (accion.includes('CREAR')) {
+                colorClase = 'bg-success';
+            } else if (accion.includes('HABILITAR') || accion.includes('ACTIVAR')) {
+                colorClase = 'bg-info text-dark';
+            } else if (accion.includes('AJUSTAR')) {
+                colorClase = 'bg-primary';
+            } else if (accion.includes('MODIFICAR')) {
+                colorClase = 'bg-warning text-dark';
+            }
+            badgeAccion.className = `badge ${colorClase} text-wrap text-start lh-sm`;
+
+            document.getElementById('modalAuditEntidad').textContent = entidad;
+            document.getElementById('modalAuditOrigen').textContent = `${origen} (${ip})`;
+
+            // Alerta de Recurso
+            const alertRecurso = document.getElementById('modalAuditAlertaRecurso');
+            const txtRecurso = document.getElementById('modalAuditRecursoTexto');
+            if (referencia) {
+                txtRecurso.textContent = referencia;
+                alertRecurso.classList.remove('d-none');
+                alertRecurso.classList.add('d-flex');
+            } else {
+                alertRecurso.classList.remove('d-flex');
+                alertRecurso.classList.add('d-none');
+            }
+
+            // Alerta de Motivo
+            const alertMotivo = document.getElementById('modalAuditAlertaMotivo');
+            const txtMotivo = document.getElementById('modalAuditMotivoTexto');
+            if (motivo) {
+                txtMotivo.textContent = motivo;
+                alertMotivo.classList.remove('d-none');
+            } else {
+                alertMotivo.classList.add('d-none');
+            }
+
+            // Inyectar tabla de cambios
+            const srcCambios = document.getElementById('cambiosAudit' + auditId);
+            const dstCambios = document.getElementById('modalAuditCuerpoCambios');
+            if (srcCambios && dstCambios) {
+                dstCambios.innerHTML = srcCambios.innerHTML;
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+

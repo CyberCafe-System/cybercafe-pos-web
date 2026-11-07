@@ -1,0 +1,74 @@
+from django.db import models
+
+
+class Equipo(models.Model):
+    TIPO_CHOICES = [
+        ('PC', 'PC'),
+        ('CONSOLA', 'Consola'),
+    ]
+
+    ESTADO_CHOICES = [
+        ('DISPONIBLE', 'Disponible'),
+        ('DANIOS_MENORES', 'Daños Menores'),
+        ('DEFECTUOSO', 'Defectuoso'),
+        ('EN_MANTENIMIENTO', 'En Mantenimiento'),
+    ]
+
+    equipo_id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=255, verbose_name="Nombre")
+    descripcion = models.TextField(null=True, blank=True, verbose_name="Descripción")
+    tarifa_por_hora = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Tarifa por hora")
+    imagen = models.CharField(max_length=255, null=True, blank=True, verbose_name="Imagen")
+    tipo = models.CharField(max_length=50, choices=TIPO_CHOICES, default='PC')
+    estado = models.CharField(max_length=50, choices=ESTADO_CHOICES, default='DISPONIBLE')
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+
+    class Meta:
+        managed = False
+        db_table = 'equipos'
+        verbose_name = 'equipo'
+        verbose_name_plural = 'equipos'
+
+    def __str__(self):
+        return f"{self.nombre} ({self.tipo})"
+
+    def evaluar_rentabilidad(self):
+        """
+        Evalúa si el equipo puede rentarse según las reglas de negocio:
+        - El equipo debe estar activo (activo=True).
+        - El estado del equipo debe ser DISPONIBLE.
+        - Ningún componente asignado puede estar desactivado (activo=False).
+        - Ningún componente asignado puede estar en REQUIERE_REEMPLAZO ni DANIOS_MENORES.
+        """
+        if not self.activo:
+            return False, "El equipo se encuentra desactivado."
+
+        if self.estado != 'DISPONIBLE':
+            return False, f"El equipo se encuentra en estado '{self.get_estado_display()}'."
+
+        try:
+            comps_inactivos = self.componentes.filter(activo=False)
+            if comps_inactivos.exists():
+                nombres = ", ".join([f"{c.nombre} (Desactivado)" for c in comps_inactivos])
+                return False, f"Tiene componentes desactivados: {nombres}"
+
+            comps_bloqueantes = self.componentes.filter(
+                estado__in=['REQUIERE_REEMPLAZO', 'DANIOS_MENORES']
+            )
+            if comps_bloqueantes.exists():
+                nombres = ", ".join([f"{c.nombre} ({c.get_estado_display()})" for c in comps_bloqueantes])
+                return False, f"Tiene componentes con reporte: {nombres}"
+        except Exception:
+            pass
+
+        return True, "Disponible"
+
+    @property
+    def es_rentable(self) -> bool:
+        if hasattr(self, '_es_rentable_override'):
+            return self._es_rentable_override
+        return self.evaluar_rentabilidad()[0]
+
+    @es_rentable.setter
+    def es_rentable(self, valor: bool):
+        self._es_rentable_override = bool(valor)

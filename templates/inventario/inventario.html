@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-box-seam me-2"></i>Inventario de Productos</h3>
+        <p class="text-muted small mb-0">Gestión de existencias, precios y catálogo de venta.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearProducto">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Producto
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorProductos" class="form-control border-start-0"
+                        placeholder="Buscar producto...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre de Producto</strong> y <strong
+                            class="text-dark">Categoría</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 70px;">Imagen</th>
+                        <th>Producto</th>
+                        <th>Categoría</th>
+                        <th>Stock</th>
+                        <th>Precio Compra</th>
+                        <th>Precio Venta</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for producto in productos %}
+                    <tr class="fila-producto"
+                        data-busqueda="{{ producto.nombre|lower }} {{ producto.categoria.nombre|lower }}">
+                        <td>
+                            {% if producto.imagen %}
+                            <img src="/media/{{ producto.imagen }}" class="rounded-3 object-fit-cover shadow-sm border"
+                                style="width: 50px; height: 50px;" alt="{{ producto.nombre }}"
+                                onerror="this.classList.add('d-none'); this.nextElementSibling.classList.remove('d-none');">
+                            <span
+                                class="d-none align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted"
+                                style="width: 50px; height: 50px;">
+                                <i class="bi bi-box-seam fs-4 opacity-50"></i>
+                            </span>
+                            {% else %}
+                            <span
+                                class="d-inline-flex align-items-center justify-content-center bg-light rounded-3 border shadow-sm text-muted"
+                                style="width: 50px; height: 50px;">
+                                <i class="bi bi-box-seam fs-4 opacity-50"></i>
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="fw-semibold text-dark">{{ producto.nombre }}</td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ producto.categoria.nombre }}</span>
+                        </td>
+                        <td>
+                            {% if producto.cantidad > 5 %}
+                            <span class="badge bg-success">{{ producto.cantidad }}</span>
+                            {% elif producto.cantidad > 0 %}
+                            <span class="badge bg-warning text-dark">{{ producto.cantidad }}</span>
+                            {% else %}
+                            <span class="badge bg-danger">{{ producto.cantidad }}</span>
+                            {% endif %}
+                        </td>
+                        <td>${{ producto.precio_compra|floatformat:2 }}</td>
+                        <td class="fw-bold text-success">${{ producto.precio_venta|floatformat:2 }}</td>
+                        <td>
+                            {% if producto.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1 btn-ajustar-stock"
+                                data-bs-toggle="modal" data-bs-target="#modalAjustarStock"
+                                data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
+                                data-stock="{{ producto.cantidad }}" title="Ajuste de Inventario">
+                                <i class="bi bi-arrow-left-right"></i>
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-producto"
+                                data-bs-toggle="modal" data-bs-target="#modalModificarProducto"
+                                data-id="{{ producto.producto_id }}" data-nombre="{{ producto.nombre }}"
+                                data-categoria="{{ producto.categoria_id }}"
+                                data-precio-compra="{{ producto.precio_compra|floatformat:2 }}"
+                                data-precio-venta="{{ producto.precio_venta|floatformat:2 }}"
+                                data-imagen="{{ producto.imagen|default:'' }}" title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            <form method="POST" action="{% url 'desactivar_producto' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="producto_id" value="{{ producto.producto_id }}">
+                                {% if producto.activo %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activar">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="fila-vacia">
+                        <td colspan="8" class="text-center text-muted py-5">
+                            <i class="bi bi-box-seam fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay productos registrados aún en el inventario.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="sinResultadosProductos" class="d-none">
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron productos que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/paginacion.html' %}
+    </div>
+</div>
+
+{% include 'inventario/crear.html' %}
+{% include 'inventario/modificar.html' %}
+
+<!-- Modal Ajustar Stock -->
+<div class="modal fade" id="modalAjustarStock" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST" action="{% url 'ajustar_stock' %}" id="formAjustarStock">
+                {% csrf_token %}
+                <input type="hidden" name="producto_id" id="ajustarProductoId">
+                <div class="modal-header bg-dark text-white rounded-top-4">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-arrow-left-right me-2 text-warning"></i>Ajuste de Inventario
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="bg-light p-3 rounded-3 mb-3 border d-flex justify-content-between align-items-center">
+                        <div>
+                            <small class="text-muted d-block">Producto seleccionado:</small>
+                            <strong class="text-dark fs-6" id="ajustarProductoNombre">--</strong>
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted d-block">Stock actual:</small>
+                            <span class="badge bg-primary fs-6" id="ajustarProductoStockActual">0</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase d-block mb-2">
+                            Tipo de movimiento <span class="text-danger">*</span>
+                        </label>
+                        <div class="btn-group w-100 shadow-xs" role="group" aria-label="Tipo de ajuste de inventario">
+                            <input type="radio" class="btn-check" name="tipo_ajuste" id="tipoAjusteSuma" value="SUMA" checked autocomplete="off">
+                            <label class="btn btn-outline-success fw-semibold py-2" for="tipoAjusteSuma">
+                                <i class="bi bi-plus-circle me-1"></i>Sumar Stock (+)
+                            </label>
+
+                            <input type="radio" class="btn-check" name="tipo_ajuste" id="tipoAjusteResta" value="RESTA" autocomplete="off">
+                            <label class="btn btn-outline-danger fw-semibold py-2" for="tipoAjusteResta">
+                                <i class="bi bi-dash-circle me-1"></i>Restar Stock (-)
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase" for="inputCantidadAjuste">
+                            Cantidad de unidades <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="delta" id="inputCantidadAjuste" class="form-control font-monospace fw-bold"
+                            min="1" step="1" inputmode="numeric" pattern="[0-9]+"
+                            placeholder="Ej: 10" required>
+                        <small class="text-muted" id="ayudaCantidadAjuste">Ingresa únicamente números enteros positivos (sin signos ni decimales).</small>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small text-muted text-uppercase">Motivo del ajuste <span class="text-danger">*</span></label>
+                        <textarea name="motivo" id="inputMotivoAjuste" class="form-control" rows="2" minlength="5" placeholder="Ej: Abastecimiento de proveedor / Merma por vencimiento" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4">
+                        <i class="bi bi-check2-circle me-1"></i> Aplicar Ajuste
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function restringirSoloEnterosPositivos(inputEl) {
+        if (!inputEl) return;
+        inputEl.addEventListener('keydown', function (e) {
+            if (['e', 'E', '-', '+', '.', ','].includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+        inputEl.addEventListener('input', function () {
+            const limpio = this.value.replace(/[^0-9]/g, '');
+            if (this.value !== limpio) {
+                this.value = limpio;
+            }
+        });
+        inputEl.addEventListener('paste', function (e) {
+            const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+            if (/[^0-9]/.test(pasteData)) {
+                e.preventDefault();
+                const soloDigitos = pasteData.replace(/[^0-9]/g, '');
+                if (soloDigitos) {
+                    this.value = soloDigitos;
+                }
+            }
+        });
+    }
+
+    restringirSoloEnterosPositivos(document.getElementById('inputCantidadAjuste'));
+    restringirSoloEnterosPositivos(document.getElementById('inputCantidadCrearProducto'));
+
+    document.querySelectorAll('.btn-ajustar-stock').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('ajustarProductoId').value = btn.dataset.id;
+            document.getElementById('ajustarProductoNombre').textContent = btn.dataset.nombre;
+            document.getElementById('ajustarProductoStockActual').textContent = btn.dataset.stock;
+            const radioSuma = document.getElementById('tipoAjusteSuma');
+            if (radioSuma) radioSuma.checked = true;
+            const inputCant = document.getElementById('inputCantidadAjuste');
+            if (inputCant) inputCant.value = '';
+            const inputMotivo = document.getElementById('inputMotivoAjuste');
+            if (inputMotivo) inputMotivo.value = '';
+        });
+    });
+
+    document.querySelectorAll('.btn-editar-producto').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('editarProductoId').value = btn.dataset.id;
+            document.getElementById('editarProductoNombre').value = btn.dataset.nombre;
+            document.getElementById('editarProductoCategoria').value = btn.dataset.categoria;
+            document.getElementById('editarProductoPrecioCompra').value = (btn.dataset.precioCompra || '').replace(',', '.');
+            document.getElementById('editarProductoPrecioVenta').value = (btn.dataset.precioVenta || '').replace(',', '.');
+            const previewImg = document.getElementById('editarProductoPreviewImg');
+            const previewIcon = document.getElementById('editarProductoPreviewIcon');
+            if (previewImg && previewIcon) {
+                if (btn.dataset.imagen) {
+                    previewImg.src = `/media/${btn.dataset.imagen}`;
+                    previewImg.classList.remove('d-none');
+                    previewIcon.classList.add('d-none');
+                } else {
+                    previewImg.src = '';
+                    previewImg.classList.add('d-none');
+                    previewIcon.classList.remove('d-none');
+                }
+            }
+        });
+    });
+
+    const buscadorProductos = document.getElementById('buscadorProductos');
+    if (buscadorProductos) {
+        const filas = document.querySelectorAll('.fila-producto');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosProductos');
+
+        buscadorProductos.addEventListener('input', function () {
+            const termino = buscadorProductos.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+</script>
+
+{% endblock %}

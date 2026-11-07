@@ -1,0 +1,395 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema POS - The COFFEE LAN</title>
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}?v=7">
+</head>
+
+<body>
+
+    <div id="wrapper">
+        <div id="sidebar-wrapper">
+            <div class="sidebar-header">
+                <a href="{% url 'inicio' %}">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo The COFFEE LAN" class="sidebar-logo">
+                </a>
+            </div>
+            <ul class="sidebar-nav">
+                <li>
+                    {% if nav_inicio %}
+                    <a href="{% url 'inicio' %}" class="active"><i class="bi bi-speedometer2"></i> Panel Principal</a>
+                    {% else %}
+                    <a href="{% url 'inicio' %}"><i class="bi bi-speedometer2"></i> Panel Principal</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_rentas %}
+                    <a href="{% url 'rentas' %}" class="active"><i class="bi bi-pc-display"></i> Control de Rentas</a>
+                    {% else %}
+                    <a href="{% url 'rentas' %}"><i class="bi bi-pc-display"></i> Control de Rentas</a>
+                    {% endif %}
+                </li>
+                {% if request.user.es_admin or request.user.es_cajero %}
+                <li>
+                    {% if nav_pos %}
+                    <a href="{% url 'pos' %}" class="active"><i class="bi bi-cart4"></i> Punto de Venta</a>
+                    {% else %}
+                    <a href="{% url 'pos' %}"><i class="bi bi-cart4"></i> Punto de Venta</a>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% if request.user.es_admin %}
+                <li>
+                    {% if nav_inventario %}
+                    <a href="{% url 'inventario' %}" class="active"><i class="bi bi-box-seam"></i> Inventario</a>
+                    {% else %}
+                    <a href="{% url 'inventario' %}"><i class="bi bi-box-seam"></i> Inventario</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_categorias %}
+                    <a href="{% url 'categorias' %}" class="active"><i class="bi bi-tags"></i> Categorías</a>
+                    {% else %}
+                    <a href="{% url 'categorias' %}"><i class="bi bi-tags"></i> Categorías</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_revisiones %}
+                    <a href="{% url 'revisiones' %}" class="active"><i class="bi bi-clipboard-check"></i> Revisiones</a>
+                    {% else %}
+                    <a href="{% url 'revisiones' %}"><i class="bi bi-clipboard-check"></i> Revisiones</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_equipos %}
+                    <a href="{% url 'equipos' %}" class="active"><i class="bi bi-cpu"></i> Equipos</a>
+                    {% else %}
+                    <a href="{% url 'equipos' %}"><i class="bi bi-cpu"></i> Equipos</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_componentes %}
+                    <a href="{% url 'componentes' %}" class="active"><i class="bi bi-mouse2"></i> Componentes</a>
+                    {% else %}
+                    <a href="{% url 'componentes' %}"><i class="bi bi-mouse2"></i> Componentes</a>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_cajero %}
+                <li>
+                    {% if nav_clientes %}
+                    <a href="{% url 'clientes' %}" class="active"><i class="bi bi-people"></i> Clientes</a>
+                    {% else %}
+                    <a href="{% url 'clientes' %}"><i class="bi bi-people"></i> Clientes</a>
+                    {% endif %}
+                </li>
+                {% endif %}
+                {% if request.user.es_admin %}
+                <li>
+                    {% if nav_usuarios %}
+                    <a href="{% url 'usuarios' %}" class="active"><i class="bi bi-person-badge"></i> Usuarios</a>
+                    {% else %}
+                    <a href="{% url 'usuarios' %}"><i class="bi bi-person-badge"></i> Usuarios</a>
+                    {% endif %}
+                </li>
+                <li>
+                    {% if nav_reportes %}
+                    <a href="{% url 'reportes' %}" class="active"><i class="bi bi-graph-up"></i> Reportes</a>
+                    {% else %}
+                    <a href="{% url 'reportes' %}"><i class="bi bi-graph-up"></i> Reportes</a>
+                    {% endif %}
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div id="page-content-wrapper">
+            <header class="top-header">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn-toggle-menu" id="menu-toggle">
+                        <i class="bi bi-list"></i>
+                    </button>
+                    <!-- Indicador visual del módulo actual -->
+                    <div class="d-flex align-items-center gap-2 border-start ps-3 py-0 my-0" style="border-color: #dee2e6 !important;">
+                        {% if modulo_titulo %}
+                        <i class="bi {{ modulo_icono }} text-coffee fs-5"></i>
+                        <span class="fw-bold text-dark fs-6">{{ modulo_titulo }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="user-profile dropdown">
+                    <a href="#" class="text-decoration-none text-dark dropdown-toggle d-flex align-items-center"
+                        data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle"></i>
+                        <span>{{ request.user.username|default:"Administrador" }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li>
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger"><i
+                                        class="bi bi-box-arrow-right me-2"></i>Cerrar Sesión</button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </header>
+
+            <main class="main-content">
+                {% block contenido %}
+                {% endblock %}
+            </main>
+        </div>
+    </div>
+
+    <!-- Contenedor Flotante Global de Notificaciones Emergentes (Toasts) Centrado Superior -->
+    <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3"
+        style="z-index: 99999; pointer-events: none;" id="toastNotificationContainer">
+        {% if messages %}
+        {% for message in messages %}
+        {% if message.tags == 'error' %}
+        <div class="toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-danger"
+            role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" data-bs-autohide="true">
+        {% elif message.tags == 'success' %}
+        <div class="toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-success"
+            role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" data-bs-autohide="true">
+        {% elif message.tags == 'warning' %}
+        <div class="toast toast-emergente align-items-center border-0 mb-2 shadow-lg bg-warning text-dark"
+            role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" data-bs-autohide="true">
+        {% else %}
+        <div class="toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-primary"
+            role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" data-bs-autohide="true">
+        {% endif %}
+            <div class="d-flex p-2 align-items-center">
+                <div class="toast-body d-flex align-items-center gap-2 py-1 fs-6 flex-grow-1">
+                    {% if message.tags == 'error' %}
+                    <i class="bi bi-x-circle-fill fs-4 flex-shrink-0 text-white"></i>
+                    {% elif message.tags == 'success' %}
+                    <i class="bi bi-check-circle-fill fs-4 flex-shrink-0 text-white"></i>
+                    {% elif message.tags == 'warning' %}
+                    <i class="bi bi-exclamation-triangle-fill fs-4 flex-shrink-0 text-dark"></i>
+                    {% else %}
+                    <i class="bi bi-info-circle-fill fs-4 flex-shrink-0 text-white"></i>
+                    {% endif %}
+                    <div class="text-break" style="font-weight: 500; font-size: 0.92rem;">
+                        {{ message }}
+                    </div>
+                </div>
+                {% if message.tags == 'warning' %}
+                <button type="button" class="btn-close ms-auto me-2" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                {% else %}
+                <button type="button" class="btn-close btn-close-white ms-auto me-2" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                {% endif %}
+            </div>
+            <div class="toast-progress"></div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <style>
+        /* Notificaciones Emergentes Flotantes Centradas Arriba */
+        .toast-container {
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .toast-emergente {
+            pointer-events: auto;
+            min-width: 320px;
+            max-width: 520px;
+            border-radius: 14px !important;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.22) !important;
+            animation: toastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .toast-emergente .toast-progress {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.5);
+            animation: toastProgressBar 5s linear forwards;
+        }
+
+        .toast-emergente.bg-warning .toast-progress {
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        @keyframes toastProgressBar {
+            from {
+                width: 100%;
+            }
+
+            to {
+                width: 0%;
+            }
+        }
+
+        @keyframes toastSlideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px) scale(0.95);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+    </style>
+
+    <!-- Datos globales de rentas activas para el monitor de notificaciones en cualquier pantalla -->
+    <script id="global-rentas-data" type="application/json">{{ rentas_activas_global_json|default:"[]"|safe }}</script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.getElementById("menu-toggle").addEventListener("click", function (e) {
+            e.preventDefault();
+            const sidebar = document.getElementById("sidebar-wrapper");
+            sidebar.style.marginLeft = sidebar.style.marginLeft === "-250px" ? "0" : "-250px";
+        });
+
+        // Función global para lanzar un Toast de Tiempo Agotado desde cualquier pantalla
+        window.dispararToastTiempoAgotado = function (equipoNombre, clienteNombre) {
+            const container = document.getElementById('toastNotificationContainer');
+            if (!container) return;
+
+            const enPantallaRentas = window.location.pathname.indexOf('/rentas/') !== -1;
+            const botonIrRentas = !enPantallaRentas
+                ? `<a href="{% url 'rentas' %}" class="btn btn-sm btn-light text-danger fw-bold ms-2 flex-shrink-0 rounded-pill px-2 py-1" style="font-size: 0.78rem;">Ir a Rentas</a>`
+                : '';
+
+            const toastDiv = document.createElement('div');
+            toastDiv.className = 'toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-danger';
+            toastDiv.setAttribute('role', 'alert');
+            toastDiv.setAttribute('aria-live', 'assertive');
+            toastDiv.setAttribute('aria-atomic', 'true');
+            toastDiv.setAttribute('data-bs-delay', '8000');
+            toastDiv.setAttribute('data-bs-autohide', 'true');
+
+            toastDiv.innerHTML = `
+                <div class="d-flex p-2 align-items-center">
+                    <div class="toast-body d-flex align-items-center gap-2 py-1 fs-6 flex-grow-1">
+                        <i class="bi bi-alarm-fill fs-4 flex-shrink-0 text-white"></i>
+                        <div class="text-break flex-grow-1" style="font-weight: 500; font-size: 0.92rem;">
+                            <strong>¡Tiempo agotado!</strong> ${equipoNombre} (${clienteNombre}).
+                        </div>
+                        ${botonIrRentas}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white ms-auto me-2" data-bs-dismiss="toast" aria-label="Cerrar"></button>
+                </div>
+                <div class="toast-progress" style="background: rgba(255,255,255,0.6); animation-duration: 8s;"></div>
+            `;
+
+            container.appendChild(toastDiv);
+            const toastInstance = new bootstrap.Toast(toastDiv, { delay: 8000, autohide: true });
+            toastInstance.show();
+            toastDiv.addEventListener('hidden.bs.toast', () => toastDiv.remove());
+        };
+
+        // Gestor global con deduplicación en sessionStorage para no repetir el mismo aviso al cambiar de pestaña/pantalla
+        window.notificarTiempoAgotadoGlobal = function (detalleId, tiempoTotal, equipoNombre, clienteNombre) {
+            const notifKey = `${detalleId}_${tiempoTotal}`;
+            let notificados = [];
+            try {
+                notificados = JSON.parse(sessionStorage.getItem('coffeelan_notified_rentas') || '[]');
+            } catch (e) {
+                notificados = [];
+            }
+            if (!notificados.includes(notifKey)) {
+                notificados.push(notifKey);
+                try {
+                    sessionStorage.setItem('coffeelan_notified_rentas', JSON.stringify(notificados));
+                } catch (e) {}
+                window.dispararToastTiempoAgotado(equipoNombre, clienteNombre);
+            }
+        };
+
+        // Inicializar notificaciones flotantes y monitor global de rentas
+        document.addEventListener("DOMContentLoaded", function () {
+            const toastElements = document.querySelectorAll('#toastNotificationContainer .toast');
+            toastElements.forEach(toastEl => {
+                const toast = new bootstrap.Toast(toastEl, {
+                    delay: 5000,
+                    autohide: true
+                });
+                toast.show();
+                toastEl.addEventListener('hidden.bs.toast', function () {
+                    toastEl.remove();
+                });
+            });
+
+            // Monitor global de rentas activas en todas las pantallas
+            let rentasActivasGlobal = [];
+            const dataEl = document.getElementById('global-rentas-data');
+            if (dataEl && dataEl.textContent) {
+                try {
+                    rentasActivasGlobal = JSON.parse(dataEl.textContent);
+                } catch (e) {
+                    rentasActivasGlobal = [];
+                }
+            }
+
+            function verificarRentasGlobales() {
+                const ahoraMs = Date.now();
+                rentasActivasGlobal.forEach(function (r) {
+                    if (!r.inicio_iso) return;
+                    const inicioMs = new Date(r.inicio_iso).getTime();
+                    const duracionMs = (parseInt(r.tiempo_total) || 0) * 60 * 1000;
+                    const restanteMs = (inicioMs + duracionMs) - ahoraMs;
+                    if (Math.floor(restanteMs / 1000) <= 0) {
+                        window.notificarTiempoAgotadoGlobal(
+                            r.detalle_id,
+                            r.tiempo_total,
+                            r.equipo_nombre,
+                            r.cliente_nombre
+                        );
+                    }
+                });
+            }
+
+            // Verificar cada segundo en segundo plano sin importar en qué módulo esté el usuario
+            setInterval(verificarRentasGlobales, 1000);
+            verificarRentasGlobales();
+
+            // Sincronizar lista de rentas activas cada 15 segundos por si otro cajero inició o extendió una renta
+            setInterval(function () {
+                fetch("{% url 'api_rentas_activas' %}", {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    credentials: 'same-origin'
+                })
+                .then(function (res) { return res.ok ? res.json() : null; })
+                .then(function (data) {
+                    if (data && Array.isArray(data.rentas)) {
+                        rentasActivasGlobal = data.rentas;
+                        verificarRentasGlobales();
+                    }
+                })
+                .catch(function () {});
+            }, 15000);
+        });
+    </script>
+    {% block extra_js %}
+    {% endblock %}
+</body>
+
+</html>

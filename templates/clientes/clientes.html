@@ -1,0 +1,313 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block contenido %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h3 class="mb-0"><i class="bi bi-people me-2"></i>Gestión de Clientes</h3>
+        <p class="text-muted small mb-0">Directorio de clientes registrados para ventas y rentas de equipos.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearCliente">
+            <i class="bi bi-plus-circle me-1"></i> Nuevo Cliente
+        </button>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4 mb-4">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" id="buscadorClientes" class="form-control border-start-0"
+                        placeholder="Buscar cliente...">
+                </div>
+                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span>Buscando en: <strong class="text-dark">Nombre</strong>, <strong
+                            class="text-dark">Apellido</strong>, <strong class="text-dark">DUI</strong>, <strong
+                            class="text-dark">Teléfono</strong> y <strong class="text-dark">Correo</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 rounded-4">
+    <div class="card-body p-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Nombre y Apellido</th>
+                        <th>DUI</th>
+                        <th>Teléfono</th>
+                        <th>Correo</th>
+                        <th>Estado</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cliente in clientes %}
+                    <tr class="fila-cliente"
+                        data-busqueda="{{ cliente.nombre|lower }} {{ cliente.apellido|lower }} {{ cliente.dui|lower }} {{ cliente.telefono }} {{ cliente.correo|default:''|lower }}">
+                        <td class="fw-semibold text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</td>
+                        <td><span class="badge bg-light text-dark border font-monospace">{{ cliente.dui }}</span></td>
+                        <td>{{ cliente.telefono }}</td>
+                        <td class="text-muted">{{ cliente.correo|default:"-" }}</td>
+                        <td>
+                            {% if cliente.activo %}
+                            <span class="badge bg-success">Activo</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Inactivo</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-outline-primary me-1 btn-editar-cliente" data-bs-toggle="modal"
+                                data-bs-target="#modalModificarCliente" data-id="{{ cliente.cliente_id }}"
+                                data-nombre="{{ cliente.nombre }}" data-apellido="{{ cliente.apellido }}"
+                                data-dui="{{ cliente.dui }}"
+                                data-telefono="{{ cliente.telefono }}" data-correo="{{ cliente.correo|default:'' }}"
+                                title="Editar">
+                                <i class="bi bi-pencil-square"></i>
+                            </button>
+                            {% if request.user.es_admin %}
+                            <form method="POST" action="{% url 'desactivar_cliente' %}" class="d-inline">
+                                {% csrf_token %}
+                                <input type="hidden" name="cliente_id" value="{{ cliente.cliente_id }}">
+                                {% if cliente.activo %}
+                                <button type="submit" class="btn btn-sm btn-outline-warning" title="Desactivar Cliente">
+                                    <i class="bi bi-toggle-on"></i>
+                                </button>
+                                {% else %}
+                                <button type="submit" class="btn btn-sm btn-outline-success" title="Activar Cliente">
+                                    <i class="bi bi-toggle-off"></i>
+                                </button>
+                                {% endif %}
+                            </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="fila-vacia">
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-people fs-1 d-block mb-2 text-muted opacity-50"></i>
+                            No hay clientes registrados aún.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    <tr id="sinResultadosClientes" class="d-none">
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="bi bi-search fs-2 d-block mb-2"></i>
+                            No se encontraron clientes que coincidan con la búsqueda.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {% include 'includes/paginacion.html' %}
+    </div>
+</div>
+
+{% include 'clientes/crear.html' %}
+{% include 'clientes/modificar.html' %}
+
+<script>
+    // Configuración de edición
+    document.querySelectorAll('.btn-editar-cliente').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            limpiarErroresModal(document.getElementById('formModificarCliente'), document.getElementById('errorModificarCliente'));
+            document.getElementById('editarClienteId').value = btn.dataset.id;
+            document.getElementById('editarClienteNombre').value = btn.dataset.nombre;
+            document.getElementById('editarClienteApellido').value = btn.dataset.apellido;
+            document.getElementById('editarClienteDui').value = btn.dataset.dui;
+            document.getElementById('editarClienteTelefono').value = btn.dataset.telefono;
+            document.getElementById('editarClienteCorreo').value = btn.dataset.correo;
+        });
+    });
+
+    // Limpiar errores y formulario al cerrar o abrir modal crear
+    const modalCrearEl = document.getElementById('modalCrearCliente');
+    if (modalCrearEl) {
+        modalCrearEl.addEventListener('hidden.bs.modal', function () {
+            const form = document.getElementById('formCrearCliente');
+            if (form) {
+                form.reset();
+                limpiarErroresModal(form, document.getElementById('errorCrearCliente'));
+            }
+        });
+    }
+
+    // Buscador interactivo
+    const buscadorClientes = document.getElementById('buscadorClientes');
+    if (buscadorClientes) {
+        const filas = document.querySelectorAll('.fila-cliente');
+        const filaVacia = document.querySelector('.fila-vacia');
+        const sinResultados = document.getElementById('sinResultadosClientes');
+
+        buscadorClientes.addEventListener('input', function () {
+            const termino = buscadorClientes.value.trim().toLowerCase();
+            let visibles = 0;
+            filas.forEach(function (fila) {
+                const coincide = fila.dataset.busqueda.includes(termino);
+                fila.classList.toggle('d-none', !coincide);
+                if (coincide) visibles++;
+            });
+            if (filaVacia) filaVacia.classList.toggle('d-none', filas.length > 0);
+            if (sinResultados) sinResultados.classList.toggle('d-none', visibles > 0 || filas.length === 0);
+        });
+    }
+
+    // Máscara automática de DUI y Teléfono
+    function aplicarMascaraDUI(input) {
+        let valor = input.value.replace(/\D/g, '').substring(0, 9);
+        if (valor.length > 8) {
+            input.value = valor.substring(0, 8) + '-' + valor.substring(8);
+        } else {
+            input.value = valor;
+        }
+    }
+
+    function aplicarMascaraTelefono(input) {
+        input.value = input.value.replace(/\D/g, '').substring(0, 8);
+    }
+
+    document.querySelectorAll('input[name="dui"]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            aplicarMascaraDUI(input);
+            input.classList.remove('is-invalid');
+        });
+    });
+
+    document.querySelectorAll('input[name="telefono"]').forEach(function (input) {
+        input.addEventListener('input', function () {
+            aplicarMascaraTelefono(input);
+            input.classList.remove('is-invalid');
+        });
+    });
+
+    // Quitar estado inválido al escribir en cualquier campo
+    document.querySelectorAll('#formCrearCliente input, #formModificarCliente input').forEach(function (input) {
+        input.addEventListener('input', function () {
+            input.classList.remove('is-invalid');
+        });
+    });
+
+    function limpiarErroresModal(form, errorDiv) {
+        if (!form) return;
+        form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+        if (errorDiv) {
+            errorDiv.classList.add('d-none');
+            const txt = errorDiv.querySelector('.error-texto');
+            if (txt) txt.innerHTML = '';
+        }
+    }
+
+    function mostrarErroresModal(form, errorDiv, errors) {
+        let mensajes = [];
+        for (const [campo, errList] of Object.entries(errors)) {
+            const input = form.querySelector(`[name="${campo}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                const feedback = input.parentElement.querySelector('.invalid-feedback');
+                if (feedback && errList.length > 0) {
+                    feedback.textContent = errList[0];
+                }
+            }
+            mensajes.push(...errList);
+        }
+        if (errorDiv && mensajes.length > 0) {
+            const txt = errorDiv.querySelector('.error-texto');
+            if (txt) {
+                txt.innerHTML = mensajes.join('<br>');
+            }
+            errorDiv.classList.remove('d-none');
+        }
+    }
+
+    function configurarEnvioModal(formId, errorDivId, btnId) {
+        const form = document.getElementById(formId);
+        const errorDiv = document.getElementById(errorDivId);
+        const btn = document.getElementById(btnId);
+
+        if (!form) return;
+
+        form.addEventListener('submit', function (e) {
+            e.preventDefault();
+            limpiarErroresModal(form, errorDiv);
+
+            // Validaciones previas del lado del cliente
+            const duiInput = form.querySelector('input[name="dui"]');
+            const telInput = form.querySelector('input[name="telefono"]');
+
+            let erroresCliente = {};
+            if (telInput) {
+                const soloDigitosTel = telInput.value.replace(/\D/g, '');
+                if (soloDigitosTel.length !== 8) {
+                    erroresCliente['telefono'] = ['El número de teléfono debe contener exactamente 8 números.'];
+                }
+            }
+
+            if (duiInput) {
+                const soloDigitosDui = duiInput.value.replace(/\D/g, '');
+                if (soloDigitosDui.length !== 9) {
+                    erroresCliente['dui'] = ['El DUI debe tener 8 dígitos más 1 dígito verificador (00000000-0).'];
+                }
+            }
+
+            if (Object.keys(erroresCliente).length > 0) {
+                mostrarErroresModal(form, errorDiv, erroresCliente);
+                return;
+            }
+
+            // Activar estado de carga en el botón
+            if (btn) {
+                btn.disabled = true;
+                const spinner = btn.querySelector('.spinner-border');
+                if (spinner) spinner.classList.remove('d-none');
+            }
+
+            const formData = new FormData(form);
+
+            fetch(form.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+                .then(async (response) => {
+                    const data = await response.json().catch(() => null);
+                    if (response.ok && data && data.success) {
+                        // Éxito: recargar para ver el cambio con mensaje de Django
+                        window.location.reload();
+                    } else {
+                        // Error: el modal NO se cierra y todos los datos se conservan
+                        const errors = (data && data.errors) ? data.errors : { '__all__': ['Ocurrió un error al procesar el registro.'] };
+                        mostrarErroresModal(form, errorDiv, errors);
+                    }
+                })
+                .catch((err) => {
+                    mostrarErroresModal(form, errorDiv, { '__all__': ['Error de conexión con el servidor. Los datos siguen en el formulario.'] });
+                })
+                .finally(() => {
+                    if (btn) {
+                        btn.disabled = false;
+                        const spinner = btn.querySelector('.spinner-border');
+                        if (spinner) spinner.classList.add('d-none');
+                    }
+                });
+        });
+    }
+
+    configurarEnvioModal('formCrearCliente', 'errorCrearCliente', 'btnSubmitCrearCliente');
+    configurarEnvioModal('formModificarCliente', 'errorModificarCliente', 'btnSubmitModificarCliente');
+</script>
+
+{% endblock %}

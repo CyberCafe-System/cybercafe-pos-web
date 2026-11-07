@@ -1,0 +1,31 @@
+<!-- Modal Crear Categoría -->
+<div class="modal fade" id="modalCrearCategoria" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form method="POST" action="{% url 'crear_categoria' %}">
+                {% csrf_token %}
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-tags me-2 text-coffee"></i>Registrar Categoría</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nombre de la Categoría <span class="text-danger fw-bold">*</span></label>
+                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej. Bebidas Calientes, Snacks, Papelería" required>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Descripción</label>
+                        <textarea name="descripcion" class="form-control rounded-3" rows="3" placeholder="Breve descripción de los productos que incluye..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-coffee rounded-pill px-4 shadow-sm">Guardar Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
