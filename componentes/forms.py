@@ -20,14 +20,13 @@ class ComponenteForm(forms.ModelForm):
 
     class Meta:
         model = Componente
-        fields = ('nombre', 'numero_serie', 'tipo', 'estado', 'equipo', 'observaciones')
+        fields = ('nombre', 'numero_serie', 'tipo', 'estado', 'equipo')
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. Mouse Gamer Principal'}),
             'numero_serie': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej. SN-A4K-98203'}),
             'tipo': forms.Select(attrs={'class': 'form-select'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
             'equipo': forms.Select(attrs={'class': 'form-select'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Anotaciones adicionales'}),
         }
 
     def __init__(self, *args, **kwargs):

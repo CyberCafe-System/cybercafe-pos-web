@@ -8,6 +8,10 @@
         <h3 class="fw-bold mb-0 text-dark">Panel de Operaciones y Estadísticas</h3>
     </div>
     <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
         {% if request.user.es_admin %}
         <a href="{% url 'reportes' %}" class="btn btn-dark rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-2 small fw-semibold">
             <i class="bi bi-grid-fill"></i>

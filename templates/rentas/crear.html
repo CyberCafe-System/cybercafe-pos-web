@@ -11,15 +11,18 @@
         <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form method="POST" action="{% url 'crear_renta' %}" target="_blank" id="formNuevaRenta">
                 {% csrf_token %}
+                <input type="hidden" name="renta_token" value="{{ renta_token }}">
                 <div class="modal-header bg-dark text-white rounded-top-4 py-3 px-4">
                     <div class="d-flex align-items-center gap-2">
                         <i class="bi bi-pc-display-horizontal text-warning fs-5"></i>
                         <div>
                             <h6 class="modal-title fw-bold mb-0">Iniciar y Cobrar Renta de Equipo</h6>
-                            <small class="text-white-50" style="font-size: 0.75rem;">Configura la sesión y procesa el cobro inmediato</small>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Configura la sesión y procesa el
+                                cobro inmediato</small>
                         </div>
                     </div>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
                 </div>
 
                 <div class="modal-body p-4">
@@ -31,13 +34,16 @@
                                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                                     <i class="bi bi-pc-display text-coffee me-1"></i> 1. Gestión de Renta
                                 </span>
-                                <span class="badge bg-coffee-subtle text-coffee border border-coffee-subtle rounded-pill small">Sesión</span>
+                                <span
+                                    class="badge bg-coffee-subtle text-coffee border border-coffee-subtle rounded-pill small">Sesión</span>
                             </div>
 
                             <!-- Banner de Asignación Directa -->
-                            <div class="alert alert-info py-2 px-3 rounded-3 d-none mb-3 align-items-center justify-content-between" id="alertaEquipoDirecto">
+                            <div class="alert alert-info py-2 px-3 rounded-3 d-none mb-3 align-items-center justify-content-between"
+                                id="alertaEquipoDirecto">
                                 <div>
-                                    <span class="small text-muted d-block" style="font-size: 0.72rem;">Equipo pre-seleccionado:</span>
+                                    <span class="small text-muted d-block" style="font-size: 0.72rem;">Equipo
+                                        pre-seleccionado:</span>
                                     <strong class="text-dark small" id="alertaEquipoDirectoNombre">--</strong>
                                 </div>
                                 <span class="badge bg-primary rounded-pill">Rápido</span>
@@ -48,10 +54,17 @@
                                 <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
                                     Equipo <span class="text-danger">*</span>
                                 </label>
-                                <select name="equipo_id" id="selectEquipoRenta" class="form-select rounded-3 shadow-xs" required>
+                                <select name="equipo_id" id="selectEquipoRenta" class="form-select rounded-3 shadow-xs"
+                                    required>
                                     <option value="" data-tarifa="0">Seleccione un equipo disponible</option>
                                     {% for eq in equipos_rentables %}
                                     <option value="{{ eq.equipo_id }}" data-tarifa="{{ eq.tarifa_por_hora }}">{{ eq.nombre }} ({{ eq.tipo }} - ${{ eq.tarifa_por_hora }}/hr)</option>
+                                    {% endfor %}
+                                    {% for eq in equipos %}
+                                    {% if not eq.activo %}
+                                    <option value="{{ eq.equipo_id }}" disabled>{{ eq.nombre }} ({{ eq.tipo }} —
+                                        Desactivado / No disponible)</option>
+                                    {% endif %}
                                     {% endfor %}
                                 </select>
                             </div>
@@ -62,40 +75,43 @@
                                     <label class="form-label fw-semibold small text-muted text-uppercase mb-0">
                                         Cliente <span class="text-danger">*</span>
                                     </label>
-                                    <span class="badge bg-light text-muted border small" id="badgeClienteCrearRenta">Sin seleccionar</span>
+                                    <span class="badge bg-light text-muted border small" id="badgeClienteCrearRenta">Sin
+                                        seleccionar</span>
                                 </div>
 
                                 <div class="input-group input-group-sm shadow-xs">
                                     <span class="input-group-text bg-white border-end-0 text-muted">
                                         <i class="bi bi-search"></i>
                                     </span>
-                                    <input type="text" id="inputBuscarClienteCrearRenta" class="form-control border-start-0 ps-0" 
-                                           placeholder="Buscar por nombre o DUI..." autocomplete="off">
-                                    <button class="btn btn-outline-secondary border-start-0 d-none" type="button" id="btnLimpiarClienteCrearRenta" title="Limpiar selección">
+                                    <input type="text" id="inputBuscarClienteCrearRenta"
+                                        class="form-control border-start-0 ps-0"
+                                        placeholder="Buscar por nombre o DUI..." autocomplete="off" required>
+                                    <button class="btn btn-outline-secondary border-start-0 d-none" type="button"
+                                        id="btnLimpiarClienteCrearRenta" title="Limpiar selección">
                                         <i class="bi bi-x-lg"></i>
                                     </button>
                                 </div>
 
-                                <select name="cliente_id" id="selectClienteRenta" class="d-none" required>
+                                <select name="cliente_id" id="selectClienteRenta" class="d-none">
                                     <option value="" selected disabled>Seleccione el cliente</option>
                                     {% for cl in clientes %}
-                                    <option value="{{ cl.cliente_id }}" 
-                                            data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
-                                            data-correo="{{ cl.correo|default:'' }}">
+                                    <option value="{{ cl.cliente_id }}" data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
+                                        data-correo="{{ cl.correo|default:'' }}">
                                         {{ cl.nombre }} {{ cl.apellido }} (DUI: {{ cl.dui }})
                                     </option>
                                     {% endfor %}
                                 </select>
 
                                 <!-- Menú flotante de resultados -->
-                                <div id="listaResultadosClienteCrearRenta" class="list-group position-absolute w-100 shadow rounded-3 border mt-1 overflow-auto d-none" 
-                                     style="max-height: 170px; z-index: 1060; background: #ffffff;">
+                                <div id="listaResultadosClienteCrearRenta"
+                                    class="list-group position-absolute w-100 shadow rounded-3 border mt-1 overflow-auto d-none"
+                                    style="max-height: 170px; z-index: 1060; background: #ffffff;">
                                     {% for cl in clientes %}
-                                    <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 item-cliente-crear-renta"
-                                            data-id="{{ cl.cliente_id }}"
-                                            data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
-                                            data-correo="{{ cl.correo|default:'' }}"
-                                            data-search="{{ cl.nombre|lower }} {{ cl.apellido|lower }} {{ cl.dui|default:'' }} {{ cl.correo|default:''|lower }}">
+                                    <button type="button"
+                                        class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 item-cliente-crear-renta"
+                                        data-id="{{ cl.cliente_id }}" data-nombre="{{ cl.nombre }} {{ cl.apellido }}"
+                                        data-correo="{{ cl.correo|default:'' }}"
+                                        data-search="{{ cl.nombre|lower }} {{ cl.apellido|lower }} {{ cl.dui|default:'' }} {{ cl.correo|default:''|lower }}">
                                         <div>
                                             <strong class="d-block text-dark small">{{ cl.nombre }} {{ cl.apellido }}</strong>
                                             <small class="text-muted">DUI: {{ cl.dui|default:"N/A" }} {% if cl.correo %}· {{ cl.correo }}{% endif %}</small>
@@ -103,7 +119,8 @@
                                         <i class="bi bi-chevron-right text-muted small"></i>
                                     </button>
                                     {% endfor %}
-                                    <div id="sinResultadosClienteCrearRenta" class="p-3 text-center text-muted small d-none">
+                                    <div id="sinResultadosClienteCrearRenta"
+                                        class="p-3 text-center text-muted small d-none">
                                         No se encontraron clientes.
                                     </div>
                                 </div>
@@ -115,14 +132,24 @@
                                     Tiempo de Renta <span class="text-danger">*</span>
                                 </label>
                                 <div class="input-group input-group-sm mb-2 shadow-xs">
-                                    <input type="number" name="tiempo_de_renta" id="inputTiempoRenta" class="form-control rounded-start-3 font-monospace fw-bold" min="15" step="15" value="60" required>
+                                    <input type="number" name="tiempo_de_renta" id="inputTiempoRenta"
+                                        class="form-control rounded-start-3 font-monospace fw-bold" min="15" step="15"
+                                        value="60" required>
                                     <span class="input-group-text bg-white text-muted">minutos</span>
                                 </div>
                                 <div class="d-flex gap-1 flex-wrap">
-                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="30">30 min</button>
-                                    <button type="button" class="btn btn-xs btn-coffee rounded-pill btn-quick-time active px-2 py-1" data-min="60">1 hora</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="120">2 horas</button>
-                                    <button type="button" class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1" data-min="180">3 horas</button>
+                                    <button type="button"
+                                        class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1"
+                                        data-min="30">30 min</button>
+                                    <button type="button"
+                                        class="btn btn-xs btn-coffee rounded-pill btn-quick-time active px-2 py-1"
+                                        data-min="60">1 hora</button>
+                                    <button type="button"
+                                        class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1"
+                                        data-min="120">2 horas</button>
+                                    <button type="button"
+                                        class="btn btn-xs btn-outline-secondary rounded-pill btn-quick-time px-2 py-1"
+                                        data-min="180">3 horas</button>
                                 </div>
                             </div>
                         </div>
@@ -133,21 +160,28 @@
                                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                                     <i class="bi bi-cash-stack text-success me-1"></i> 2. Proceso de Cobro
                                 </span>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">Inmediato</span>
+                                <span
+                                    class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small">Inmediato</span>
                             </div>
 
                             <!-- 2.1 Resumen Total y Vuelto -->
                             <div class="row g-2 mb-3">
                                 <div class="col-6">
-                                    <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
-                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Total a Cobrar</span>
-                                        <div class="fs-4 fw-bold text-success font-monospace" id="crearRentaTotalTexto">$0.00</div>
+                                    <div
+                                        class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                        <span class="text-muted text-uppercase fw-semibold"
+                                            style="font-size: 0.7rem;">Total a Cobrar</span>
+                                        <div class="fs-4 fw-bold text-success font-monospace" id="crearRentaTotalTexto">
+                                            $0.00</div>
                                     </div>
                                 </div>
                                 <div class="col-6">
-                                    <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
-                                        <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.7rem;">Cambio / Vuelto</span>
-                                        <strong class="fs-4 font-monospace text-dark" id="crearRentaVueltoTexto">$0.00</strong>
+                                    <div
+                                        class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                        <span class="text-muted text-uppercase fw-semibold"
+                                            style="font-size: 0.7rem;">Cambio / Vuelto</span>
+                                        <strong class="fs-4 font-monospace text-dark"
+                                            id="crearRentaVueltoTexto">$0.00</strong>
                                     </div>
                                 </div>
                             </div>
@@ -159,15 +193,36 @@
                                 </label>
                                 <div class="input-group input-group-sm mb-2 shadow-xs">
                                     <span class="input-group-text bg-white fw-bold text-muted">$</span>
-                                    <input type="number" step="0.01" min="0" max="99999.99" id="inputPagaConCrearRenta" class="form-control font-monospace fs-6 fw-bold" placeholder="0.00" inputmode="decimal">
+                                    <input type="number" step="0.01" min="0" max="99999.99" id="inputPagaConCrearRenta"
+                                        name="efectivo_recibido" min="0" max="{{ efectivo_maximo|default:100.00 }}"
+                                        class="form-control font-monospace fs-6 fw-bold" placeholder="0.00"
+                                        inputmode="decimal" required>
                                 </div>
                                 <div class="d-flex flex-wrap gap-1">
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="exacto">Exacto</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="1">$1</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="2">$2</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="5">$5</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="10">$10</button>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear" data-monto="20">$20</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="exacto">Exacto</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="1">$1</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="2">$2</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="5">$5</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="10">$10</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="20">$20</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="50">$50</button>
+                                    <button type="button"
+                                        class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-crear"
+                                        data-monto="100">$100</button>
                                 </div>
                             </div>
 
@@ -175,14 +230,19 @@
                             <div class="card border rounded-3 p-3 bg-light shadow-xs mt-auto mb-1">
                                 <div class="d-flex align-items-center gap-2 mb-1">
                                     <div class="form-check form-switch m-0 p-0 d-flex align-items-center">
-                                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch" name="enviar_correo" id="checkEnviarCorreoCrearRenta" value="1" disabled style="cursor: pointer;">
+                                        <input class="form-check-input m-0 fs-5" type="checkbox" role="switch"
+                                            name="enviar_correo" id="checkEnviarCorreoCrearRenta" value="1" disabled
+                                            style="cursor: pointer;">
                                     </div>
-                                    <label class="form-check-label fw-semibold text-dark small mb-0" for="checkEnviarCorreoCrearRenta" style="cursor: pointer;">
+                                    <label class="form-check-label fw-semibold text-dark small mb-0"
+                                        for="checkEnviarCorreoCrearRenta" style="cursor: pointer;">
                                         <i class="bi bi-envelope-at text-primary me-1"></i>Enviar factura por correo
                                     </label>
                                 </div>
-                                <div id="infoCorreoClienteCrearContainer" class="small ps-1" style="font-size: 0.78rem;">
-                                    <span id="textoCorreoDestinoCrear" class="text-muted fst-italic">Seleccione un cliente para habilitar el envío</span>
+                                <div id="infoCorreoClienteCrearContainer" class="small ps-1"
+                                    style="font-size: 0.78rem;">
+                                    <span id="textoCorreoDestinoCrear" class="text-muted fst-italic">Seleccione un
+                                        cliente para habilitar el envío</span>
                                 </div>
                             </div>
                         </div>
@@ -191,7 +251,8 @@
                 </div>
 
                 <div class="modal-footer border-0 pt-0 px-4 pb-4 bg-light bg-opacity-50">
-                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4"
+                        data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" id="btnConfirmarCrearRenta" class="btn btn-coffee rounded-pill px-4 shadow">
                         <i class="bi bi-cash-stack me-1"></i> Cobrar e Iniciar Renta
                     </button>
@@ -252,8 +313,8 @@
     }
 
     // Billetes rápidos
-    document.querySelectorAll('.btn-billete-crear').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    document.querySelectorAll('.btn-billete-crear').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             const monto = this.dataset.monto;
             const inputPaga = document.getElementById('inputPagaConCrearRenta');
             if (!inputPaga) return;
@@ -274,8 +335,8 @@
     }
 
     // Botones de tiempo rápido
-    document.querySelectorAll('.btn-quick-time').forEach(function(btn) {
-        btn.addEventListener('click', function() {
+    document.querySelectorAll('.btn-quick-time').forEach(function (btn) {
+        btn.addEventListener('click', function () {
             document.querySelectorAll('.btn-quick-time').forEach(b => {
                 b.classList.remove('btn-coffee', 'active');
                 b.classList.add('btn-outline-secondary');
@@ -344,6 +405,7 @@
         });
 
         inputBuscarClienteCrearRenta.addEventListener('input', function () {
+            this.setCustomValidity('');
             filtrarClientesCrearRenta(this.value);
             listaResultadosClienteCrearRenta.classList.remove('d-none');
         });
@@ -368,6 +430,7 @@
             }
             if (inputBuscarClienteCrearRenta) {
                 inputBuscarClienteCrearRenta.value = clienteNombre;
+                inputBuscarClienteCrearRenta.setCustomValidity('');
             }
             if (badgeClienteCrearRenta) {
                 badgeClienteCrearRenta.textContent = '✓ Seleccionado';
@@ -385,6 +448,7 @@
 
     if (btnLimpiarClienteCrearRenta) {
         btnLimpiarClienteCrearRenta.addEventListener('click', function () {
+            if (inputBuscarClienteCrearRenta) inputBuscarClienteCrearRenta.setCustomValidity('');
             if (inputBuscarClienteCrearRenta) {
                 inputBuscarClienteCrearRenta.value = '';
                 inputBuscarClienteCrearRenta.focus();
@@ -414,7 +478,17 @@
     const modalNuevaRentaEl = document.getElementById('modalNuevaRenta');
 
     if (formNuevaRenta) {
-        formNuevaRenta.addEventListener('submit', function () {
+        formNuevaRenta.addEventListener('submit', function (e) {
+            const clienteVal = selectClienteRenta ? selectClienteRenta.value : '';
+            if (!clienteVal) {
+                e.preventDefault();
+                e.stopPropagation();
+                if (inputBuscarClienteCrearRenta) {
+                    inputBuscarClienteCrearRenta.setCustomValidity('Selecciona un elemento de la lista.');
+                    inputBuscarClienteCrearRenta.reportValidity();
+                }
+                return false;
+            }
             if (btnConfirmarCrearRenta) {
                 btnConfirmarCrearRenta.disabled = true;
                 btnConfirmarCrearRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando e Iniciando...';

@@ -17,10 +17,9 @@
 
         <div class="d-flex align-items-center gap-2 flex-wrap">
             <!-- Botón Actualizar (Recarga sin usar el del navegador) -->
-            <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center gap-2 small fw-semibold"
-                onclick="window.location.reload();" title="Actualizar datos de revisiones">
+            <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+                onclick="window.location.reload();" title="Recargar página">
                 <i class="bi bi-arrow-clockwise"></i>
-                <span>Actualizar</span>
             </button>
 
             <!-- Botón de Filtros Generales (Estilo Módulo de Reportes) -->
@@ -30,63 +29,82 @@
                 <span>Filtrar</span>
                 <span class="badge bg-white text-coffee rounded-pill ms-1 d-none" id="badgeFiltrosActivosCount">0</span>
             </button>
-
-            <!-- Indicador Clicable de Puestos Pendientes -->
-            {% if count_pendientes > 0 %}
-            <button type="button" id="btnAccesoPendientes" class="btn p-0 border-0 text-decoration-none shadow-none"
-                title="Ver puestos pendientes de revisión">
-                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 rounded-pill small cursor-pointer d-flex align-items-center gap-1">
-                    <i class="bi bi-hourglass-split"></i>
-                    <span><strong>{{ count_pendientes }}</strong> puesto(s) esperando inspección móvil</span>
-                </span>
-            </button>
-            {% else %}
-            <span class="badge bg-light text-muted border px-3 py-2 rounded-pill small">
-                <i class="bi bi-check-circle me-1 text-success"></i> Sin inspecciones pendientes
-            </span>
-            {% endif %}
         </div>
     </div>
 
-    <!-- Métricas Rápidas Generales del Módulo -->
+    <!-- Las 4 Tarjetas de Estadisticas Principales del Modulo -->
     <div class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-primary-subtle text-primary p-3 rounded-4">
-                        <i class="bi bi-cpu fs-3"></i>
-                    </div>
+        <!-- Tarjeta 1: Total Componentes -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="background: linear-gradient(135deg, #1a110b 0%, #452f23 100%); border-radius: 14px;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small text-uppercase fw-bold">Total Componentes</span>
-                        <h3 class="fw-bold mb-0 text-dark">{{ componentes_revisiones|length }}</h3>
+                        <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                            TOTAL COMPONENTES
+                        </span>
+                        <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                            {{ componentes_revisiones|length }}
+                        </h2>
+                    </div>
+                    <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                        <i class="bi bi-cpu"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-success-subtle text-success p-3 rounded-4">
-                        <i class="bi bi-check-circle-fill fs-3"></i>
-                    </div>
+
+        <!-- Tarjeta 2: En Espera de Inspeccion -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #c57616; border-radius: 14px;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small text-uppercase fw-bold">En Buen Estado</span>
-                        <h3 class="fw-bold mb-0 text-success">
-                            {{ count_equipos_disponibles }} <small class="text-muted fs-6 fw-normal">equipos disponibles</small>
-                        </h3>
+                        <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                            ESPERANDO INSPECCION
+                        </span>
+                        <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                            {{ count_pendientes }}
+                        </h2>
+                    </div>
+                    <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                        <i class="bi bi-hourglass-split"></i>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="card border-0 shadow-xs rounded-4 bg-white p-3 h-100">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="bg-danger-subtle text-danger p-3 rounded-4">
-                        <i class="bi bi-exclamation-triangle-fill fs-3"></i>
-                    </div>
+
+        <!-- Tarjeta 3: Equipos Disponibles / En Buen Estado -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #159b59; border-radius: 14px;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small text-uppercase fw-bold">Daños reportados esta semana</span>
-                        <h3 class="fw-bold mb-0 text-danger">{{ count_danios_semana }}</h3>
+                        <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                            EQUIPOS DISPONIBLES
+                        </span>
+                        <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                            {{ count_equipos_disponibles }}
+                        </h2>
+                    </div>
+                    <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tarjeta 4: Danios Reportados Esta Semana -->
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm h-100" style="background-color: #0d6efd; border-radius: 14px;">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <span class="d-block text-uppercase fw-bold mb-1" style="color: rgba(255, 255, 255, 0.85); font-size: 0.75rem; letter-spacing: 0.5px;">
+                            DAÑOS ESTA SEMANA
+                        </span>
+                        <h2 class="mb-0 fw-bold text-white font-monospace" style="font-size: 1.85rem;">
+                            {{ count_danios_semana }}
+                        </h2>
+                    </div>
+                    <div class="text-white ms-3" style="font-size: 2.3rem; opacity: 0.85;">
+                        <i class="bi bi-exclamation-triangle-fill"></i>
                     </div>
                 </div>
             </div>
@@ -514,13 +532,13 @@
                                     <td class="ps-4">
                                         <div class="d-flex align-items-center">
                                             <div class="me-3 p-2 bg-light rounded-3 text-coffee">
-                                                {% if comp.tipo == 'Teclado' %}
+                                                {% if comp.tipo == 'TECLADO' or comp.tipo == 'Teclado' %}
                                                 <i class="bi bi-keyboard fs-5"></i>
-                                                {% elif comp.tipo == 'Mouse' %}
+                                                {% elif comp.tipo == 'MOUSE' or comp.tipo == 'Mouse' %}
                                                 <i class="bi bi-mouse fs-5"></i>
-                                                {% elif comp.tipo == 'Monitor' %}
+                                                {% elif comp.tipo == 'MONITOR' or comp.tipo == 'Monitor' %}
                                                 <i class="bi bi-display fs-5"></i>
-                                                {% elif comp.tipo == 'Control' %}
+                                                {% elif comp.tipo == 'CONTROL' or comp.tipo == 'Control' %}
                                                 <i class="bi bi-controller fs-5"></i>
                                                 {% else %}
                                                 <i class="bi bi-cpu fs-5"></i>

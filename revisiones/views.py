@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import models, transaction
@@ -7,7 +9,10 @@ from django.utils import timezone
 from equipos.models import Equipo
 from rentas.models import DetalleRenta
 from usuarios.decorators import admin_required, asistente_o_admin_required
-from .models import RevisionEquipo
+from usuarios.models import registrar_auditoria
+from .models import RevisionComponente, RevisionEquipo
+
+logger = logging.getLogger(__name__)
 
 
 @login_required
@@ -17,14 +22,14 @@ def revisiones_list(request):
     Vista principal Master-Detail del Módulo de Revisiones.
     Carga el historial de revisiones y los equipos actualmente pendientes de inspección.
     """
-    # 1. Obtener todas las revisiones realizadas con relaciones precargadas
+    # 1. Obtener todas las revisiones realizadas con relaciones precargadas (incluyendo usuario__rol para evitar N+1)
     revisiones = list(
         RevisionEquipo.objects
         .select_related(
             'detalle_renta__equipo',
             'detalle_renta__renta__cliente',
             'detalle_renta__renta__usuario',
-            'usuario',
+            'usuario__rol',
         )
         .prefetch_related('detalle_renta__equipo__componentes')
         .order_by('-fecha_revision')
@@ -68,7 +73,7 @@ def revisiones_list(request):
         DetalleRenta.objects.values('equipo_id').annotate(max_id=models.Max('detalle_renta_id')).values_list('equipo_id', 'max_id')
     )
     equipos_con_renta_activa = set(
-        DetalleRenta.objects.filter(estado__in=('ACTIVA', 'PENDIENTE_REVISION')).values_list('equipo_id', flat=True)
+        DetalleRenta.objects.filter(estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION')).values_list('equipo_id', flat=True)
     )
 
     for r in revisiones:
@@ -171,15 +176,18 @@ def crear_revision(request):
 
         try:
             with transaction.atomic():
+                detalle_prev = get_object_or_404(DetalleRenta, pk=detalle_id)
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
-                    DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
+                    DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                 )
 
-                if detalle.estado != 'PENDIENTE_REVISION':
+                if detalle.estado not in ('PENDIENTE_REVISION', 'TIEMPO_TERMINADO'):
                     messages.warning(
                         request,
-                        f'El equipo {detalle.equipo.nombre} ya no se encuentra en estado Pendiente de Revisión '
+                        f'El equipo {equipo.nombre} ya no se encuentra en estado Pendiente de Revisión '
                         f'(estado actual: {detalle.get_estado_display()}).'
                     )
                     return redirect('revisiones')
@@ -189,9 +197,17 @@ def crear_revision(request):
                 if estado_si_daniado not in estados_validos:
                     estado_si_daniado = 'DANIOS_MENORES'
 
-                equipo = detalle.equipo
+                # equipo ya se encuentra bloqueado con select_for_update
                 if inspeccion_pasada:
-                    equipo.estado = 'DISPONIBLE'
+                    # Verificar que no existan componentes en DANIOS_MENORES, REQUIERE_REEMPLAZO o desactivados
+                    from componentes.models import Componente
+                    tiene_comps_bloqueantes = Componente.objects.filter(
+                        equipo=equipo,
+                    ).filter(
+                        models.Q(activo=False) | models.Q(estado__in=('DANIOS_MENORES', 'REQUIERE_REEMPLAZO'))
+                    ).exists()
+                    if not tiene_comps_bloqueantes:
+                        equipo.estado = 'DISPONIBLE'
                 else:
                     equipo.estado = estado_si_daniado
                 equipo.save(update_fields=['estado'])
@@ -226,12 +242,23 @@ def crear_revision(request):
                 if not inspeccion_pasada and lista_afectados:
                     from componentes.models import Componente
                     fecha_str = timezone.localtime(revision.fecha_revision).strftime('%d/%m/%Y %I:%M %p')
-                    for comp_nombre in lista_afectados:
-                        c_obj = Componente.objects.filter(equipo=equipo, nombre__iexact=comp_nombre.split(' (')[0]).first()
+                    componentes_equipo_qs = Componente.objects.select_for_update().filter(equipo=equipo)
+                    for comp_raw in lista_afectados:
+                        c_obj = None
+                        if comp_raw.isdigit():
+                            c_obj = componentes_equipo_qs.filter(pk=int(comp_raw)).first()
+                        if c_obj is None:
+                            # Soportar formato "Nombre (S/N: ...)" sin truncar nombres que contengan paréntesis propios
+                            nombre_limpio = comp_raw.split(' (S/N:')[0].strip()
+                            c_obj = (
+                                componentes_equipo_qs.filter(nombre__iexact=comp_raw).first()
+                                or componentes_equipo_qs.filter(nombre__iexact=nombre_limpio).first()
+                                or componentes_equipo_qs.filter(nombre__iexact=comp_raw.split(' (')[0].strip()).first()
+                            )
                         if c_obj:
+                            estado_previo_comp = c_obj.estado
                             nuevo_estado = 'DANIOS_MENORES' if estado_si_daniado == 'DANIOS_MENORES' else 'REQUIERE_REEMPLAZO'
                             c_obj.estado = nuevo_estado
-                            estado_label = c_obj.get_estado_display()
                             bloque_revision = (
                                 f"[REVISIÓN: #{revision.revision_equipo_id} | FECHA: {fecha_str}]\n"
                                 f"Descripción: {observaciones or 'Novedad reportada en inspección técnica'}\n"
@@ -242,6 +269,26 @@ def crear_revision(request):
                             else:
                                 c_obj.observaciones = bloque_revision
                             c_obj.save(update_fields=['estado', 'observaciones'])
+                            RevisionComponente.objects.create(
+                                revision_equipo=revision,
+                                componente=c_obj,
+                                estado_previo=estado_previo_comp,
+                                estado_nuevo=nuevo_estado,
+                                descripcion=observaciones or 'Novedad reportada en inspección técnica',
+                            )
+
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='CREAR_REVISION',
+                    entidad='RevisionEquipo',
+                    entidad_id=revision.revision_equipo_id,
+                    valor_nuevo={
+                        'nombre': equipo.nombre,
+                        'inspeccion_pasada': inspeccion_pasada,
+                        'estado': equipo.estado,
+                    },
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
 
             if inspeccion_pasada:
                 messages.success(
@@ -255,8 +302,11 @@ def crear_revision(request):
                     f'El equipo queda fuera de servicio para mantenimiento.'
                 )
 
-        except Exception as e:
-            messages.error(request, f'No se pudo registrar la revisión: {str(e)}')
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            logger.exception('Error al registrar la revisión:')
+            messages.error(request, 'No se pudo registrar la revisión técnica. Verifica los datos e inténtalo de nuevo.')
 
     return redirect('revisiones')
 
@@ -280,8 +330,8 @@ def reiniciar_revision(request, revision_id):
                     ),
                     pk=revision_id,
                 )
-                detalle = revision.detalle_renta
-                equipo = detalle.equipo
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=revision.detalle_renta.equipo_id)
+                detalle = get_object_or_404(DetalleRenta.objects.select_for_update(), pk=revision.detalle_renta_id)
 
                 # 1. Validación: Verificar que el equipo NO haya sido rentado de nuevo posteriormente
                 renta_posterior = DetalleRenta.objects.filter(
@@ -291,7 +341,7 @@ def reiniciar_revision(request, revision_id):
 
                 renta_activa = DetalleRenta.objects.filter(
                     equipo=equipo,
-                    estado__in=('ACTIVA', 'PENDIENTE_REVISION')
+                    estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION')
                 ).exclude(detalle_renta_id=detalle.detalle_renta_id).exists()
 
                 if renta_posterior or renta_activa:
@@ -305,22 +355,49 @@ def reiniciar_revision(request, revision_id):
                 detalle.estado = 'PENDIENTE_REVISION'
                 detalle.save(update_fields=['estado'])
 
-                # 3. Limpiar cualquier reporte inyectado en periféricos/componentes por esta revisión
+                # 3. Restaurar estado_previo y limpiar reporte inyectado en periféricos por esta revisión
                 from componentes.models import Componente
+                mapa_estados_previos = {
+                    rc.componente_id: rc.estado_previo
+                    for rc in RevisionComponente.objects.filter(revision_equipo=revision)
+                }
                 prefijo_rev = f"[REVISIÓN: #{revision.revision_equipo_id}"
-                componentes_equipo = Componente.objects.filter(equipo=equipo)
+                componentes_equipo = Componente.objects.select_for_update().filter(equipo=equipo)
                 for comp in componentes_equipo:
+                    modificado = False
                     if comp.observaciones and prefijo_rev in comp.observaciones:
                         bloques = [b.strip() for b in comp.observaciones.split('--------------------------------------------------') if b.strip()]
                         bloques_filtrados = [b for b in bloques if prefijo_rev not in b]
                         if bloques_filtrados:
                             comp.observaciones = "\n--------------------------------------------------\n".join(bloques_filtrados) + "\n--------------------------------------------------"
+                            comp.estado = mapa_estados_previos.get(comp.componente_id, comp.estado)
                         else:
                             comp.observaciones = None
-                            comp.estado = 'DISPONIBLE'
+                            comp.estado = mapa_estados_previos.get(comp.componente_id, 'DISPONIBLE')
+                        modificado = True
+                    elif comp.componente_id in mapa_estados_previos:
+                        comp.estado = mapa_estados_previos[comp.componente_id]
+                        modificado = True
+
+                    if modificado:
                         comp.save(update_fields=['observaciones', 'estado'])
 
-                # 4. Eliminar el registro de auditoría de revisión
+                RevisionComponente.objects.filter(revision_equipo=revision).delete()
+
+                # 4. Registrar auditoría y eliminar el registro de revisión
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='REINICIAR_REVISION',
+                    entidad='RevisionEquipo',
+                    entidad_id=revision_id,
+                    valor_previo={
+                        'nombre': equipo.nombre,
+                        'inspeccion_pasada': revision.inspeccion_pasada,
+                        'observaciones': revision.observaciones,
+                    },
+                    valor_nuevo={'estado': 'PENDIENTE_REVISION'},
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
                 revision.delete()
 
             messages.success(
@@ -328,8 +405,11 @@ def reiniciar_revision(request, revision_id):
                 f'La revisión #{revision_id} fue revocada correctamente. '
                 f'El equipo {equipo.nombre} ha vuelto a la lista de pendientes para que se realice la inspección nuevamente desde la app móvil.'
             )
-        except Exception as e:
-            messages.error(request, f'Error al revocar la revisión: {str(e)}')
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            logger.exception('Error al revocar la revisión:')
+            messages.error(request, 'No se pudo revocar la revisión técnica. Inténtalo de nuevo.')
 
     return redirect('revisiones')
 
@@ -349,21 +429,68 @@ def editar_revision(request, revision_id):
 
         try:
             with transaction.atomic():
+                pasada_prev = getattr(revision, 'inspeccion_pasada', None)
+                obs_prev = getattr(revision, 'observaciones', None)
+
                 revision.observaciones = observaciones or None
                 revision.inspeccion_pasada = inspeccion_pasada
                 revision.save(update_fields=['observaciones', 'inspeccion_pasada'])
 
-                # Si cambia el resultado de la inspección, actualizamos el estado del equipo
-                equipo = revision.detalle_renta.equipo
+                # Si cambia el resultado de la inspección, actualizamos el estado del equipo y sus componentes
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=revision.detalle_renta.equipo_id)
+                estado_eq_prev = getattr(equipo, 'estado', None)
+
                 if inspeccion_pasada:
+                    # Si originalmente había reprobado componentes en esta revisión, restaurarlos a su estado_previo
+                    if pasada_prev is False:
+                        from componentes.models import Componente
+                        rcs = list(RevisionComponente.objects.filter(revision_equipo=revision))
+                        if rcs:
+                            mapa_prev = {rc.componente_id: rc.estado_previo for rc in rcs}
+                            prefijo_rev = f"[REVISIÓN: #{revision.revision_equipo_id}"
+                            for comp in Componente.objects.select_for_update().filter(pk__in=mapa_prev.keys()):
+                                if comp.observaciones and prefijo_rev in comp.observaciones:
+                                    bloques = [b.strip() for b in comp.observaciones.split('--------------------------------------------------') if b.strip()]
+                                    bloques_filtrados = [b for b in bloques if prefijo_rev not in b]
+                                    comp.observaciones = (
+                                        "\n--------------------------------------------------\n".join(bloques_filtrados) + "\n--------------------------------------------------"
+                                        if bloques_filtrados else None
+                                    )
+                                comp.estado = mapa_prev.get(comp.componente_id) or 'DISPONIBLE'
+                                comp.save(update_fields=['observaciones', 'estado'])
+                            RevisionComponente.objects.filter(revision_equipo=revision).delete()
+
+                        tiene_bloqueo = Componente.objects.filter(equipo=equipo).filter(
+                            models.Q(activo=False) | models.Q(estado='REQUIERE_REEMPLAZO')
+                        ).exists()
+                        if tiene_bloqueo:
+                            raise ValueError(
+                                f'No se puede marcar el equipo "{equipo.nombre}" como Disponible porque tiene '
+                                'periféricos inactivos o que requieren reemplazo.'
+                            )
                     equipo.estado = 'DISPONIBLE'
                 else:
                     estado_daniado = request.POST.get('estado_si_daniado', 'DANIOS_MENORES')
+                    if estado_daniado not in ('DANIOS_MENORES', 'DEFECTUOSO', 'EN_MANTENIMIENTO'):
+                        estado_daniado = 'DANIOS_MENORES'
                     equipo.estado = estado_daniado
                 equipo.save(update_fields=['estado'])
 
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='MODIFICAR_REVISION',
+                    entidad='RevisionEquipo',
+                    entidad_id=revision_id,
+                    valor_previo={'inspeccion_pasada': pasada_prev, 'estado': estado_eq_prev, 'observaciones': obs_prev},
+                    valor_nuevo={'inspeccion_pasada': inspeccion_pasada, 'estado': equipo.estado, 'observaciones': revision.observaciones},
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
+
             messages.success(request, f'Revisión #{revision_id} actualizada correctamente por el Administrador.')
-        except Exception as e:
-            messages.error(request, f'No se pudo actualizar la revisión: {str(e)}')
+        except ValueError as e:
+            messages.error(request, str(e))
+        except Exception:
+            logger.exception('Error al actualizar la revisión:')
+            messages.error(request, 'No se pudo actualizar la revisión técnica. Inténtalo de nuevo.')
 
     return redirect('revisiones')

@@ -8,12 +8,11 @@ from .models import Cliente
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ('nombre', 'apellido', 'dui', 'direccion', 'telefono', 'correo')
+        fields = ('nombre', 'apellido', 'dui', 'telefono', 'correo')
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control rounded-3', 'placeholder': 'Ej. Juan'}),
             'apellido': forms.TextInput(attrs={'class': 'form-control rounded-3', 'placeholder': 'Ej. Pérez'}),
             'dui': forms.TextInput(attrs={'class': 'form-control rounded-3', 'maxlength': '10', 'placeholder': '00000000-0'}),
-            'direccion': forms.TextInput(attrs={'class': 'form-control rounded-3', 'placeholder': 'Dirección completa'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control rounded-3', 'maxlength': '8', 'placeholder': '70000000'}),
             'correo': forms.EmailInput(attrs={'class': 'form-control rounded-3', 'placeholder': 'ejemplo@correo.com'}),
         }
@@ -29,12 +28,6 @@ class ClienteForm(forms.ModelForm):
         if not apellido:
             raise forms.ValidationError("El apellido es obligatorio.")
         return apellido
-
-    def clean_direccion(self):
-        direccion = self.cleaned_data.get('direccion', '').strip()
-        if not direccion:
-            raise forms.ValidationError("La dirección es obligatoria.")
-        return direccion
 
     def clean_dui(self):
         dui = self.cleaned_data.get('dui', '').strip()

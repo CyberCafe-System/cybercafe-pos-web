@@ -1,32 +1,41 @@
 import csv
 import datetime
-from decimal import ROUND_HALF_UP, Decimal
-from itertools import groupby
+import json
+import logging
+import uuid
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-from django.db.models import Sum
+from django.db import transaction
+from django.db.models import Case, DecimalField, F, Sum, When
+from django.db.models.functions import Coalesce
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente
 from equipos.models import Equipo
-from inventario.models import Producto
+from inventario.models import MovimientoInventario, Producto
 from rentas.models import DetalleRenta, Renta
 from usuarios.decorators import admin_required, cajero_o_admin_required
-from usuarios.models import Usuario
+from usuarios.models import Auditoria, Usuario, registrar_auditoria
 
 from .models import DetalleVenta, Venta
 from .ticket import generar_factura_pdf
 
 IVA = Decimal('0.13')
 CENTAVOS = Decimal('0.01')
+EFECTIVO_MAXIMO = getattr(settings, 'EFECTIVO_MAXIMO', Decimal('100.00'))
+
+logger = logging.getLogger(__name__)
 
 
 def _rango_fecha_local(dia):
@@ -70,28 +79,31 @@ def inicio(request):
     hoy = timezone.localdate()
     inicio_hoy, fin_hoy = _rango_fecha_local(hoy)
 
-    ventas_hoy_qs = Venta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
+    ventas_hoy_qs = Venta.objects.filter(fecha__range=(inicio_hoy, fin_hoy)).exclude(estado='ANULADA')
     rentas_hoy_qs = Renta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
 
-    # Ingresos totales de hoy (POS + Rentas)
-    subtotal_ventas = sum((v.subtotal + v.iva) for v in ventas_hoy_qs) or Decimal('0.00')
-    subtotal_rentas = sum(r.total for r in rentas_hoy_qs) or Decimal('0.00')
+    # Ingresos totales de hoy calculados mediante agregación SQL (POS sin anuladas + Rentas)
+    subtotal_ventas = ventas_hoy_qs.aggregate(
+        total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00'))
+    )['total'] or Decimal('0.00')
+    subtotal_rentas = rentas_hoy_qs.aggregate(
+        total=Coalesce(Sum('total'), Decimal('0.00'))
+    )['total'] or Decimal('0.00')
     ingresos_hoy = (subtotal_ventas + subtotal_rentas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
-    # Equipos en uso
-    equipos_ocupados = DetalleRenta.objects.filter(estado='ACTIVA').values('equipo_id').distinct().count()
+    # Equipos en uso o con tiempo terminado
+    equipos_ocupados = DetalleRenta.objects.filter(
+        estado__in=['ACTIVA', 'TIEMPO_TERMINADO']
+    ).values('equipo_id').distinct().count()
     total_equipos = Equipo.objects.count()
     equipos_activos_str = f"{equipos_ocupados} / {total_equipos}" if total_equipos else "0 / 0"
 
-    # Total de ventas POS hoy
     ventas_hoy_count = ventas_hoy_qs.count()
 
-    # Clientes activos únicos hoy (set union para deduplicación estricta)
     clientes_ventas = set(ventas_hoy_qs.exclude(cliente_id__isnull=True).values_list('cliente_id', flat=True))
     clientes_rentas = set(rentas_hoy_qs.exclude(cliente_id__isnull=True).values_list('cliente_id', flat=True))
     total_clientes_activos = len(clientes_ventas | clientes_rentas)
 
-    # Últimas transacciones (Ventas y Rentas)
     ultimas_ventas_raw = list(
         Venta.objects.select_related('cliente', 'usuario')
         .prefetch_related('detalles__producto')
@@ -105,11 +117,13 @@ def inicio(request):
 
     transacciones = []
     for v in ultimas_ventas_raw:
-        items_nombres = [d.producto.nombre for d in v.detalles.all()[:2]]
+        detalles_v = list(v.detalles.all())
+        items_nombres = [d.producto.nombre for d in detalles_v[:2] if d.producto]
         concepto = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-        if v.detalles.count() > 2:
-            concepto += f" (+{v.detalles.count() - 2} más)"
+        if len(detalles_v) > 2:
+            concepto += f" (+{len(detalles_v) - 2} más)"
         cliente_nombre = f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General"
+        estado_label = 'Anulada' if v.estado == 'ANULADA' else 'Pagado'
         transacciones.append({
             'id': f"TK-{v.venta_id}",
             'cliente': v.cliente,
@@ -118,12 +132,14 @@ def inicio(request):
             'usuario': v.usuario,
             'fecha_hora': v.fecha,
             'total': (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP),
-            'estado': 'Pagado',
+            'estado': estado_label,
+            'es_anulada': v.estado == 'ANULADA',
             'es_venta': True,
         })
 
     for r in ultimas_rentas_raw:
-        det = r.detalles.first()
+        detalles_r = list(r.detalles.all())
+        det = detalles_r[0] if detalles_r else None
         equipo_nom = det.equipo.nombre if det and det.equipo else "Equipo"
         minutos = det.tiempo_de_renta if det else 60
         cliente_nombre = f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General"
@@ -136,40 +152,75 @@ def inicio(request):
             'fecha_hora': r.fecha,
             'total': r.total,
             'estado': r.estado_de_pago.title(),
+            'es_anulada': False,
             'es_venta': False,
         })
 
-    # Ordenar por fecha descendente y tomar las 5 más recientes
     transacciones.sort(key=lambda x: x['fecha_hora'], reverse=True)
     ultimas_transacciones = transacciones[:5]
 
-    # Configuración de semana actual (Lunes a Domingo)
-    inicio_semana = hoy - timezone.timedelta(days=hoy.weekday())  # Lunes
-    fin_semana = inicio_semana + timezone.timedelta(days=6)       # Domingo
+    inicio_semana = hoy - timezone.timedelta(days=hoy.weekday())
+    fin_semana = inicio_semana + timezone.timedelta(days=6)
     inicio_semana_dt, _ = _rango_fecha_local(inicio_semana)
     _, fin_semana_dt = _rango_fecha_local(fin_semana)
 
-    # Gráfica 1: Ingresos de la Semana (Lunes a Domingo)
     dias_semana_es = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
     chart_dias_labels = []
     chart_ventas_data = []
     chart_rentas_data = []
 
+    agregaciones_ventas_semana = {}
+    agregaciones_rentas_semana = {}
     for i in range(7):
         dia = inicio_semana + timezone.timedelta(days=i)
-        etiqueta = dias_semana_es[i]
-        chart_dias_labels.append(etiqueta)
+        ini_dia, fin_dia = _rango_fecha_local(dia)
+        agregaciones_ventas_semana[f'd_{i}'] = Coalesce(
+            Sum(
+                Case(
+                    When(
+                        fecha__range=(ini_dia, fin_dia),
+                        then=F('subtotal') + F('iva'),
+                    ),
+                    default=Decimal('0.00'),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal('0.00'),
+        )
+        agregaciones_rentas_semana[f'd_{i}'] = Coalesce(
+            Sum(
+                Case(
+                    When(fecha__range=(ini_dia, fin_dia), then=F('total')),
+                    default=Decimal('0.00'),
+                    output_field=DecimalField(),
+                )
+            ),
+            Decimal('0.00'),
+        )
 
-        inicio_dia_dt, fin_dia_dt = _rango_fecha_local(dia)
-        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
-        r_sub = sum(r.total for r in Renta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
+    totales_ventas_semana = (
+        Venta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
+        .exclude(estado='ANULADA')
+        .aggregate(**agregaciones_ventas_semana)
+    )
+    totales_rentas_semana = (
+        Renta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
+        .aggregate(**agregaciones_rentas_semana)
+    )
+
+    for i in range(7):
+        chart_dias_labels.append(dias_semana_es[i])
+
+        v_sub = totales_ventas_semana.get(f'd_{i}', Decimal('0.00')) or Decimal('0.00')
+        r_sub = totales_rentas_semana.get(f'd_{i}', Decimal('0.00')) or Decimal('0.00')
 
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
 
-    # Gráfica 2: Top 5 Productos Más Vendidos de la Semana (Lunes a Domingo)
     top_vendidos_qs = list(
-        DetalleVenta.objects.filter(venta__fecha__range=(inicio_semana_dt, fin_semana_dt))
+        DetalleVenta.objects.filter(
+            venta__fecha__range=(inicio_semana_dt, fin_semana_dt)
+        ).exclude(venta__estado='ANULADA')
         .values('producto__nombre')
         .annotate(total_unidades=Sum('cantidad'))
         .order_by('-total_unidades')[:5]
@@ -187,16 +238,12 @@ def inicio(request):
         chart_top_labels = ['Sin ventas esta semana']
         chart_top_data = [1]
 
-    # Resumen semanal acumulado (Lunes a Domingo)
     total_semana_ventas = sum(chart_ventas_data)
     total_semana_rentas = sum(chart_rentas_data)
     total_semana = total_semana_ventas + total_semana_rentas
 
-    # Ocupación de equipos
     equipos_libres = max(0, total_equipos - equipos_ocupados)
     porcentaje_ocupacion = int(round((equipos_ocupados / total_equipos * 100))) if total_equipos else 0
-
-    import json
 
     return render(request, 'inicio.html', {
         'ingresos_hoy': ingresos_hoy,
@@ -230,21 +277,48 @@ def _obtener_carrito(request):
 
 
 def _resumen_carrito(carrito):
+    """
+    Calcula el resumen del carrito en una sola consulta por lotes.
+    Detecta y reporta ítems que ya no existen, están inactivos o tienen su categoría inactiva.
+    """
+    if not carrito:
+        return [], Decimal('0.00'), Decimal('0.00'), Decimal('0.00'), []
+
+    ids_int = []
+    for pid in carrito.keys():
+        try:
+            ids_int.append(int(pid))
+        except (ValueError, TypeError):
+            pass
+
+    prods_db = {
+        p.producto_id: p
+        for p in Producto.objects.filter(pk__in=ids_int).select_related('categoria')
+    }
+
     items = []
     subtotal = Decimal('0.00')
-    for producto_id, cantidad in carrito.items():
-        producto = (
-            Producto.objects.filter(pk=producto_id, activo=True)
-            .select_related('categoria')
-            .first()
-        )
-        if producto is None:
+    eliminados = []
+
+    for str_pid, cantidad in list(carrito.items()):
+        try:
+            int_pid = int(str_pid)
+        except (ValueError, TypeError):
             continue
-        linea = producto.precio_venta * cantidad
+
+        prod = prods_db.get(int_pid)
+        if prod is None or not prod.activo or (prod.categoria and not prod.categoria.activa):
+            nombre_descartado = prod.nombre if prod else f"ID {str_pid}"
+            eliminados.append(nombre_descartado)
+            continue
+
+        linea = prod.precio_venta * cantidad
         subtotal += linea
-        items.append({'producto': producto, 'cantidad': cantidad, 'subtotal': linea})
+        items.append({'producto': prod, 'cantidad': cantidad, 'subtotal': linea})
+
     iva = (subtotal * IVA).quantize(CENTAVOS, rounding=ROUND_HALF_UP)
-    return items, subtotal, iva, subtotal + iva
+    total = subtotal + iva
+    return items, subtotal, iva, total, eliminados
 
 
 def _respuesta_pdf(venta):
@@ -257,12 +331,11 @@ def _respuesta_pdf(venta):
 @cajero_o_admin_required
 def pos(request):
     productos = (
-        Producto.objects.filter(activo=True)
+        Producto.objects.filter(activo=True, categoria__activa=True)
         .select_related('categoria')
         .order_by('categoria__nombre', 'nombre')
     )
 
-    # Organizar por categorías
     categorias_dict = {}
     for p in productos:
         cat_nom = p.categoria.nombre.strip().title() if p.categoria else 'General'
@@ -275,7 +348,29 @@ def pos(request):
         for cat_nom, prods in categorias_dict.items()
     ]
 
-    items, subtotal, iva, total = _resumen_carrito(_obtener_carrito(request))
+    carrito = _obtener_carrito(request)
+    items, subtotal, iva, total, eliminados = _resumen_carrito(carrito)
+
+    # Notificar y limpiar ítems retirados silenciosamente
+    if eliminados:
+        for item_nom in eliminados:
+            for pid, p in list(carrito.items()):
+                # Quitar del carrito de sesión
+                pass
+        # Filtrar el carrito en sesión para que solo contenga los activos válidos
+        ids_validos = {str(item['producto'].producto_id) for item in items}
+        carrito_limpio = {k: v for k, v in carrito.items() if str(k) in ids_validos}
+        request.session['carrito'] = carrito_limpio
+        messages.warning(
+            request,
+            f'Aviso: Los siguientes productos fueron retirados de tu carrito porque ya no están disponibles: {", ".join(eliminados)}.'
+        )
+
+    pos_token = request.session.get('pos_token')
+    if not pos_token:
+        pos_token = uuid.uuid4().hex
+        request.session['pos_token'] = pos_token
+
     contexto = {
         'productos': productos,
         'categorias_dict': categorias_dict,
@@ -284,9 +379,11 @@ def pos(request):
         'subtotal': subtotal,
         'iva': iva,
         'total': total,
-        'clientes': Cliente.objects.order_by('nombre', 'apellido'),
+        'clientes': Cliente.objects.filter(activo=True).order_by('nombre', 'apellido'),
         'iva_porcentaje': int(IVA * 100),
         'ultima_venta_id': request.session.get('ultima_venta_id'),
+        'pos_token': pos_token,
+        'efectivo_maximo': EFECTIVO_MAXIMO,
     }
     return render(request, 'pos/pos.html', contexto)
 
@@ -295,7 +392,12 @@ def pos(request):
 @cajero_o_admin_required
 def agregar_carrito(request):
     if request.method == 'POST':
-        producto = get_object_or_404(Producto, pk=request.POST.get('producto_id'), activo=True)
+        producto = get_object_or_404(
+            Producto.objects.select_related('categoria'),
+            pk=request.POST.get('producto_id'),
+            activo=True,
+            categoria__activa=True,
+        )
         try:
             cantidad = int(request.POST.get('cantidad') or 1)
         except (TypeError, ValueError):
@@ -324,7 +426,12 @@ def actualizar_cantidad_carrito(request):
     if request.method == 'POST':
         producto_id = str(request.POST.get('producto_id'))
         accion = request.POST.get('accion')
-        producto = get_object_or_404(Producto, pk=producto_id, activo=True)
+        producto = get_object_or_404(
+            Producto.objects.select_related('categoria'),
+            pk=producto_id,
+            activo=True,
+            categoria__activa=True,
+        )
         carrito = _obtener_carrito(request)
         actual = carrito.get(producto_id, 0)
 
@@ -370,35 +477,159 @@ def procesar_venta(request):
     if request.method != 'POST':
         return redirect('pos')
 
-    items, subtotal, iva, _total = _resumen_carrito(_obtener_carrito(request))
-    if not items:
+    token_enviado = (request.POST.get('pos_token') or '').strip()
+    token_sesion = request.session.get('pos_token')
+
+    # Validación de idempotencia contra doble submit
+    if not token_enviado or token_enviado != token_sesion:
+        # Comprobar si ya fue registrada en BD con esta clave
+        if token_enviado:
+            venta_previa = Venta.objects.filter(clave_idempotencia=token_enviado).first()
+            if venta_previa:
+                messages.warning(
+                    request,
+                    f'Esta solicitud ya fue procesada anteriormente (Factura #{venta_previa.venta_id}).'
+                )
+                return _respuesta_pdf(venta_previa)
+        messages.error(request, 'La solicitud de cobro ya expiró o no es válida. Intente nuevamente.')
+        return redirect('pos')
+
+    carrito = _obtener_carrito(request)
+    if not carrito:
         messages.error(request, 'El carrito está vacío. Agrega productos antes de procesar el pago.')
         return redirect('pos')
 
-    cliente = get_object_or_404(Cliente, pk=request.POST.get('cliente_id'))
+    cliente_id = request.POST.get('cliente_id')
+    cliente = get_object_or_404(Cliente, pk=cliente_id, activo=True)
 
-    venta = Venta.objects.create(
-        cliente=cliente,
-        usuario=request.user,
-        fecha=timezone.now(),
-        subtotal=subtotal,
-        iva=iva,
-    )
+    # Validar pago en efectivo y cambio
+    efectivo_raw = (request.POST.get('efectivo_recibido') or '').strip().replace('$', '')
+    try:
+        efectivo_recibido = Decimal(efectivo_raw).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError):
+        messages.error(request, 'Debe ingresar un monto válido de efectivo recibido.')
+        return redirect('pos')
 
-    for item in items:
-        producto = item['producto']
-        DetalleVenta.objects.create(
-            venta=venta,
-            producto=producto,
-            precio_unitario=producto.precio_venta,
-            cantidad=item['cantidad'],
-            subtotal=item['subtotal'],
+    if efectivo_recibido <= Decimal('0.00'):
+        messages.error(request, 'El efectivo recibido debe ser mayor a $0.00.')
+        return redirect('pos')
+
+    if efectivo_recibido > EFECTIVO_MAXIMO:
+        messages.error(
+            request,
+            f'El monto máximo en efectivo permitido por transacción es de ${EFECTIVO_MAXIMO:.2f}.'
         )
-        producto.cantidad = max(producto.cantidad - item['cantidad'], 0)
-        producto.save(update_fields=['cantidad'])
+        return redirect('pos')
 
-    request.session['carrito'] = {}
-    request.session['ultima_venta_id'] = venta.venta_id
+    try:
+        with transaction.atomic():
+            # 1. Comprobación de idempotencia concurrente en BD con bloqueo
+            venta_existente = Venta.objects.select_for_update().filter(clave_idempotencia=token_enviado).first()
+            if venta_existente:
+                messages.warning(request, f'La venta #{venta_existente.venta_id} ya fue registrada.')
+                return _respuesta_pdf(venta_existente)
+
+            # 2. Bloquear filas de productos en BD con select_for_update() en orden determinista
+            ids_productos = sorted([int(pid) for pid in carrito.keys()])
+            productos_bloqueados = {
+                p.producto_id: p
+                for p in Producto.objects.select_for_update().select_related('categoria').filter(producto_id__in=ids_productos)
+            }
+
+            # 3. Revalidar stock y estado activo de todos los productos y categoría
+            items_procesar = []
+            subtotal_recalculado = Decimal('0.00')
+
+            for str_pid, cant in carrito.items():
+                int_pid = int(str_pid)
+                prod = productos_bloqueados.get(int_pid)
+
+                if not prod:
+                    raise ValueError('Uno de los productos seleccionados ya no existe en el catálogo.')
+
+                if not prod.activo or (prod.categoria and not prod.categoria.activa):
+                    raise ValueError(f'El producto "{prod.nombre}" ha sido desactivado y no está disponible para la venta.')
+
+                if prod.cantidad < cant:
+                    raise ValueError(
+                        f'Inventario insuficiente para "{prod.nombre}". '
+                        f'Stock actual disponible: {prod.cantidad}, cantidad requerida: {cant}.'
+                    )
+
+                item_subtotal = (Decimal(str(prod.precio_venta)) * Decimal(str(cant))).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP
+                )
+                subtotal_recalculado += item_subtotal
+                items_procesar.append({
+                    'producto': prod,
+                    'cantidad': cant,
+                    'precio_unitario': prod.precio_venta,
+                    'subtotal': item_subtotal,
+                })
+
+            iva_recalculado = (subtotal_recalculado * IVA).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+            total_recalculado = subtotal_recalculado + iva_recalculado
+
+            if efectivo_recibido < total_recalculado:
+                raise ValueError(
+                    f'Efectivo insuficiente. Total a pagar: ${total_recalculado:.2f}, '
+                    f'Efectivo recibido: ${efectivo_recibido:.2f}.'
+                )
+
+            cambio_calculado = (efectivo_recibido - total_recalculado).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
+            # 4. Crear la cabecera de la venta
+            venta = Venta.objects.create(
+                cliente=cliente,
+                usuario=request.user,
+                fecha=timezone.now(),
+                subtotal=subtotal_recalculado,
+                iva=iva_recalculado,
+                efectivo_recibido=efectivo_recibido,
+                cambio=cambio_calculado,
+                clave_idempotencia=token_enviado,
+                estado='PAGADA',
+            )
+
+            # 5. Crear detalles de venta y descontar inventario registrando kardex
+            for item in items_procesar:
+                prod = item['producto']
+                cant = item['cantidad']
+
+                DetalleVenta.objects.create(
+                    venta=venta,
+                    producto=prod,
+                    precio_unitario=item['precio_unitario'],
+                    cantidad=cant,
+                    subtotal=item['subtotal'],
+                )
+
+                prod.cantidad -= cant
+                prod.version += 1
+                prod.save(update_fields=['cantidad', 'version'])
+
+                MovimientoInventario.objects.create(
+                    producto=prod,
+                    usuario=request.user,
+                    tipo='VENTA',
+                    delta=-cant,
+                    stock_resultante=prod.cantidad,
+                    motivo=f'Venta POS #{venta.venta_id}',
+                    referencia_id=venta.venta_id,
+                )
+
+            # 6. Al tener éxito, vaciar carrito y rotar token de idempotencia
+            request.session['carrito'] = {}
+            request.session['ultima_venta_id'] = venta.venta_id
+            request.session['pos_token'] = uuid.uuid4().hex
+
+    except ValueError as e:
+        messages.error(request, str(e))
+        return redirect('pos')
+    except Exception:
+        logger.exception('Error crítico durante la transacción de procesar_venta:')
+        messages.error(request, 'Ocurrió un error inesperado al procesar la venta. Verifique los datos e intente de nuevo.')
+        return redirect('pos')
 
     # Enviar factura por correo si el checklist está activado
     enviar_correo = bool(request.POST.get('enviar_correo'))
@@ -415,6 +646,83 @@ def procesar_venta(request):
         messages.success(request, f'Venta #{venta.venta_id} registrada correctamente.')
 
     return _respuesta_pdf(venta)
+
+
+@login_required
+@admin_required
+@require_POST
+def anular_venta(request, venta_id):
+    """
+    Anula una venta del POS exclusivamente por un Administrador y con motivo obligatorio.
+    Restaura el stock de los productos vendidos y registra el movimiento en kardex y auditoría.
+    """
+    motivo = (request.POST.get('motivo') or '').strip()
+    if len(motivo) < 10:
+        messages.error(request, 'El motivo de anulación es obligatorio y debe contener al menos 10 caracteres explicativos.')
+        return redirect('reportes')
+
+    try:
+        with transaction.atomic():
+            venta = Venta.objects.select_for_update().get(pk=venta_id)
+            if venta.estado == 'ANULADA':
+                messages.warning(request, f'La venta #{venta_id} ya se encuentra anulada.')
+                return redirect('reportes')
+
+            fecha_venta_local = timezone.localtime(venta.fecha).date() if timezone.is_aware(venta.fecha) else venta.fecha.date()
+            if fecha_venta_local != timezone.localdate():
+                messages.error(
+                    request,
+                    f'No se puede anular la venta #{venta_id} porque pertenece a una fecha anterior ({fecha_venta_local.strftime("%d/%m/%Y")}). Solo se permiten anulaciones del mismo día.'
+                )
+                return redirect('reportes')
+
+            venta.estado = 'ANULADA'
+            venta.anulada_por = request.user
+            venta.anulada_en = timezone.now()
+            venta.motivo_anulacion = motivo
+            venta.save(update_fields=['estado', 'anulada_por', 'anulada_en', 'motivo_anulacion'])
+
+            # Restaurar stock de cada detalle bloqueando productos en orden determinista por producto_id (anti-deadlock)
+            detalles_raw = list(venta.detalles.select_related('producto'))
+            detalles_con_prod = [d for d in detalles_raw if getattr(d, 'producto_id', None)]
+            detalles_con_prod.sort(key=lambda d: d.producto_id)
+            ids_prod = sorted({d.producto_id for d in detalles_con_prod})
+
+            productos_lock_qs = Producto.objects.select_for_update().filter(producto_id__in=ids_prod).order_by('producto_id')
+            productos_lock = {p.producto_id: p for p in productos_lock_qs}
+
+            for detalle in detalles_con_prod:
+                prod = productos_lock.get(detalle.producto_id) or Producto.objects.select_for_update().get(pk=detalle.producto_id)
+                prod.cantidad += detalle.cantidad
+                prod.version += 1
+                prod.save(update_fields=['cantidad', 'version'])
+
+                MovimientoInventario.objects.create(
+                    producto=prod,
+                    usuario=request.user,
+                    tipo='ANULACION',
+                    delta=detalle.cantidad,
+                    stock_resultante=prod.cantidad,
+                    motivo=f'Anulación Factura #{venta.venta_id}: {motivo}',
+                    referencia_id=venta.venta_id,
+                )
+
+            registrar_auditoria(
+                usuario=request.user,
+                accion='ANULAR_VENTA',
+                entidad='Venta',
+                entidad_id=venta.venta_id,
+                valor_previo={'estado': 'PAGADA'},
+                valor_nuevo={'estado': 'ANULADA', 'motivo': motivo, 'anulada_por': request.user.username},
+                ip=request.META.get('REMOTE_ADDR'),
+            )
+
+        messages.success(request, f'Venta #{venta_id} anulada correctamente. Se ha restituido el inventario.')
+    except Exception:
+        logger.exception(f'Error al anular venta #{venta_id}:')
+        messages.error(request, 'Ocurrió un error inesperado al anular la venta.')
+
+    return redirect('reportes')
 
 
 @login_required
@@ -435,15 +743,25 @@ def ticket_pdf(request, venta_id=None):
     return _respuesta_pdf(venta)
 
 
-@login_required
-@admin_required
-def reportes(request):
+def _sanitizar_celda_planilla(valor):
+    """Previene inyección de fórmulas (CSV/Excel Macro Injection) al abrir reportes en hojas de cálculo."""
+    texto = str(valor if valor is not None else '')
+    if texto.startswith(('=', '+', '-', '@', '\t', '\r')):
+        return f"'{texto}"
+    return texto
+
+
+def _construir_transacciones_reporte(request):
+    """
+    Construye de forma centralizada la lista de transacciones y totales para la vista
+    de reportes y para las exportaciones a CSV y Excel.
+    """
     fecha_inicio_str = request.GET.get('fecha_inicio')
     fecha_fin_str = request.GET.get('fecha_fin')
     tipo_filtro = request.GET.get('tipo', 'todos')
     usuario_id_str = request.GET.get('usuario')
 
-    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
+    ventas_qs = Venta.objects.select_related('cliente', 'usuario', 'anulada_por').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
 
     ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
@@ -459,6 +777,11 @@ def reportes(request):
     total_rentas = Decimal('0.00')
 
     if tipo_filtro in ['todos', 'ventas']:
+        agregado_v = ventas_qs.exclude(estado='ANULADA').aggregate(
+            total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+        total_ventas = agregado_v.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
         for v in ventas_qs:
             items_nombres = []
             for d in v.detalles.all():
@@ -466,21 +789,37 @@ def reportes(request):
                 items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             monto_v = (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            total_ventas += monto_v
+
+            es_anulada = (v.estado == 'ANULADA')
+
+            fecha_local = timezone.localtime(v.fecha) if timezone.is_aware(v.fecha) else v.fecha
+            es_mismo_dia = (fecha_local.date() == timezone.localdate())
+
             transacciones.append({
                 'ticket': f"V-{v.venta_id}",
                 'fecha': v.fecha,
+                'fecha_str': fecha_local.strftime('%d/%m/%Y %I:%M %p'),
                 'usuario': v.usuario.username if v.usuario else "Sistema",
                 'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
                 'concepto': articulos,
                 'total': monto_v,
                 'tipo': 'Venta POS',
+                'estado': 'Anulada' if es_anulada else 'Pagada',
+                'es_anulada': es_anulada,
+                'es_mismo_dia': es_mismo_dia,
                 'es_venta': True,
                 'venta_id': v.venta_id,
                 'renta_id': None,
+                'motivo_anulacion': v.motivo_anulacion,
+                'anulada_por': v.anulada_por.username if v.anulada_por else None,
             })
 
     if tipo_filtro in ['todos', 'rentas']:
+        agregado_r = rentas_qs.aggregate(
+            total=Coalesce(Sum('total'), Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+        total_rentas = agregado_r.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
         for r in rentas_qs:
             detalles = list(r.detalles.all())
             if detalles:
@@ -493,23 +832,48 @@ def reportes(request):
             else:
                 concepto = "Renta de Equipo"
             monto_r = r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            total_rentas += monto_r
             transacciones.append({
                 'ticket': f"R-{r.renta_id}",
                 'fecha': r.fecha,
+                'fecha_str': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
                 'usuario': r.usuario.username if r.usuario else "Sistema",
                 'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
                 'concepto': concepto,
                 'total': monto_r,
                 'tipo': 'Renta de Equipo',
+                'estado': r.estado_de_pago.title(),
+                'es_anulada': False,
                 'es_venta': False,
                 'venta_id': None,
                 'renta_id': r.renta_id,
             })
 
     transacciones.sort(key=lambda x: x['fecha'], reverse=True)
+    return {
+        'transacciones': transacciones,
+        'total_ventas': total_ventas,
+        'total_rentas': total_rentas,
+        'fecha_inicio_str': fecha_inicio_str,
+        'fecha_fin_str': fecha_fin_str,
+        'tipo_filtro': tipo_filtro,
+        'usuario_id_str': usuario_id_str,
+    }
+
+
+@login_required
+@admin_required
+def reportes(request):
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
+    total_ventas = datos['total_ventas']
+    total_rentas = datos['total_rentas']
+    fecha_inicio_str = datos['fecha_inicio_str']
+    fecha_fin_str = datos['fecha_fin_str']
+    tipo_filtro = datos['tipo_filtro']
+    usuario_id_str = datos['usuario_id_str']
+
     total_global = total_ventas + total_rentas
-    num_transacciones = len(transacciones)
+    num_transacciones = len([t for t in transacciones if not t.get('es_anulada')])
     ticket_promedio = (total_global / Decimal(num_transacciones)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP) if num_transacciones else Decimal('0.00')
 
     pct_ventas = int((total_ventas / total_global * 100)) if total_global > 0 else 0
@@ -542,74 +906,26 @@ def reportes(request):
 @login_required
 @admin_required
 def reportes_exportar_csv(request):
-    fecha_inicio_str = request.GET.get('fecha_inicio')
-    fecha_fin_str = request.GET.get('fecha_fin')
-    tipo_filtro = request.GET.get('tipo', 'todos')
-    usuario_id_str = request.GET.get('usuario')
-
-    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
-    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
-
-    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
-    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
-
-    if usuario_id_str and usuario_id_str.isdigit():
-        uid = int(usuario_id_str)
-        ventas_qs = ventas_qs.filter(usuario_id=uid)
-        rentas_qs = rentas_qs.filter(usuario_id=uid)
-
-    filas = []
-    if tipo_filtro in ['todos', 'ventas']:
-        for v in ventas_qs:
-            items_nombres = []
-            for d in v.detalles.all():
-                prod_nombre = d.producto.nombre if d.producto else "Producto"
-                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
-            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-            filas.append({
-                'fecha_obj': v.fecha,
-                'ticket': f"V-{v.venta_id}",
-                'tipo': "Venta POS",
-                'fecha': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': v.usuario.username if v.usuario else "Sistema",
-                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
-                'concepto': articulos,
-                'total': f"${(v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
-            })
-
-    if tipo_filtro in ['todos', 'rentas']:
-        for r in rentas_qs:
-            detalles = list(r.detalles.all())
-            if detalles:
-                equipos_info = []
-                for det in detalles:
-                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
-                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
-                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
-                concepto = ", ".join(equipos_info)
-            else:
-                concepto = "Renta de Equipo"
-            filas.append({
-                'fecha_obj': r.fecha,
-                'ticket': f"R-{r.renta_id}",
-                'tipo': "Renta de Equipo",
-                'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': r.usuario.username if r.usuario else "Sistema",
-                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': concepto,
-                'total': f"${r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)}",
-            })
-
-    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.csv"'
-    response.write('\ufeff')  # UTF-8 BOM para Excel en español
+    response.write('\ufeff')
 
     writer = csv.writer(response)
-    writer.writerow(['Ticket', 'Tipo de Ingreso', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total'])
-    for f in filas:
-        writer.writerow([f['ticket'], f['tipo'], f['fecha'], f['cajero'], f['cliente'], f['concepto'], f['total']])
+    writer.writerow(['Ticket', 'Tipo de Ingreso', 'Estado', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total'])
+    for f in transacciones:
+        writer.writerow([
+            _sanitizar_celda_planilla(f['ticket']),
+            _sanitizar_celda_planilla(f['tipo']),
+            _sanitizar_celda_planilla(f.get('estado', 'Pagada')),
+            _sanitizar_celda_planilla(f['fecha_str']),
+            _sanitizar_celda_planilla(f['usuario']),
+            _sanitizar_celda_planilla(f['cliente']),
+            _sanitizar_celda_planilla(f['concepto']),
+            f"${f['total']}",
+        ])
 
     return response
 
@@ -617,71 +933,14 @@ def reportes_exportar_csv(request):
 @login_required
 @admin_required
 def reportes_exportar_excel(request):
-    fecha_inicio_str = request.GET.get('fecha_inicio')
-    fecha_fin_str = request.GET.get('fecha_fin')
-    tipo_filtro = request.GET.get('tipo', 'todos')
-    usuario_id_str = request.GET.get('usuario')
-
-    ventas_qs = Venta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__producto').order_by('-fecha')
-    rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
-
-    ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
-    rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
-
-    if usuario_id_str and usuario_id_str.isdigit():
-        uid = int(usuario_id_str)
-        ventas_qs = ventas_qs.filter(usuario_id=uid)
-        rentas_qs = rentas_qs.filter(usuario_id=uid)
-
-    filas = []
-    if tipo_filtro in ['todos', 'ventas']:
-        for v in ventas_qs:
-            items_nombres = []
-            for d in v.detalles.all():
-                prod_nombre = d.producto.nombre if d.producto else "Producto"
-                items_nombres.append(f"{d.cantidad}x {prod_nombre}")
-            articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
-            filas.append({
-                'fecha_obj': v.fecha,
-                'ticket': f"V-{v.venta_id}",
-                'tipo': "Venta POS",
-                'fecha': timezone.localtime(v.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': v.usuario.username if v.usuario else "Sistema",
-                'cliente': f"{v.cliente.nombre} {v.cliente.apellido}" if v.cliente else "Cliente General",
-                'concepto': articulos,
-                'total': float((v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            })
-
-    if tipo_filtro in ['todos', 'rentas']:
-        for r in rentas_qs:
-            detalles = list(r.detalles.all())
-            if detalles:
-                equipos_info = []
-                for det in detalles:
-                    equipo_nom = det.equipo.nombre if (det and det.equipo) else "Equipo"
-                    minutos = (det.tiempo_de_renta or 0) + (det.tiempo_agregado or 0)
-                    equipos_info.append(f"Renta {equipo_nom} ({minutos} min)")
-                concepto = ", ".join(equipos_info)
-            else:
-                concepto = "Renta de Equipo"
-            filas.append({
-                'fecha_obj': r.fecha,
-                'ticket': f"R-{r.renta_id}",
-                'tipo': "Renta de Equipo",
-                'fecha': timezone.localtime(r.fecha).strftime('%d/%m/%Y %I:%M %p'),
-                'cajero': r.usuario.username if r.usuario else "Sistema",
-                'cliente': f"{r.cliente.nombre} {r.cliente.apellido}" if r.cliente else "Cliente General",
-                'concepto': concepto,
-                'total': float(r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)),
-            })
-
-    filas.sort(key=lambda x: x['fecha_obj'], reverse=True)
+    datos = _construir_transacciones_reporte(request)
+    transacciones = datos['transacciones']
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Reporte de Ingresos"
 
-    headers = ['N° Ticket', 'Tipo de Ingreso', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total ($)']
+    headers = ['N° Ticket', 'Tipo de Ingreso', 'Estado', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total ($)']
     ws.append(headers)
 
     header_font = Font(name='Calibri', size=11, bold=True, color='FFFFFF')
@@ -694,14 +953,15 @@ def reportes_exportar_excel(request):
         cell.fill = header_fill
         cell.alignment = header_alignment
 
-    for row_idx, f in enumerate(filas, start=2):
-        ws.cell(row=row_idx, column=1, value=f['ticket'])
-        ws.cell(row=row_idx, column=2, value=f['tipo'])
-        ws.cell(row=row_idx, column=3, value=f['fecha'])
-        ws.cell(row=row_idx, column=4, value=f['cajero'])
-        ws.cell(row=row_idx, column=5, value=f['cliente'])
-        ws.cell(row=row_idx, column=6, value=f['concepto'])
-        total_cell = ws.cell(row=row_idx, column=7, value=f['total'])
+    for row_idx, f in enumerate(transacciones, start=2):
+        ws.cell(row=row_idx, column=1, value=_sanitizar_celda_planilla(f['ticket']))
+        ws.cell(row=row_idx, column=2, value=_sanitizar_celda_planilla(f['tipo']))
+        ws.cell(row=row_idx, column=3, value=_sanitizar_celda_planilla(f.get('estado', 'Pagada')))
+        ws.cell(row=row_idx, column=4, value=_sanitizar_celda_planilla(f['fecha_str']))
+        ws.cell(row=row_idx, column=5, value=_sanitizar_celda_planilla(f['usuario']))
+        ws.cell(row=row_idx, column=6, value=_sanitizar_celda_planilla(f['cliente']))
+        ws.cell(row=row_idx, column=7, value=_sanitizar_celda_planilla(f['concepto']))
+        total_cell = ws.cell(row=row_idx, column=8, value=float(f['total']))
         total_cell.number_format = '$#,##0.00'
 
     for col in ws.columns:
@@ -715,4 +975,3 @@ def reportes_exportar_excel(request):
     response['Content-Disposition'] = f'attachment; filename="reporte_ingresos_{timezone.localdate()}.xlsx"'
     wb.save(response)
     return response
-

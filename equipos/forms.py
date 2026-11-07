@@ -32,6 +32,17 @@ class EquipoForm(forms.ModelForm):
             args = (data,) + args[1:]
         super().__init__(*args, **kwargs)
 
+    def clean_nombre(self):
+        nombre = (self.cleaned_data.get('nombre') or '').strip()
+        if not nombre:
+            raise forms.ValidationError("El nombre del equipo es obligatorio.")
+        qs = Equipo.objects.filter(nombre__iexact=nombre)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError(f'Ya existe un equipo registrado con el nombre "{nombre}".')
+        return nombre
+
     def clean_tarifa_por_hora(self):
         tarifa = self.cleaned_data.get('tarifa_por_hora')
         if tarifa is None:
@@ -41,4 +52,3 @@ class EquipoForm(forms.ModelForm):
         if tarifa > MONTO_MAXIMO:
             raise forms.ValidationError("La tarifa por hora no puede ser mayor a $99,999.99.")
         return tarifa.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-

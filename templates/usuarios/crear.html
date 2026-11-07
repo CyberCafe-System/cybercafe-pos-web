@@ -16,31 +16,40 @@
                         <select name="rol" class="form-select rounded-3" required>
                             <option value="">Seleccione un rol</option>
                             {% for rol in roles %}
-                            <option value="{{ rol.rol_id }}">{{ rol.nombre }}{% if rol.nombre|lower == 'asistente' %} (Solo App Móvil){% endif %}</option>
+                            {% if rol.es_asistente %}
+                            <option value="{{ rol.rol_id }}">{{ rol.nombre }} (Solo App Móvil)</option>
+                            {% else %}
+                            <option value="{{ rol.rol_id }}">{{ rol.nombre }}</option>
+                            {% endif %}
                             {% endfor %}
                         </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre Completo <span class="text-danger fw-bold">*</span></label>
-                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej. Roberto Morales" required>
+                        <input type="text" name="nombre" class="form-control rounded-3" placeholder="Ej. Roberto Morales" maxlength="50" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre de Usuario (Username) <span class="text-danger fw-bold">*</span></label>
-                        <input type="text" name="username" class="form-control rounded-3" placeholder="Ej. rmorales" required>
+                        <input type="text" name="username" class="form-control rounded-3" placeholder="Ej. rmorales" maxlength="50" required>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Correo Electrónico <span class="text-danger fw-bold">*</span></label>
-                        <input type="email" name="correo" class="form-control rounded-3" placeholder="usuario@cybercafe.com" required>
+                        <input type="email" name="correo" class="form-control rounded-3" placeholder="usuario@cybercafe.com" maxlength="75" required>
                     </div>
 
                     <div class="mb-2">
                         <label class="form-label fw-semibold">Contraseña Inicial <span class="text-danger fw-bold">*</span></label>
-                        <input type="password" name="password" class="form-control rounded-3" placeholder="Mínimo 8 caracteres (letras y números)" minlength="8" pattern="(?=.*[A-Za-z])(?=.*\d).{8,}" title="La contraseña debe tener al menos 8 caracteres y combinar letras y números." required>
+                        <div class="input-group">
+                            <input type="password" name="password" id="crearUsuarioPassword" class="form-control rounded-start-3" placeholder="********" minlength="8" maxlength="15" pattern="(?=.*[A-Z])(?=.*\d).{8,15}" title="Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número." required>
+                            <button class="btn btn-outline-secondary rounded-end-3 btn-toggle-password" type="button" data-target="crearUsuarioPassword" title="Mostrar u ocultar contraseña">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
                         <div class="form-text small text-muted mt-1">
-                            <i class="bi bi-shield-check me-1 text-success"></i>Seguridad mínima: al menos 8 caracteres, incluyendo letras y números.
+                            <i class="bi bi-shield-check me-1 text-success"></i>Contraseña de 8 a 15 caracteres con al menos una mayúscula y un número.
                         </div>
                     </div>
                 </div>

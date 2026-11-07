@@ -5,13 +5,20 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h3 class="mb-0"><i class="bi bi-pc-display me-2"></i>Control de Rentas y Equipos</h3>
-        <p class="text-muted small mb-0">Supervisión en tiempo real del uso de computadoras, consolas y estaciones de juego.</p>
+        <p class="text-muted small mb-0">Supervisión en tiempo real del uso de computadoras, consolas y estaciones de
+            juego.</p>
     </div>
-    {% if request.user.es_admin or request.user.es_cajero %}
-    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta" id="btnNuevaRentaTop">
-        <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
-    </button>
-    {% endif %}
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        {% if request.user.es_admin or request.user.es_cajero %}
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalNuevaRenta" id="btnNuevaRentaTop">
+            <i class="bi bi-plus-circle me-1"></i> Iniciar Nueva Renta
+        </button>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Barra Unificada: Filtros por Pestañas + Buscador Compacto -->
@@ -19,21 +26,33 @@
     <div class="card-body p-2 px-3">
         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
             <!-- Pestañas de Filtro Rápido -->
-            <div class="d-flex align-items-center gap-1 overflow-x-auto custom-scrollbar flex-grow-1 py-1" id="contenedorFiltrosRentas">
-                <button type="button" class="btn btn-sm btn-filtro-tab active rounded-pill px-3 py-1" data-filtro="todos">
-                    <i class="bi bi-grid-fill me-1"></i> Todos <span class="badge bg-white text-dark rounded-pill ms-1">{{ equipos|length }}</span>
+            <div class="d-flex align-items-center gap-1 overflow-x-auto custom-scrollbar flex-grow-1 py-1"
+                id="contenedorFiltrosRentas">
+                <button type="button" class="btn btn-sm btn-filtro-tab active rounded-pill px-3 py-1"
+                    data-filtro="todos">
+                    <i class="bi bi-grid-fill me-1"></i> Todos <span
+                        class="badge bg-white text-dark rounded-pill ms-1">{{ equipos|length }}</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="en_uso">
-                    <i class="bi bi-hourglass-split me-1 text-warning"></i> En Uso <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_en_uso }}</span>
+                    <i class="bi bi-hourglass-split me-1 text-warning"></i> En Uso <span
+                        class="badge bg-light text-muted border rounded-pill ms-1">{{ count_en_uso }}</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="terminados">
+                    <i class="bi bi-alarm-fill me-1 text-danger"></i> Terminados <span
+                        class="badge bg-light text-muted border rounded-pill ms-1">{{ count_tiempo_terminado }}</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="revision">
-                    <i class="bi bi-clipboard-check me-1 text-info"></i> Revisión <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_revision }}</span>
+                    <i class="bi bi-clipboard-check me-1 text-info"></i> Revisión <span
+                        class="badge bg-light text-muted border rounded-pill ms-1">{{ count_revision }}</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="disponible">
-                    <i class="bi bi-check-circle me-1 text-success"></i> Disponibles <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_disponibles }}</span>
+                    <i class="bi bi-check-circle me-1 text-success"></i> Disponibles <span
+                        class="badge bg-light text-muted border rounded-pill ms-1">{{ count_disponibles }}</span>
                 </button>
-                <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="mantenimiento">
-                    <i class="bi bi-tools me-1 text-secondary"></i> Mantenimiento <span class="badge bg-light text-muted border rounded-pill ms-1">{{ count_mantenimiento }}</span>
+                <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1"
+                    data-filtro="mantenimiento">
+                    <i class="bi bi-tools me-1 text-secondary"></i> Mantenimiento <span
+                        class="badge bg-light text-muted border rounded-pill ms-1">{{ count_mantenimiento }}</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-filtro-tab rounded-pill px-3 py-1" data-filtro="pc">
                     <i class="bi bi-pc-display me-1 text-primary"></i> PCs
@@ -46,7 +65,8 @@
             <!-- Buscador Compacto a la derecha -->
             <div class="input-group input-group-sm flex-shrink-0" style="max-width: 250px;">
                 <span class="input-group-text bg-white border-end-0 py-1"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="buscadorRentas" class="form-control border-start-0 py-1" placeholder="Buscar equipo o cliente...">
+                <input type="text" id="buscadorRentas" class="form-control border-start-0 py-1"
+                    placeholder="Buscar equipo o cliente...">
             </div>
         </div>
     </div>
@@ -56,26 +76,26 @@
 <div class="row g-4" id="grillaEquiposRentas">
     {% for equipo in equipos %}
     <div class="col-xl-3 col-lg-4 col-md-6 tarjeta-equipo"
-         data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
-         data-tipo="{% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}consola{% else %}pc{% endif %}"
-         data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
+        data-categoria="{% if equipo.renta_activa %}en_uso{% elif equipo.tiempo_terminado %}terminados{% elif equipo.revision_pendiente %}revision{% elif equipo.es_rentable %}disponible{% else %}mantenimiento{% endif %}"
+        data-tipo="{% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}consola{% else %}pc{% endif %}"
+        data-busqueda="{{ equipo.nombre|lower }} {{ equipo.tipo|lower }} {% if not equipo.activo %}desactivado inactivo {% endif %}{% if equipo.renta_activa %}{{ equipo.renta_activa.renta.cliente.nombre|lower }} {{ equipo.renta_activa.renta.cliente.apellido|lower }} ocupado en uso{% elif equipo.tiempo_terminado %}{{ equipo.tiempo_terminado.renta.cliente.nombre|lower }} {{ equipo.tiempo_terminado.renta.cliente.apellido|lower }} tiempo terminado vencido{% elif equipo.revision_pendiente %}{{ equipo.revision_pendiente.renta.cliente.nombre|lower }} {{ equipo.revision_pendiente.renta.cliente.apellido|lower }} pendiente de revision{% elif equipo.es_rentable %}disponible{% else %}{{ equipo.get_estado_display|lower }}{% endif %}">
 
         {% if equipo.renta_activa %}
         <!-- Equipo EN USO -->
         <div class="card shadow-sm border-0 border-top border-4 border-warning h-100 rounded-4 card-equipo-en-uso position-relative"
-             id="card-equipo-{{ equipo.equipo_id }}"
-             data-equipo-id="{{ equipo.equipo_id }}"
-             data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
-             data-inicio-iso="{{ equipo.renta_activa.hora_inicio|date:'c' }}"
-             data-tiempo-total="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }}"
-             data-equipo-nombre="{{ equipo.nombre }}"
-             data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
-             data-tarifa="{{ equipo.tarifa_por_hora }}"
-             data-subtotal="{{ equipo.renta_activa.subtotal }}">
-            
+            id="card-equipo-{{ equipo.equipo_id }}" data-equipo-id="{{ equipo.equipo_id }}"
+            data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
+            data-inicio-iso="{{ equipo.renta_activa.hora_inicio|date:'c' }}"
+            data-vencimiento-iso="{{ equipo.renta_activa.hora_vencimiento|date:'c' }}"
+            data-tiempo-total="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }}"
+            data-equipo-nombre="{{ equipo.nombre }}"
+            data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
+            data-tarifa="{{ equipo.tarifa_por_hora }}" data-subtotal="{{ equipo.renta_activa.subtotal }}">
+
             <div class="card-body p-3 d-flex flex-column text-center">
                 <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill badge-estado-renta" id="badge-estado-{{ equipo.equipo_id }}">
+                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill badge-estado-renta"
+                        id="badge-estado-{{ equipo.equipo_id }}">
                         <i class="bi bi-hourglass-split me-1"></i> En Uso
                     </span>
                     <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
@@ -96,18 +116,22 @@
                         <span class="small text-muted fw-semibold" style="font-size: 0.78rem;">
                             <i class="bi bi-stopwatch me-1 text-coffee"></i>Restante:
                         </span>
-                        <span class="fw-bold font-monospace fs-5 timer-clock text-dark" id="timer-clock-{{ equipo.equipo_id }}">
+                        <span class="fw-bold font-monospace fs-5 timer-clock text-dark"
+                            id="timer-clock-{{ equipo.equipo_id }}">
                             --:--
                         </span>
                     </div>
                     <div class="progress" style="height: 6px; border-radius: 10px; background-color: #e5e7eb;">
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-success timer-progress-bar"
-                             id="progress-bar-{{ equipo.equipo_id }}" style="width: 100%;"></div>
+                            id="progress-bar-{{ equipo.equipo_id }}" style="width: 100%;"></div>
                     </div>
-                    <div class="d-flex justify-content-between align-items-center text-muted mt-1" style="font-size: 0.72rem;">
+                    <div class="d-flex justify-content-between align-items-center text-muted mt-1"
+                        style="font-size: 0.72rem;">
                         <span>Inicio: {{ equipo.renta_activa.hora_inicio|date:"h:i A" }}</span>
                         <span>Total: <strong class="text-success font-monospace">${{ equipo.renta_activa.subtotal }}</strong>
-                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1" style="font-size: 0.65rem;">
+                            <span
+                                class="badge bg-success-subtle text-success border border-success-subtle rounded-pill ms-1"
+                                style="font-size: 0.65rem;">
                                 <i class="bi bi-check-circle-fill"></i> Pagado
                             </span>
                         </span>
@@ -116,47 +140,136 @@
 
                 <!-- Botones de Acción -->
                 <div class="mt-auto d-flex gap-1 flex-wrap">
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 btn-info-equipo"
-                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
-                            data-nombre="{{ equipo.nombre }}"
-                            data-tipo="{{ equipo.tipo }}"
-                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="En Uso"
-                            data-cliente="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
-                            data-inicio="{{ equipo.renta_activa.hora_inicio|date:'d/m/Y h:i A' }}"
-                            data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
-                            data-total="${{ equipo.renta_activa.subtotal }}"
-                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
-                            title="Ver Periféricos e Información">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 btn-info-equipo"
+                        data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                        data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                        data-estado="En Uso"
+                        data-cliente="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
+                        data-inicio="{{ equipo.renta_activa.hora_inicio|date:'d/m/Y h:i A' }}"
+                        data-tiempo="{{ equipo.renta_activa.tiempo_de_renta|add:equipo.renta_activa.tiempo_agregado }} min"
+                        data-total="${{ equipo.renta_activa.subtotal }}"
+                        data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                        title="Ver Periféricos e Información">
                         <i class="bi bi-info-circle"></i>
                     </button>
 
                     <!-- Factura / Comprobante PDF -->
-                    <a href="{% url 'factura_renta_id' equipo.renta_activa.renta.renta_id %}" target="_blank" rel="noopener"
-                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1" title="Ver Factura PDF Pagada">
+                    <a href="{% url 'factura_renta_id' equipo.renta_activa.renta.renta_id %}" target="_blank"
+                        rel="noopener" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
+                        title="Ver Factura PDF Pagada">
                         <i class="bi bi-file-earmark-pdf"></i>
                     </a>
 
                     {% if request.user.es_admin or request.user.es_cajero %}
                     <!-- Botón Extender Tiempo -->
-                    <button type="button" class="btn btn-sm btn-outline-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
-                            data-bs-toggle="modal" data-bs-target="#modalExtenderRenta"
-                            data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
-                            data-equipo-nombre="{{ equipo.nombre }}"
-                            data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
-                            data-tarifa="{{ equipo.tarifa_por_hora }}"
-                            title="Agregar más tiempo a la sesión">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
+                        data-bs-toggle="modal" data-bs-target="#modalExtenderRenta"
+                        data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        data-cliente-nombre="{{ equipo.renta_activa.renta.cliente.nombre }} {{ equipo.renta_activa.renta.cliente.apellido }}"
+                        data-tarifa="{{ equipo.tarifa_por_hora }}" title="Agregar más tiempo a la sesión">
                         <i class="bi bi-clock-history"></i> + Tiempo
                     </button>
 
                     <!-- Botón Finalizar y Enviar a Revisión (Cobro ya realizado al inicio) -->
-                    <form method="post" action="{% url 'enviar_revision' %}" class="d-inline flex-grow-1" onsubmit="return confirm('¿Finalizar sesión de {{ equipo.nombre }} y enviar el puesto a Revisión Técnica?');">
-                        {% csrf_token %}
-                        <input type="hidden" name="detalle_renta_id" value="{{ equipo.renta_activa.detalle_renta_id }}">
-                        <button type="submit" class="btn btn-sm btn-info text-dark rounded-pill w-100 py-1 px-2 shadow-xs fw-semibold" title="Finalizar tiempo y enviar el equipo a revisión técnica">
-                            <i class="bi bi-clipboard-check me-1"></i> A Revisión
-                        </button>
-                    </form>
+                    <button type="button"
+                        class="btn btn-sm btn-info text-dark rounded-pill flex-grow-1 py-1 px-2 shadow-xs fw-semibold btn-abrir-enviar-revision"
+                        data-bs-toggle="modal" data-bs-target="#modalConfirmarEnviarRevision"
+                        data-detalle-id="{{ equipo.renta_activa.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        title="Finalizar tiempo y enviar el equipo a revisión técnica">
+                        <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% elif equipo.tiempo_terminado %}
+        <!-- Equipo CON TIEMPO TERMINADO (Sesión Vencida) -->
+        <div class="card shadow-sm border-0 border-top border-4 border-danger h-100 rounded-4 card-equipo-terminado position-relative"
+            id="card-equipo-{{ equipo.equipo_id }}" data-equipo-id="{{ equipo.equipo_id }}"
+            data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+            data-inicio-iso="{{ equipo.tiempo_terminado.hora_inicio|date:'c' }}"
+            data-tiempo-total="{{ equipo.tiempo_terminado.tiempo_de_renta|add:equipo.tiempo_terminado.tiempo_agregado }}"
+            data-equipo-nombre="{{ equipo.nombre }}"
+            data-cliente-nombre="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+            data-tarifa="{{ equipo.tarifa_por_hora }}" data-subtotal="{{ equipo.tiempo_terminado.subtotal }}">
+
+            <div class="card-body p-3 d-flex flex-column text-center">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-danger text-white px-3 py-1 rounded-pill">
+                        <i class="bi bi-alarm-fill me-1"></i> Tiempo Terminado
+                    </span>
+                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                </div>
+
+                <i class="bi bi-clock-history text-danger mb-1" style="font-size: 2.4rem;"></i>
+
+                <h5 class="fw-bold mb-0 text-dark">{{ equipo.nombre }}</h5>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-person-fill text-primary"></i> {{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}
+                </p>
+
+                <!-- Panel de aviso de tiempo agotado -->
+                <div
+                    class="bg-danger bg-opacity-10 p-2 rounded-3 mb-3 border border-danger border-opacity-25 text-start">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-danger fw-bold" style="font-size: 0.78rem;">
+                            <i class="bi bi-exclamation-triangle-fill me-1"></i>Sesión Vencida
+                        </span>
+                        <span class="badge bg-danger text-white font-monospace">00:00</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center text-muted mt-1"
+                        style="font-size: 0.72rem;">
+                        <span>Venció: {{ equipo.tiempo_terminado.hora_vencimiento|date:"h:i A" }}</span>
+                        <span>Cobrado: <strong class="text-dark font-monospace">${{ equipo.tiempo_terminado.subtotal }}</strong></span>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción para Tiempo Terminado -->
+                <div class="mt-auto d-flex gap-1 flex-wrap justify-content-center">
+                    <button type="button"
+                        class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 btn-info-equipo"
+                        data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                        data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                        data-estado="Tiempo Terminado"
+                        data-cliente="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+                        data-inicio="{{ equipo.tiempo_terminado.hora_inicio|date:'d/m/Y h:i A' }}"
+                        data-tiempo="{{ equipo.tiempo_terminado.tiempo_de_renta|add:equipo.tiempo_terminado.tiempo_agregado }} min"
+                        data-total="${{ equipo.tiempo_terminado.subtotal }}"
+                        data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                        title="Ver Periféricos e Información">
+                        <i class="bi bi-info-circle"></i>
+                    </button>
+
+                    <a href="{% url 'factura_renta_id' equipo.tiempo_terminado.renta.renta_id %}" target="_blank"
+                        rel="noopener" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
+                        title="Ver Factura PDF Pagada">
+                        <i class="bi bi-file-earmark-pdf"></i>
+                    </a>
+
+                    {% if request.user.es_admin or request.user.es_cajero %}
+                    <button type="button"
+                        class="btn btn-sm btn-warning text-dark rounded-pill py-1 px-2 btn-abrir-extender"
+                        data-bs-toggle="modal" data-bs-target="#modalExtenderRenta"
+                        data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        data-cliente-nombre="{{ equipo.tiempo_terminado.renta.cliente.nombre }} {{ equipo.tiempo_terminado.renta.cliente.apellido }}"
+                        data-tarifa="{{ equipo.tarifa_por_hora }}" title="Agregar más tiempo a la sesión">
+                        <i class="bi bi-plus-circle me-1"></i>+ Tiempo
+                    </button>
+
+                    <button type="button"
+                        class="btn btn-sm btn-info text-dark rounded-pill flex-grow-1 py-1 px-2 shadow-xs fw-semibold btn-abrir-enviar-revision"
+                        data-bs-toggle="modal" data-bs-target="#modalConfirmarEnviarRevision"
+                        data-detalle-id="{{ equipo.tiempo_terminado.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        title="Enviar a revisión técnica">
+                        <i class="bi bi-clipboard-check me-1"></i> A Revisión
+                    </button>
                     {% endif %}
                 </div>
             </div>
@@ -189,9 +302,11 @@
                     <div class="d-flex justify-content-between">
                         <span class="text-muted">Estado pago:</span>
                         {% if equipo.revision_pendiente.renta.estado_de_pago == 'PAGADO' %}
-                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle me-1"></i>Pagado</span>
+                        <span class="badge bg-success-subtle text-success border border-success-subtle"><i
+                                class="bi bi-check-circle me-1"></i>Pagado</span>
                         {% else %}
-                        <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pago Pendiente</span>
+                        <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Pago
+                            Pendiente</span>
                         {% endif %}
                     </div>
                 </div>
@@ -200,25 +315,23 @@
 
                 <div class="mt-auto d-flex gap-1 flex-wrap justify-content-center">
                     <button class="btn btn-sm btn-outline-secondary rounded-pill btn-info-equipo px-2 py-1"
-                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
-                            data-nombre="{{ equipo.nombre }}"
-                            data-tipo="{{ equipo.tipo }}"
-                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="Pendiente de Revisión"
-                            data-cliente="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
-                            data-inicio="{{ equipo.revision_pendiente.hora_inicio|date:'d/m/Y h:i A' }}"
-                            data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
-                            data-total="${{ equipo.revision_pendiente.subtotal }}"
-                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
-                            title="Ver Periféricos e Información">
+                        data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                        data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                        data-estado="Pendiente de Revisión"
+                        data-cliente="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
+                        data-inicio="{{ equipo.revision_pendiente.hora_inicio|date:'d/m/Y h:i A' }}"
+                        data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
+                        data-total="${{ equipo.revision_pendiente.subtotal }}"
+                        data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                        title="Ver Periféricos e Información">
                         <i class="bi bi-info-circle"></i> Info
                     </button>
 
                     {% if request.user.es_admin or request.user.es_asistente %}
                     <!-- Botón Revisar Ahora (Administrador o Asistente) -->
                     <a href="{% url 'revisiones' %}?detalle_id={{ equipo.revision_pendiente.detalle_renta_id }}&equipo_id={{ equipo.equipo_id }}"
-                       class="btn btn-sm btn-info text-dark rounded-pill px-3 py-1 shadow-sm fw-semibold"
-                       title="Realizar inspección técnica">
+                        class="btn btn-sm btn-info text-dark rounded-pill px-3 py-1 shadow-sm fw-semibold"
+                        title="Realizar inspección técnica">
                         <i class="bi bi-clipboard-check me-1"></i> Revisar Puesto
                     </a>
                     {% endif %}
@@ -226,23 +339,21 @@
                     {% if equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_admin or equipo.revision_pendiente.renta.estado_de_pago == 'PENDIENTE' and request.user.es_cajero %}
                     <!-- Botón Cobrar si pago quedó pendiente -->
                     <button type="button" class="btn btn-sm btn-danger rounded-pill px-3 py-1 shadow-sm btn-abrir-cobro"
-                            data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
-                            data-detalle-id="{{ equipo.revision_pendiente.detalle_renta_id }}"
-                            data-equipo-nombre="{{ equipo.nombre }}"
-                            data-cliente-nombre="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
-                            data-cliente-correo="{{ equipo.revision_pendiente.renta.cliente.correo|default:'' }}"
-                            data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
-                            data-total="{{ equipo.revision_pendiente.subtotal|unlocalize }}"
-                            title="Cobrar sesión de renta">
+                        data-bs-toggle="modal" data-bs-target="#modalCobroRenta"
+                        data-detalle-id="{{ equipo.revision_pendiente.detalle_renta_id }}"
+                        data-equipo-nombre="{{ equipo.nombre }}"
+                        data-cliente-nombre="{{ equipo.revision_pendiente.renta.cliente.nombre }} {{ equipo.revision_pendiente.renta.cliente.apellido }}"
+                        data-cliente-correo="{{ equipo.revision_pendiente.renta.cliente.correo|default:'' }}"
+                        data-tiempo="{{ equipo.revision_pendiente.tiempo_de_renta|add:equipo.revision_pendiente.tiempo_agregado }} min"
+                        data-total="{{ equipo.revision_pendiente.subtotal|unlocalize }}" title="Cobrar sesión de renta">
                         <i class="bi bi-cash-stack me-1"></i> Cobrar
                     </button>
                     {% endif %}
 
                     {% if equipo.revision_pendiente.renta.estado_de_pago == 'PAGADO' %}
-                    <a href="{% url 'factura_renta_id' equipo.revision_pendiente.renta.renta_id %}"
-                       target="_blank" rel="noopener"
-                       class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
-                       title="Ver/Descargar factura de la renta">
+                    <a href="{% url 'factura_renta_id' equipo.revision_pendiente.renta.renta_id %}" target="_blank"
+                        rel="noopener" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-1"
+                        title="Ver/Descargar factura de la renta">
                         <i class="bi bi-file-earmark-pdf"></i> PDF
                     </a>
                     {% endif %}
@@ -251,33 +362,39 @@
         </div>
 
         {% elif not equipo.es_rentable %}
-        <!-- Equipo NO RENTABLE (mantenimiento / defectuoso) -->
-        <div class="card shadow-sm border-0 border-top border-4 border-secondary h-100 rounded-4">
+        <!-- Equipo NO RENTABLE (desactivado / mantenimiento / defectuoso) -->
+        <div
+            class="card shadow-sm border-0 border-top border-4 {% if not equipo.activo %}border-dark{% else %}border-secondary{% endif %} h-100 rounded-4">
             <div class="card-body p-4 d-flex flex-column text-center">
                 <div class="d-flex justify-content-between align-items-center mb-3">
+                    {% if not equipo.activo %}
+                    <span class="badge bg-dark px-3 py-1 rounded-pill">
+                        <i class="bi bi-slash-circle me-1"></i> Desactivado
+                    </span>
+                    {% else %}
                     <span class="badge bg-secondary px-3 py-1 rounded-pill">
                         <i class="bi bi-tools me-1"></i> {{ equipo.get_estado_display }}
                     </span>
+                    {% endif %}
                     <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
                 </div>
 
+                {% if not equipo.activo %}
+                <i class="bi bi-slash-circle text-secondary mb-2" style="font-size: 2.8rem;"></i>
+                {% else %}
                 <i class="bi bi-tools text-muted mb-2" style="font-size: 2.8rem;"></i>
+                {% endif %}
                 <h5 class="fw-bold mb-1 text-muted">{{ equipo.nombre }}</h5>
-                <p class="text-muted small mb-3">Equipo no disponible para renta</p>
+                <p class="text-muted small mb-3">{{ equipo.bloqueo_motivo|default:"Equipo no disponible para renta" }}</p>
 
                 <div class="mt-auto">
                     <button class="btn btn-outline-secondary w-100 rounded-pill btn-info-equipo"
-                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
-                            data-nombre="{{ equipo.nombre }}"
-                            data-tipo="{{ equipo.tipo }}"
-                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="{{ equipo.get_estado_display }}"
-                            data-cliente="--"
-                            data-inicio="--"
-                            data-tiempo="--"
-                            data-total="--"
-                            data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
-                            title="Ver Periféricos">
+                        data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                        data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                        data-estado="{% if not equipo.activo %}Desactivado ({{ equipo.get_estado_display }}){% else %}{{ equipo.get_estado_display }}{% endif %}"
+                        data-cliente="--" data-inicio="--" data-tiempo="--" data-total="--"
+                        data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
+                        title="Ver Periféricos">
                         <i class="bi bi-info-circle me-1"></i> Componentes
                     </button>
                 </div>
@@ -285,253 +402,294 @@
         </div>
 
         {% else %}
-        <!-- Equipo DISPONIBLE -->
-        <div class="card shadow-sm border-0 border-top border-4 border-success h-100 rounded-4">
-            <div class="card-body p-4 d-flex flex-column text-center">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <span class="badge bg-success px-3 py-1 rounded-pill">
-                        <i class="bi bi-check-circle me-1"></i> Disponible
-                    </span>
-                    <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
-                </div>
+            <!-- Equipo DISPONIBLE -->
+            <div class="card shadow-sm border-0 border-top border-4 border-success h-100 rounded-4">
+                <div class="card-body p-4 d-flex flex-column text-center">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="badge bg-success px-3 py-1 rounded-pill">
+                            <i class="bi bi-check-circle me-1"></i> Disponible
+                        </span>
+                        <span class="badge bg-light text-dark border">{{ equipo.tipo }}</span>
+                    </div>
 
-                {% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}
-                <i class="bi bi-controller text-success mb-2" style="font-size: 2.8rem;"></i>
-                {% else %}
-                <i class="bi bi-pc-display text-success mb-2" style="font-size: 2.8rem;"></i>
-                {% endif %}
+                    {% if 'CONSOLA' in equipo.tipo|upper or 'PLAYSTATION' in equipo.tipo|upper %}
+                    <i class="bi bi-controller text-success mb-2" style="font-size: 2.8rem;"></i>
+                    {% else %}
+                    <i class="bi bi-pc-display text-success mb-2" style="font-size: 2.8rem;"></i>
+                    {% endif %}
 
-                <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
-                <p class="text-success fw-bold fs-6 mb-3">Tarifa: ${{ equipo.tarifa_por_hora|floatformat:2 }}/hr</p>
+                    <h5 class="fw-bold mb-1 text-dark">{{ equipo.nombre }}</h5>
+                    <p class="text-success fw-bold fs-6 mb-3">Tarifa: ${{ equipo.tarifa_por_hora|floatformat:2 }}/hr</p>
 
-                <div class="mt-auto d-flex gap-2">
-                    <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
-                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo"
-                            data-nombre="{{ equipo.nombre }}"
-                            data-tipo="{{ equipo.tipo }}"
-                            data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
-                            data-estado="Disponible"
-                            data-cliente="--"
-                            data-inicio="--"
-                            data-tiempo="--"
-                            data-total="--"
+                    <div class="mt-auto d-flex gap-2">
+                        <button class="btn btn-outline-secondary rounded-pill btn-info-equipo px-3"
+                            data-bs-toggle="modal" data-bs-target="#modalInfoEquipo" data-nombre="{{ equipo.nombre }}"
+                            data-tipo="{{ equipo.tipo }}" data-tarifa="${{ equipo.tarifa_por_hora }}/hr"
+                            data-estado="Disponible" data-cliente="--" data-inicio="--" data-tiempo="--" data-total="--"
                             data-componentes="{% for c in equipo.componentes.all %}{{ c.tipo }}: {{ c.nombre }}{% if c.numero_serie %} (S/N: {{ c.numero_serie }}){% endif %}{% if not forloop.last %};;{% endif %}{% empty %}Sin periféricos asignados{% endfor %}"
                             title="Ver Hardware y Periféricos">
-                        <i class="bi bi-info-circle"></i>
-                    </button>
-                    {% if request.user.es_admin or request.user.es_cajero %}
-                    <!-- Asignación Directa de Renta -->
-                    <button class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm btn-asignar-equipo-directo"
+                            <i class="bi bi-info-circle"></i>
+                        </button>
+                        {% if request.user.es_admin or request.user.es_cajero %}
+                        <!-- Asignación Directa de Renta -->
+                        <button class="btn btn-coffee flex-grow-1 rounded-pill shadow-sm btn-asignar-equipo-directo"
                             data-bs-toggle="modal" data-bs-target="#modalNuevaRenta"
-                            data-equipo-id="{{ equipo.equipo_id }}"
-                            data-equipo-nombre="{{ equipo.nombre }}"
+                            data-equipo-id="{{ equipo.equipo_id }}" data-equipo-nombre="{{ equipo.nombre }}"
                             data-tarifa="{{ equipo.tarifa_por_hora }}">
-                        <i class="bi bi-play-circle me-1"></i> Asignar Tiempo
-                    </button>
-                    {% endif %}
+                            <i class="bi bi-play-circle me-1"></i> Asignar Tiempo
+                        </button>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
+            {% endif %}
+
         </div>
-        {% endif %}
-
+        {% empty %}
+        <div class="col-12 text-center text-muted py-5">
+            <i class="bi bi-pc-display fs-1 d-block mb-2 text-muted opacity-50"></i>
+            <h5>No hay equipos registrados en el sistema</h5>
+            <p class="small">Agrega computadoras y consolas en el apartado de Equipos para poder rentarlas.</p>
+        </div>
+        {% endfor %}
     </div>
-    {% empty %}
-    <div class="col-12 text-center text-muted py-5">
-        <i class="bi bi-pc-display fs-1 d-block mb-2 text-muted opacity-50"></i>
-        <h5>No hay equipos registrados en el sistema</h5>
-        <p class="small">Agrega computadoras y consolas en el apartado de Equipos para poder rentarlas.</p>
+
+    <!-- Mensaje si no hay coincidencias con filtros -->
+    <div class="alert alert-light border text-center text-muted py-4 rounded-4 d-none" id="sinResultadosRentas">
+        <i class="bi bi-search fs-2 d-block mb-2 text-muted"></i>
+        <h6 class="mb-0">No se encontraron equipos que coincidan con el filtro o búsqueda seleccionada.</h6>
     </div>
-    {% endfor %}
-</div>
 
-<!-- Mensaje si no hay coincidencias con filtros -->
-<div class="alert alert-light border text-center text-muted py-4 rounded-4 d-none" id="sinResultadosRentas">
-    <i class="bi bi-search fs-2 d-block mb-2 text-muted"></i>
-    <h6 class="mb-0">No se encontraron equipos que coincidan con el filtro o búsqueda seleccionada.</h6>
-</div>
-
-<!-- Modal Detalle e Información del Equipo -->
-<div class="modal fade" id="modalInfoEquipo" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold" id="infoEquipoTitulo">
-                    <i class="bi bi-info-circle me-2 text-primary"></i>Información del Equipo
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body px-4 pt-3 pb-4">
-                <div class="bg-light p-3 rounded-3 mb-3">
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Tipo de Equipo:</span>
-                        <strong id="infoEquipoTipo">--</strong>
-                    </div>
-                    <div class="d-flex justify-content-between mb-1">
-                        <span class="text-muted">Tarifa por Hora:</span>
-                        <strong id="infoEquipoTarifa">--</strong>
-                    </div>
-                    <div class="d-flex justify-content-between">
-                        <span class="text-muted">Estado Actual:</span>
-                        <span class="badge bg-dark" id="infoEquipoEstado">--</span>
-                    </div>
+    <!-- Modal Detalle e Información del Equipo -->
+    <div class="modal fade" id="modalInfoEquipo" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="infoEquipoTitulo">
+                        <i class="bi bi-info-circle me-2 text-primary"></i>Información del Equipo
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-
-                <div id="seccionInfoRenta" class="d-none mb-3">
-                    <h6 class="fw-bold mb-2 text-warning"><i class="bi bi-hourglass-split me-1"></i>Sesión en Curso</h6>
-                    <div class="bg-light p-3 rounded-3 border border-warning">
+                <div class="modal-body px-4 pt-3 pb-4">
+                    <div class="bg-light p-3 rounded-3 mb-3">
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Cliente:</span>
-                            <strong id="infoEquipoCliente">--</strong>
+                            <span class="text-muted">Tipo de Equipo:</span>
+                            <strong id="infoEquipoTipo">--</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Hora de Inicio:</span>
-                            <span id="infoEquipoInicio">--</span>
-                        </div>
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="text-muted">Tiempo Contratado:</span>
-                            <span id="infoEquipoTiempo">--</span>
+                            <span class="text-muted">Tarifa por Hora:</span>
+                            <strong id="infoEquipoTarifa">--</strong>
                         </div>
                         <div class="d-flex justify-content-between">
-                            <span class="text-muted">Importe Total:</span>
-                            <strong class="text-success" id="infoEquipoTotal">--</strong>
+                            <span class="text-muted">Estado Actual:</span>
+                            <span class="badge bg-dark" id="infoEquipoEstado">--</span>
                         </div>
                     </div>
-                </div>
 
-                <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-cpu me-1 text-coffee"></i>Hardware y Periféricos Asignados</h6>
-                <div class="list-group rounded-3 shadow-sm border-0" id="listaComponentesEquipo">
-                    <!-- Inyectado por JS -->
+                    <div id="seccionInfoRenta" class="d-none mb-3">
+                        <h6 class="fw-bold mb-2 text-warning"><i class="bi bi-hourglass-split me-1"></i>Sesión en Curso
+                        </h6>
+                        <div class="bg-light p-3 rounded-3 border border-warning">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Cliente:</span>
+                                <strong id="infoEquipoCliente">--</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Hora de Inicio:</span>
+                                <span id="infoEquipoInicio">--</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span class="text-muted">Tiempo Contratado:</span>
+                                <span id="infoEquipoTiempo">--</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Importe Total:</span>
+                                <strong class="text-success" id="infoEquipoTotal">--</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mb-2 text-dark"><i class="bi bi-cpu me-1 text-coffee"></i>Hardware y Periféricos
+                        Asignados</h6>
+                    <div class="list-group rounded-3 shadow-sm border-0" id="listaComponentesEquipo">
+                        <!-- Inyectado por JS -->
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer border-0 pt-0 px-4 pb-4">
-                <button type="button" class="btn btn-coffee rounded-pill px-4 w-100" data-bs-dismiss="modal">Cerrar</button>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-coffee rounded-pill px-4 w-100"
+                        data-bs-dismiss="modal">Cerrar</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-{% if request.user.es_admin or request.user.es_cajero %}
-{% include 'rentas/crear.html' %}
-{% include 'rentas/extender.html' %}
-{% include 'rentas/cobrar.html' %}
-{% endif %}
+    {% if request.user.es_admin or request.user.es_cajero %}
+    {% include 'rentas/crear.html' %}
+    {% include 'rentas/extender.html' %}
+    {% include 'rentas/cobrar.html' %}
 
-<style>
-    .btn-filtro-tab {
-        background: #ffffff;
-        color: #495057;
-        border: 1px solid #dee2e6;
-        font-size: 0.85rem;
-        cursor: pointer;
-        white-space: nowrap;
-        transition: all 0.2s ease;
-    }
-    .btn-filtro-tab:hover {
-        border-color: var(--clr-cobre, #855204);
-        color: var(--clr-espresso, #2c1e16);
-    }
-    .btn-filtro-tab.active {
-        background: linear-gradient(135deg, var(--clr-espresso, #2c1e16) 0%, #452f23 100%);
-        color: #ffffff !important;
-        border-color: var(--clr-espresso, #2c1e16);
-    }
-    .btn-filtro-tab.active .badge {
-        background-color: #ffffff !important;
-        color: var(--clr-espresso, #2c1e16) !important;
-    }
+    <!-- Modal Confirmar Enviar a Revisión Técnica (Estilo Modal Limpiar Carrito) -->
+    <div class="modal fade" id="modalConfirmarEnviarRevision" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header bg-danger text-white rounded-top-4 py-3">
+                    <h5 class="modal-title fw-bold fs-6">
+                        <i class="bi bi-exclamation-triangle me-2"></i>Finalizar Sesión y Enviar a Revisión
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4 text-center">
+                    <i class="bi bi-clipboard-check text-danger display-4 mb-3 d-block"></i>
+                    <h6 class="fw-bold mb-2">¿Finalizar sesión de <span id="confirmarRevisionEquipoNombre" class="text-danger">--</span> y enviar el puesto a Revisión Técnica?</h6>
+                    <p class="text-muted small mb-0">Esta acción dará por concluido el tiempo de uso del cliente y marcará el puesto como pendiente de inspección técnica.</p>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <form method="POST" action="{% url 'enviar_revision' %}" class="m-0">
+                        {% csrf_token %}
+                        <input type="hidden" name="detalle_renta_id" id="confirmarRevisionDetalleId">
+                        <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">
+                            <i class="bi bi-clipboard-check me-1"></i> Sí, enviar a revisión
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-    /* Animación de alerta para tiempo agotado */
-    @keyframes pulseAgotado {
-        0% { transform: scale(1); box-shadow: 0 0 0 rgba(220, 53, 69, 0.4); }
-        50% { transform: scale(1.02); box-shadow: 0 0 15px rgba(220, 53, 69, 0.7); }
-        100% { transform: scale(1); box-shadow: 0 0 0 rgba(220, 53, 69, 0.4); }
-    }
-    .tiempo-vencido-card {
-        border-top-color: #dc3545 !important;
-        animation: pulseAgotado 2s infinite ease-in-out;
-    }
-</style>
+    <style>
+        .btn-filtro-tab {
+            background: #ffffff;
+            color: #495057;
+            border: 1px solid #dee2e6;
+            font-size: 0.85rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    // -------------------------------------------------------------
-    // 1. FILTROS RÁPIDOS POR PESTAÑAS Y BUSCADOR COMPACTO
-    // -------------------------------------------------------------
-    const tabsFiltros = document.querySelectorAll('.btn-filtro-tab');
-    const tarjetas = document.querySelectorAll('.tarjeta-equipo');
-    const buscador = document.getElementById('buscadorRentas');
-    const sinResultados = document.getElementById('sinResultadosRentas');
-    let filtroSeleccionado = 'todos';
+        .btn-filtro-tab:hover {
+            border-color: var(--clr-cobre, #855204);
+            color: var(--clr-espresso, #2c1e16);
+        }
 
-    function aplicarFiltrosRentas() {
-        const query = buscador ? buscador.value.trim().toLowerCase() : '';
-        let totalVisibles = 0;
+        .btn-filtro-tab.active {
+            background: linear-gradient(135deg, var(--clr-espresso, #2c1e16) 0%, #452f23 100%);
+            color: #ffffff !important;
+            border-color: var(--clr-espresso, #2c1e16);
+        }
 
-        tarjetas.forEach(function (t) {
-            const cat = t.dataset.categoria || '';
-            const tipo = t.dataset.tipo || '';
-            const busqueda = t.dataset.busqueda || '';
+        .btn-filtro-tab.active .badge {
+            background-color: #ffffff !important;
+            color: var(--clr-espresso, #2c1e16) !important;
+        }
 
-            let coincideFiltro = false;
-            if (filtroSeleccionado === 'todos') {
-                coincideFiltro = true;
-            } else if (filtroSeleccionado === 'pc' || filtroSeleccionado === 'consola') {
-                coincideFiltro = (tipo === filtroSeleccionado);
-            } else {
-                coincideFiltro = (cat === filtroSeleccionado);
+        /* Animación de alerta para tiempo agotado */
+        @keyframes pulseAgotado {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
             }
 
-            const coincideTexto = !query || busqueda.includes(query);
-            const visible = coincideFiltro && coincideTexto;
-            t.classList.toggle('d-none', !visible);
-            if (visible) totalVisibles++;
-        });
+            50% {
+                transform: scale(1.02);
+                box-shadow: 0 0 15px rgba(220, 53, 69, 0.7);
+            }
 
-        if (sinResultados) {
-            sinResultados.classList.toggle('d-none', totalVisibles > 0 || tarjetas.length === 0);
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 rgba(220, 53, 69, 0.4);
+            }
         }
-    }
 
-    tabsFiltros.forEach(function (tab) {
-        tab.addEventListener('click', function () {
-            tabsFiltros.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            filtroSeleccionado = this.dataset.filtro;
-            aplicarFiltrosRentas();
-        });
-    });
+        .tiempo-vencido-card {
+            border-top-color: #dc3545 !important;
+            animation: pulseAgotado 2s infinite ease-in-out;
+        }
+    </style>
 
-    if (buscador) {
-        buscador.addEventListener('input', aplicarFiltrosRentas);
-    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // -------------------------------------------------------------
+            // 1. FILTROS RÁPIDOS POR PESTAÑAS Y BUSCADOR COMPACTO
+            // -------------------------------------------------------------
+            const tabsFiltros = document.querySelectorAll('.btn-filtro-tab');
+            const tarjetas = document.querySelectorAll('.tarjeta-equipo');
+            const buscador = document.getElementById('buscadorRentas');
+            const sinResultados = document.getElementById('sinResultadosRentas');
+            let filtroSeleccionado = 'todos';
 
-    // -------------------------------------------------------------
-    // 2. RELOJ EN VIVO, BARRA DINÁMICA Y ALERTA DE TIEMPO AGOTADO
-    // -------------------------------------------------------------
-    const equiposEnUso = document.querySelectorAll('.card-equipo-en-uso');
-    const notifiedDetalles = new Set(); // Para notificar solo una vez por sesión
+            function aplicarFiltrosRentas() {
+                const query = buscador ? buscador.value.trim().toLowerCase() : '';
+                let totalVisibles = 0;
 
-    function formatTime(segundosTotal) {
-        const absSec = Math.abs(segundosTotal);
-        const m = Math.floor(absSec / 60);
-        const s = absSec % 60;
-        const pad = (n) => String(n).padStart(2, '0');
-        return `${pad(m)}:${pad(s)}`;
-    }
+                tarjetas.forEach(function (t) {
+                    const cat = t.dataset.categoria || '';
+                    const tipo = t.dataset.tipo || '';
+                    const busqueda = t.dataset.busqueda || '';
 
-    function dispararToastTiempoAgotado(equipoNombre, clienteNombre) {
-        const container = document.getElementById('toastNotificationContainer');
-        if (!container) return;
+                    let coincideFiltro = false;
+                    if (filtroSeleccionado === 'todos') {
+                        coincideFiltro = true;
+                    } else if (filtroSeleccionado === 'pc' || filtroSeleccionado === 'consola') {
+                        coincideFiltro = (tipo === filtroSeleccionado);
+                    } else {
+                        coincideFiltro = (cat === filtroSeleccionado);
+                    }
 
-        const toastDiv = document.createElement('div');
-        toastDiv.className = 'toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-danger';
-        toastDiv.setAttribute('role', 'alert');
-        toastDiv.setAttribute('aria-live', 'assertive');
-        toastDiv.setAttribute('aria-atomic', 'true');
-        toastDiv.setAttribute('data-bs-delay', '7000');
-        toastDiv.setAttribute('data-bs-autohide', 'true');
+                    const coincideTexto = !query || busqueda.includes(query);
+                    const visible = coincideFiltro && coincideTexto;
+                    t.classList.toggle('d-none', !visible);
+                    if (visible) totalVisibles++;
+                });
 
-        toastDiv.innerHTML = `
+                if (sinResultados) {
+                    sinResultados.classList.toggle('d-none', totalVisibles > 0 || tarjetas.length === 0);
+                }
+            }
+
+            tabsFiltros.forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    tabsFiltros.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    filtroSeleccionado = this.dataset.filtro;
+                    aplicarFiltrosRentas();
+                });
+            });
+
+            if (buscador) {
+                buscador.addEventListener('input', aplicarFiltrosRentas);
+            }
+
+            // -------------------------------------------------------------
+            // 2. RELOJ EN VIVO, BARRA DINÁMICA Y ALERTA DE TIEMPO AGOTADO
+            // -------------------------------------------------------------
+            const equiposEnUso = document.querySelectorAll('.card-equipo-en-uso');
+            const notifiedDetalles = new Set(); // Para notificar solo una vez por sesión
+
+            function formatTime(segundosTotal) {
+                const absSec = Math.abs(segundosTotal);
+                const m = Math.floor(absSec / 60);
+                const s = absSec % 60;
+                const pad = (n) => String(n).padStart(2, '0');
+                return `${pad(m)}:${pad(s)}`;
+            }
+
+            function dispararToastTiempoAgotado(equipoNombre, clienteNombre) {
+                const container = document.getElementById('toastNotificationContainer');
+                if (!container) return;
+
+                const toastDiv = document.createElement('div');
+                toastDiv.className = 'toast toast-emergente align-items-center border-0 text-white mb-2 shadow-lg bg-danger';
+                toastDiv.setAttribute('role', 'alert');
+                toastDiv.setAttribute('aria-live', 'assertive');
+                toastDiv.setAttribute('aria-atomic', 'true');
+                toastDiv.setAttribute('data-bs-delay', '7000');
+                toastDiv.setAttribute('data-bs-autohide', 'true');
+
+                toastDiv.innerHTML = `
             <div class="d-flex p-2 align-items-center">
                 <div class="toast-body d-flex align-items-center gap-2 py-1 fs-6 flex-grow-1">
                     <i class="bi bi-alarm-fill fs-4 flex-shrink-0 text-white"></i>
@@ -544,468 +702,565 @@ document.addEventListener('DOMContentLoaded', function () {
             <div class="toast-progress" style="background: rgba(255,255,255,0.6); animation-duration: 7s;"></div>
         `;
 
-        container.appendChild(toastDiv);
-        const toastInstance = new bootstrap.Toast(toastDiv, { delay: 7000, autohide: true });
-        toastInstance.show();
-        toastDiv.addEventListener('hidden.bs.toast', () => toastDiv.remove());
-    }
-
-    function actualizarTemporizadores() {
-        const ahoraMs = Date.now();
-
-        equiposEnUso.forEach(function (card) {
-            const eqId = card.dataset.equipoId;
-            const detalleId = card.dataset.detalleId;
-            const inicioIso = card.dataset.inicioIso;
-            const tiempoTotalMin = parseInt(card.dataset.tiempoTotal) || 0;
-            const eqNombre = card.dataset.equipoNombre;
-            const clienteNombre = card.dataset.clienteNombre;
-
-            const clockEl = document.getElementById('timer-clock-' + eqId);
-            const progressEl = document.getElementById('progress-bar-' + eqId);
-            const badgeEl = document.getElementById('badge-estado-' + eqId);
-
-            if (!clockEl || !progressEl || !inicioIso) return;
-
-            const inicioMs = new Date(inicioIso).getTime();
-            const duracionMs = tiempoTotalMin * 60 * 1000;
-            const finMs = inicioMs + duracionMs;
-            const restanteMs = finMs - ahoraMs;
-            const restanteSegundos = Math.floor(restanteMs / 1000);
-
-            if (restanteSegundos > 0) {
-                // Tiempo en curso
-                clockEl.textContent = formatTime(restanteSegundos);
-                const porcentaje = Math.max(0, Math.min(100, (restanteMs / duracionMs) * 100));
-                progressEl.style.width = porcentaje + '%';
-
-                if (porcentaje > 25) {
-                    progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success timer-progress-bar';
-                    clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-dark';
-                } else {
-                    progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning timer-progress-bar';
-                    clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-warning';
-                }
-            } else {
-                // TIEMPO AGOTADO (o excedido)
-                clockEl.textContent = '+' + formatTime(restanteSegundos);
-                clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-danger';
-                progressEl.style.width = '100%';
-                progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-danger timer-progress-bar';
-
-                // Alerta visual en la tarjeta
-                card.classList.add('tiempo-vencido-card');
-                if (badgeEl) {
-                    badgeEl.className = 'badge bg-danger text-white px-3 py-1 rounded-pill';
-                    badgeEl.innerHTML = '<i class="bi bi-alarm-fill me-1"></i> ¡Agotado!';
-                }
-
-                // Disparar notificación emergente si no se ha notificado
-                if (!notifiedDetalles.has(detalleId)) {
-                    notifiedDetalles.add(detalleId);
-                    dispararToastTiempoAgotado(eqNombre, clienteNombre);
-                }
-            }
-        });
-    }
-
-    setInterval(actualizarTemporizadores, 1000);
-    actualizarTemporizadores();
-
-    // -------------------------------------------------------------
-    // 3. ASIGNACIÓN DIRECTA DE RENTA
-    // -------------------------------------------------------------
-    document.querySelectorAll('.btn-asignar-equipo-directo').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const eqId = this.dataset.equipoId;
-            const eqNombre = this.dataset.equipoNombre;
-            const tarifa = this.dataset.tarifa;
-
-            const selectEq = document.getElementById('selectEquipoRenta');
-            const banner = document.getElementById('alertaEquipoDirecto');
-            const bannerNombre = document.getElementById('alertaEquipoDirectoNombre');
-
-            if (selectEq && eqId) {
-                selectEq.value = eqId;
-                if (banner && bannerNombre) {
-                    banner.classList.remove('d-none');
-                    banner.classList.add('d-flex');
-                    bannerNombre.textContent = `${eqNombre} ($${tarifa}/hr)`;
-                }
-                if (typeof recalcularEstimadoRenta === 'function') {
-                    recalcularEstimadoRenta();
-                }
-            }
-        });
-    });
-
-    const btnNuevaTop = document.getElementById('btnNuevaRentaTop');
-    if (btnNuevaTop) {
-        btnNuevaTop.addEventListener('click', function () {
-            const banner = document.getElementById('alertaEquipoDirecto');
-            if (banner) {
-                banner.classList.remove('d-flex');
-                banner.classList.add('d-none');
-            }
-        });
-    }
-
-    // -------------------------------------------------------------
-    // 4. MODAL EXTENDER RENTA (+15, +30, +1 hr, +2 hr)
-    // -------------------------------------------------------------
-    let extenderTarifaActual = 0;
-    document.querySelectorAll('.btn-abrir-extender').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.getElementById('extenderDetalleId').value = this.dataset.detalleId;
-            document.getElementById('extenderEquipoNombre').textContent = this.dataset.equipoNombre;
-            document.getElementById('extenderClienteNombre').textContent = this.dataset.clienteNombre;
-            extenderTarifaActual = parseFloat(this.dataset.tarifa) || 0;
-            document.getElementById('extenderTarifa').textContent = `$${extenderTarifaActual.toFixed(2)}/hr`;
-
-            // Reset a +30 min por defecto
-            actualizarSeleccionExtender(30);
-        });
-    });
-
-    function actualizarSeleccionExtender(minutos) {
-        document.getElementById('extenderMinutosExtra').value = minutos;
-        document.getElementById('extenderBadgeMin').textContent = `+${minutos} min`;
-        const costo = (extenderTarifaActual * (minutos / 60)).toFixed(2);
-        document.getElementById('extenderCostoExtra').textContent = `+$${costo}`;
-
-        document.querySelectorAll('.btn-preset-extender').forEach(b => {
-            const isMatch = parseInt(b.dataset.min) === minutos;
-            b.classList.toggle('btn-coffee', isMatch);
-            b.classList.toggle('active', isMatch);
-            b.classList.toggle('btn-outline-secondary', !isMatch);
-        });
-    }
-
-    document.querySelectorAll('.btn-preset-extender').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            actualizarSeleccionExtender(parseInt(this.dataset.min));
-        });
-    });
-
-    // -------------------------------------------------------------
-    // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA Y BUSCADOR DE CLIENTE
-    // -------------------------------------------------------------
-    let cobroTotalActual = 0;
-    let clienteOriginalNombre = '';
-    let clienteOriginalCorreo = '';
-
-    const inputBuscarClienteRenta = document.getElementById('inputBuscarClienteRenta');
-    const listaResultadosClienteRenta = document.getElementById('listaResultadosClienteRenta');
-    const btnLimpiarClienteRenta = document.getElementById('btnLimpiarClienteRenta');
-    const selectClienteCobroRenta = document.getElementById('selectClienteCobroRenta');
-    const badgeClienteCobroRenta = document.getElementById('badgeClienteCobroRenta');
-    const sinResultadosClienteRenta = document.getElementById('sinResultadosClienteRenta');
-    const itemsClienteRenta = document.querySelectorAll('.item-cliente-renta');
-    const checkCorreoRenta = document.getElementById('checkEnviarCorreoRenta');
-    const textoDestinoRenta = document.getElementById('textoCorreoDestinoRenta');
-
-    function actualizarCorreoCobroRenta(correo) {
-        if (!checkCorreoRenta || !textoDestinoRenta) return;
-        correo = (correo || '').trim();
-        if (correo) {
-            checkCorreoRenta.disabled = false;
-            checkCorreoRenta.checked = true;
-            textoDestinoRenta.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
-        } else {
-            checkCorreoRenta.checked = false;
-            checkCorreoRenta.disabled = true;
-            textoDestinoRenta.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado.`;
-        }
-    }
-
-    function filtrarClientesRenta(termino) {
-        termino = (termino || '').toLowerCase().trim();
-        let visibles = 0;
-        itemsClienteRenta.forEach(function (item) {
-            const searchStr = item.dataset.search || '';
-            if (!termino || searchStr.includes(termino)) {
-                item.classList.remove('d-none');
-                visibles++;
-            } else {
-                item.classList.add('d-none');
-            }
-        });
-        if (sinResultadosClienteRenta) {
-            if (visibles === 0) {
-                sinResultadosClienteRenta.classList.remove('d-none');
-            } else {
-                sinResultadosClienteRenta.classList.add('d-none');
-            }
-        }
-    }
-
-    if (inputBuscarClienteRenta && listaResultadosClienteRenta) {
-        inputBuscarClienteRenta.addEventListener('focus', function () {
-            filtrarClientesRenta(this.value);
-            listaResultadosClienteRenta.classList.remove('d-none');
-        });
-
-        inputBuscarClienteRenta.addEventListener('input', function () {
-            filtrarClientesRenta(this.value);
-            listaResultadosClienteRenta.classList.remove('d-none');
-        });
-
-        document.addEventListener('click', function (e) {
-            const cont = document.getElementById('contenedorBuscarClienteRenta');
-            if (cont && !cont.contains(e.target)) {
-                listaResultadosClienteRenta.classList.add('d-none');
-            }
-        });
-    }
-
-    itemsClienteRenta.forEach(function (item) {
-        item.addEventListener('click', function () {
-            const clId = this.dataset.id;
-            const clNombre = this.dataset.nombre;
-            const clCorreo = this.dataset.correo;
-
-            if (selectClienteCobroRenta) {
-                selectClienteCobroRenta.value = clId;
-            }
-            if (inputBuscarClienteRenta) {
-                inputBuscarClienteRenta.value = clNombre;
-            }
-            if (badgeClienteCobroRenta) {
-                badgeClienteCobroRenta.textContent = '✓ Cambiado';
-                badgeClienteCobroRenta.className = 'badge bg-primary text-white small';
-            }
-            if (btnLimpiarClienteRenta) {
-                btnLimpiarClienteRenta.classList.remove('d-none');
-            }
-            if (listaResultadosClienteRenta) {
-                listaResultadosClienteRenta.classList.add('d-none');
-            }
-            actualizarCorreoCobroRenta(clCorreo);
-        });
-    });
-
-    if (btnLimpiarClienteRenta) {
-        btnLimpiarClienteRenta.addEventListener('click', function () {
-            if (inputBuscarClienteRenta) {
-                inputBuscarClienteRenta.value = clienteOriginalNombre;
-            }
-            if (selectClienteCobroRenta) {
-                selectClienteCobroRenta.value = '';
-            }
-            if (badgeClienteCobroRenta) {
-                badgeClienteCobroRenta.textContent = 'Asignado';
-                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
-            }
-            this.classList.add('d-none');
-            actualizarCorreoCobroRenta(clienteOriginalCorreo);
-            if (listaResultadosClienteRenta) {
-                listaResultadosClienteRenta.classList.add('d-none');
-            }
-        });
-    }
-
-    document.querySelectorAll('.btn-abrir-cobro').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.getElementById('cobroDetalleId').value = this.dataset.detalleId;
-            document.getElementById('cobroEquipoNombre').textContent = this.dataset.equipoNombre;
-            document.getElementById('cobroTiempoTotal').textContent = this.dataset.tiempo;
-
-            clienteOriginalNombre = this.dataset.clienteNombre || '';
-            clienteOriginalCorreo = (this.dataset.clienteCorreo || '').trim();
-
-            if (inputBuscarClienteRenta) {
-                inputBuscarClienteRenta.value = clienteOriginalNombre;
-            }
-            if (selectClienteCobroRenta) {
-                selectClienteCobroRenta.value = '';
-            }
-            if (badgeClienteCobroRenta) {
-                badgeClienteCobroRenta.textContent = 'Asignado';
-                badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
-            }
-            if (btnLimpiarClienteRenta) {
-                btnLimpiarClienteRenta.classList.add('d-none');
-            }
-            if (listaResultadosClienteRenta) {
-                listaResultadosClienteRenta.classList.add('d-none');
+                container.appendChild(toastDiv);
+                const toastInstance = new bootstrap.Toast(toastDiv, { delay: 7000, autohide: true });
+                toastInstance.show();
+                toastDiv.addEventListener('hidden.bs.toast', () => toastDiv.remove());
             }
 
-            cobroTotalActual = parseFloat((this.dataset.total || '0').replace(',', '.')) || 0;
-            document.getElementById('cobroTotalTexto').textContent = `$${cobroTotalActual.toFixed(2)}`;
+            function actualizarTemporizadores() {
+                const ahoraMs = Date.now();
 
-            // Reset calculadora
-            const inputPaga = document.getElementById('inputPagaConRenta');
-            if (inputPaga) {
-                inputPaga.value = '';
-                actualizarVueltoCobro();
-            }
+                equiposEnUso.forEach(function (card) {
+                    const eqId = card.dataset.equipoId;
+                    const detalleId = card.dataset.detalleId;
+                    const inicioIso = card.dataset.inicioIso;
+                    const tiempoTotalMin = parseInt(card.dataset.tiempoTotal) || 0;
+                    const eqNombre = card.dataset.equipoNombre;
+                    const clienteNombre = card.dataset.clienteNombre;
 
-            actualizarCorreoCobroRenta(clienteOriginalCorreo);
-        });
-    });
+                    const clockEl = document.getElementById('timer-clock-' + eqId);
+                    const progressEl = document.getElementById('progress-bar-' + eqId);
+                    const badgeEl = document.getElementById('badge-estado-' + eqId);
 
-    function redondearCentavos(valor) {
-        return Math.round((valor + Number.EPSILON) * 100) / 100;
-    }
+                    if (!clockEl || !progressEl || !inicioIso) return;
 
-    function actualizarVueltoCobro() {
-        const inputPaga = document.getElementById('inputPagaConRenta');
-        const vueltoTexto = document.getElementById('cobroVueltoTexto');
-        if (!inputPaga || !vueltoTexto) return;
+                    const inicioMs = new Date(inicioIso).getTime();
+                    const duracionMs = tiempoTotalMin * 60 * 1000;
+                    const vencimientoIso = card.dataset.vencimientoIso;
+                    const finMs = (vencimientoIso && !isNaN(new Date(vencimientoIso).getTime()))
+                        ? new Date(vencimientoIso).getTime()
+                        : (inicioMs + duracionMs);
+                    const restanteMs = finMs - ahoraMs;
+                    const restanteSegundos = Math.floor(restanteMs / 1000);
 
-        const val = inputPaga.value.trim();
-        if (val === '') {
-            vueltoTexto.textContent = '$0.00';
-            vueltoTexto.className = 'fs-5 font-monospace text-dark';
-            return;
-        }
+                    if (restanteSegundos > 0) {
+                        // Tiempo en curso
+                        clockEl.textContent = formatTime(restanteSegundos);
+                        const porcentaje = Math.max(0, Math.min(100, (restanteMs / duracionMs) * 100));
+                        progressEl.style.width = porcentaje + '%';
 
-        let pagaCon = parseFloat(val.replace(',', '.')) || 0;
-        let total = redondearCentavos(cobroTotalActual);
-        pagaCon = redondearCentavos(pagaCon);
-        if (pagaCon > 99999.99) {
-            pagaCon = 99999.99;
-            inputPaga.value = pagaCon.toFixed(2);
-        }
-        if (pagaCon < 0) {
-            pagaCon = 0;
-            inputPaga.value = pagaCon.toFixed(2);
-        }
-        const diff = redondearCentavos(pagaCon - total);
+                        if (porcentaje > 25) {
+                            progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-success timer-progress-bar';
+                            clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-dark';
+                        } else {
+                            progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-warning timer-progress-bar';
+                            clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-warning';
+                        }
+                    } else {
+                        // TIEMPO AGOTADO (o excedido)
+                        clockEl.textContent = '+' + formatTime(restanteSegundos);
+                        clockEl.className = 'fw-bold font-monospace fs-5 timer-clock text-danger';
+                        progressEl.style.width = '100%';
+                        progressEl.className = 'progress-bar progress-bar-striped progress-bar-animated bg-danger timer-progress-bar';
 
-        if (diff >= 0) {
-            vueltoTexto.textContent = `$${diff.toFixed(2)}`;
-            vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
-        } else {
-            vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
-            vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
-        }
-    }
+                        // Alerta visual en la tarjeta
+                        card.classList.add('tiempo-vencido-card');
+                        if (badgeEl) {
+                            badgeEl.className = 'badge bg-danger text-white px-3 py-1 rounded-pill';
+                            badgeEl.innerHTML = '<i class="bi bi-alarm-fill me-1"></i> ¡Agotado!';
+                        }
 
-    const inputPagaRenta = document.getElementById('inputPagaConRenta');
-    if (inputPagaRenta) {
-        inputPagaRenta.addEventListener('input', actualizarVueltoCobro);
-    }
-
-    document.querySelectorAll('.btn-billete-cobro').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            const monto = this.dataset.monto;
-            const inputPaga = document.getElementById('inputPagaConRenta');
-            if (!inputPaga) return;
-
-            if (monto === 'exacto') {
-                let m = Math.round((cobroTotalActual + Number.EPSILON) * 100) / 100;
-                if (m > 99999.99) m = 99999.99;
-                if (m < 0) m = 0;
-                inputPaga.value = m.toFixed(2);
-            } else {
-                let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
-                if (m > 99999.99) m = 99999.99;
-                if (m < 0) m = 0;
-                inputPaga.value = m.toFixed(2);
-            }
-            actualizarVueltoCobro();
-            inputPaga.focus();
-        });
-    });
-
-    const modalCobroEl = document.getElementById('modalCobroRenta');
-    if (modalCobroEl) {
-        modalCobroEl.addEventListener('shown.bs.modal', function () {
-            const inputPaga = document.getElementById('inputPagaConRenta');
-            if (inputPaga) {
-                inputPaga.focus();
-            }
-        });
-    }
-
-    // Al confirmar cobro de renta: abrir factura PDF en pestaña nueva y refrescar rentas
-    const formCobroRenta = document.getElementById('formCobroRenta');
-    const btnConfirmarCobroRenta = document.getElementById('btnConfirmarCobroRenta');
-    if (formCobroRenta) {
-        formCobroRenta.addEventListener('submit', function () {
-            if (btnConfirmarCobroRenta) {
-                btnConfirmarCobroRenta.disabled = true;
-                btnConfirmarCobroRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
-            }
-            if (modalCobroEl && window.bootstrap) {
-                setTimeout(function () {
-                    const modalInstance = bootstrap.Modal.getInstance(modalCobroEl);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
-                }, 600);
-            }
-            setTimeout(function () {
-                window.location.reload();
-            }, 1800);
-        });
-    }
-
-    // Al confirmar extensión de renta: abrir factura actualizada PDF en pestaña nueva y refrescar rentas
-    const formExtenderRenta = document.getElementById('formExtenderRenta');
-    const btnConfirmarExtenderRenta = document.getElementById('btnConfirmarExtenderRenta');
-    const modalExtenderEl = document.getElementById('modalExtenderRenta');
-    if (formExtenderRenta) {
-        formExtenderRenta.addEventListener('submit', function () {
-            if (btnConfirmarExtenderRenta) {
-                btnConfirmarExtenderRenta.disabled = true;
-                btnConfirmarExtenderRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando extensión...';
-            }
-            if (modalExtenderEl && window.bootstrap) {
-                setTimeout(function () {
-                    const modalInstance = bootstrap.Modal.getInstance(modalExtenderEl);
-                    if (modalInstance) {
-                        modalInstance.hide();
-                    }
-                }, 600);
-            }
-            setTimeout(function () {
-                window.location.reload();
-            }, 1800);
-        });
-    }
-
-    // -------------------------------------------------------------
-    // 6. MODAL DE INFO / HARDWARE DE EQUIPO
-    // -------------------------------------------------------------
-    document.querySelectorAll('.btn-info-equipo').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            document.getElementById('infoEquipoTitulo').innerHTML = '<i class="bi bi-pc-display me-2 text-coffee"></i>' + btn.dataset.nombre;
-            document.getElementById('infoEquipoTipo').textContent = btn.dataset.tipo;
-            document.getElementById('infoEquipoTarifa').textContent = btn.dataset.tarifa;
-            document.getElementById('infoEquipoEstado').textContent = btn.dataset.estado;
-
-            const seccionRenta = document.getElementById('seccionInfoRenta');
-            if (btn.dataset.estado === 'En Uso' || btn.dataset.estado === 'Pendiente de Revisión') {
-                seccionRenta.classList.remove('d-none');
-                document.getElementById('infoEquipoCliente').textContent = btn.dataset.cliente;
-                document.getElementById('infoEquipoInicio').textContent = btn.dataset.inicio;
-                document.getElementById('infoEquipoTiempo').textContent = btn.dataset.tiempo;
-                document.getElementById('infoEquipoTotal').textContent = btn.dataset.total;
-            } else {
-                seccionRenta.classList.add('d-none');
-            }
-
-            // Lista de Componentes
-            const lista = document.getElementById('listaComponentesEquipo');
-            lista.innerHTML = '';
-            const componentesRaw = btn.dataset.componentes;
-            if (componentesRaw && componentesRaw !== 'Sin periféricos asignados') {
-                const items = componentesRaw.split(';;');
-                items.forEach(function (item) {
-                    if (item.trim()) {
-                        const li = document.createElement('div');
-                        li.className = 'list-group-item d-flex align-items-center gap-2 border-0 bg-light mb-1 rounded-3';
-                        li.innerHTML = '<i class="bi bi-check2-circle text-success"></i><span>' + item + '</span>';
-                        lista.appendChild(li);
+                        // Disparar notificación emergente si no se ha notificado
+                        const notifKeyLocal = `${detalleId}_${tiempoTotalMin}`;
+                        if (!notifiedDetalles.has(notifKeyLocal)) {
+                            notifiedDetalles.add(notifKeyLocal);
+                            if (typeof window.notificarTiempoAgotadoGlobal === 'function') {
+                                window.notificarTiempoAgotadoGlobal(detalleId, tiempoTotalMin, eqNombre, clienteNombre);
+                            } else {
+                                dispararToastTiempoAgotado(eqNombre, clienteNombre);
+                            }
+                        }
                     }
                 });
-            } else {
-                lista.innerHTML = '<div class="text-muted small p-2 text-center">No tiene componentes asociados en bodega.</div>';
             }
+
+            setInterval(actualizarTemporizadores, 1000);
+            actualizarTemporizadores();
+
+            // -------------------------------------------------------------
+            // 3. ASIGNACIÓN DIRECTA DE RENTA Y MODAL DE ENVIAR A REVISIÓN
+            // -------------------------------------------------------------
+            document.querySelectorAll('.btn-abrir-enviar-revision').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const detalleInput = document.getElementById('confirmarRevisionDetalleId');
+                    const equipoSpan = document.getElementById('confirmarRevisionEquipoNombre');
+                    if (detalleInput) detalleInput.value = this.dataset.detalleId || '';
+                    if (equipoSpan) equipoSpan.textContent = this.dataset.equipoNombre || '--';
+                });
+            });
+
+            document.querySelectorAll('.btn-asignar-equipo-directo').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const eqId = this.dataset.equipoId;
+                    const eqNombre = this.dataset.equipoNombre;
+                    const tarifa = this.dataset.tarifa;
+
+                    const selectEq = document.getElementById('selectEquipoRenta');
+                    const banner = document.getElementById('alertaEquipoDirecto');
+                    const bannerNombre = document.getElementById('alertaEquipoDirectoNombre');
+
+                    if (selectEq && eqId) {
+                        selectEq.value = eqId;
+                        if (banner && bannerNombre) {
+                            banner.classList.remove('d-none');
+                            banner.classList.add('d-flex');
+                            bannerNombre.textContent = `${eqNombre} ($${tarifa}/hr)`;
+                        }
+                        if (typeof recalcularEstimadoRenta === 'function') {
+                            recalcularEstimadoRenta();
+                        }
+                    }
+                });
+            });
+
+            const btnNuevaTop = document.getElementById('btnNuevaRentaTop');
+            if (btnNuevaTop) {
+                btnNuevaTop.addEventListener('click', function () {
+                    const banner = document.getElementById('alertaEquipoDirecto');
+                    if (banner) {
+                        banner.classList.remove('d-flex');
+                        banner.classList.add('d-none');
+                    }
+                });
+            }
+
+            // -------------------------------------------------------------
+            // 4. MODAL EXTENDER RENTA (+15, +30, +1 hr, +2 hr) CON CALCULADORA DE EFECTIVO
+            // -------------------------------------------------------------
+            let extenderTarifaActual = 0;
+            let extenderCostoActual = 0;
+            const efectivoMaxExt = parseFloat('{{ efectivo_maximo|default:100.00|unlocalize }}') || 100;
+
+            function actualizarVueltoExtender() {
+                const inputPaga = document.getElementById('inputPagaConExtender');
+                const vueltoTexto = document.getElementById('extenderVueltoTexto');
+                const btnConfirmar = document.getElementById('btnConfirmarExtenderRenta');
+                if (!inputPaga || !vueltoTexto) return;
+
+                const val = inputPaga.value.trim();
+                if (val === '') {
+                    vueltoTexto.textContent = '$0.00';
+                    vueltoTexto.className = 'fs-4 font-monospace text-dark';
+                    if (btnConfirmar) btnConfirmar.disabled = true;
+                    return;
+                }
+
+                let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+                let total = Math.round((extenderCostoActual + Number.EPSILON) * 100) / 100;
+                pagaCon = Math.round((pagaCon + Number.EPSILON) * 100) / 100;
+
+                if (pagaCon < 0) {
+                    pagaCon = 0;
+                    inputPaga.value = '0.00';
+                }
+                if (pagaCon > efectivoMaxExt) {
+                    vueltoTexto.textContent = `Máx $${efectivoMaxExt.toFixed(2)}`;
+                    vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+                    if (btnConfirmar) btnConfirmar.disabled = true;
+                    return;
+                }
+
+                const diff = Math.round(((pagaCon - total) + Number.EPSILON) * 100) / 100;
+                if (diff >= 0) {
+                    vueltoTexto.textContent = `$${diff.toFixed(2)}`;
+                    vueltoTexto.className = 'fs-4 font-monospace text-success fw-bold';
+                    if (btnConfirmar) btnConfirmar.disabled = false;
+                } else {
+                    vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
+                    vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+                    if (btnConfirmar) btnConfirmar.disabled = true;
+                }
+            }
+
+            document.querySelectorAll('.btn-abrir-extender').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.getElementById('extenderDetalleId').value = this.dataset.detalleId;
+                    document.getElementById('extenderEquipoNombre').textContent = this.dataset.equipoNombre;
+                    document.getElementById('extenderClienteNombre').textContent = this.dataset.clienteNombre;
+                    extenderTarifaActual = parseFloat((this.dataset.tarifa || '0').replace(',', '.')) || 0;
+                    document.getElementById('extenderTarifa').textContent = `$${extenderTarifaActual.toFixed(2)}/hr`;
+
+                    const extTokenEl = document.getElementById('extToken');
+                    if (extTokenEl) {
+                        extTokenEl.value = 'ext_' + Date.now() + '_' + Math.random().toString(36).substring(2, 10);
+                    }
+                    const inputPaga = document.getElementById('inputPagaConExtender');
+                    if (inputPaga) {
+                        inputPaga.value = '';
+                    }
+
+                    // Reset a +30 min por defecto
+                    actualizarSeleccionExtender(30);
+                });
+            });
+
+            function actualizarSeleccionExtender(minutos) {
+                document.getElementById('extenderMinutosExtra').value = minutos;
+                const badgeMinEl = document.getElementById('extenderBadgeMin');
+                if (badgeMinEl) {
+                    badgeMinEl.textContent = `+${minutos} min`;
+                }
+                extenderCostoActual = Math.round(((extenderTarifaActual * (minutos / 60)) + Number.EPSILON) * 100) / 100;
+                const costoEl = document.getElementById('extenderCostoExtra');
+                if (costoEl) {
+                    costoEl.textContent = `$${extenderCostoActual.toFixed(2)}`;
+                }
+
+                document.querySelectorAll('.btn-preset-extender').forEach(b => {
+                    const isMatch = parseInt(b.dataset.min) === minutos;
+                    b.classList.toggle('btn-coffee', isMatch);
+                    b.classList.toggle('active', isMatch);
+                    b.classList.toggle('btn-outline-secondary', !isMatch);
+                });
+                actualizarVueltoExtender();
+            }
+
+            document.querySelectorAll('.btn-preset-extender').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    actualizarSeleccionExtender(parseInt(this.dataset.min));
+                });
+            });
+
+            const inputPagaExtEl = document.getElementById('inputPagaConExtender');
+            if (inputPagaExtEl) {
+                inputPagaExtEl.addEventListener('input', actualizarVueltoExtender);
+            }
+
+            document.querySelectorAll('.btn-billete-extender').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const monto = this.dataset.monto;
+                    const inputPaga = document.getElementById('inputPagaConExtender');
+                    if (!inputPaga) return;
+                    if (monto === 'exacto') {
+                        inputPaga.value = extenderCostoActual.toFixed(2);
+                    } else {
+                        inputPaga.value = (parseFloat(monto) || 0).toFixed(2);
+                    }
+                    actualizarVueltoExtender();
+                    inputPaga.focus();
+                });
+            });
+
+            // -------------------------------------------------------------
+            // 5. MODAL DE CONFIRMACIÓN DE COBRO CON CALCULADORA Y BUSCADOR DE CLIENTE
+            // -------------------------------------------------------------
+            let cobroTotalActual = 0;
+            let clienteOriginalNombre = '';
+            let clienteOriginalCorreo = '';
+
+            const inputBuscarClienteRenta = document.getElementById('inputBuscarClienteRenta');
+            const listaResultadosClienteRenta = document.getElementById('listaResultadosClienteRenta');
+            const btnLimpiarClienteRenta = document.getElementById('btnLimpiarClienteRenta');
+            const selectClienteCobroRenta = document.getElementById('selectClienteCobroRenta');
+            const badgeClienteCobroRenta = document.getElementById('badgeClienteCobroRenta');
+            const sinResultadosClienteRenta = document.getElementById('sinResultadosClienteRenta');
+            const itemsClienteRenta = document.querySelectorAll('.item-cliente-renta');
+            const checkCorreoRenta = document.getElementById('checkEnviarCorreoRenta');
+            const textoDestinoRenta = document.getElementById('textoCorreoDestinoRenta');
+
+            function actualizarCorreoCobroRenta(correo) {
+                if (!checkCorreoRenta || !textoDestinoRenta) return;
+                correo = (correo || '').trim();
+                if (correo) {
+                    checkCorreoRenta.disabled = false;
+                    checkCorreoRenta.checked = true;
+                    textoDestinoRenta.innerHTML = `<i class="bi bi-check-circle-fill text-success me-1"></i>Se enviará a: <strong class="text-dark">${correo}</strong>`;
+                } else {
+                    checkCorreoRenta.checked = false;
+                    checkCorreoRenta.disabled = true;
+                    textoDestinoRenta.innerHTML = `<i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>Este cliente no tiene correo registrado.`;
+                }
+            }
+
+            function filtrarClientesRenta(termino) {
+                termino = (termino || '').toLowerCase().trim();
+                let visibles = 0;
+                itemsClienteRenta.forEach(function (item) {
+                    const searchStr = item.dataset.search || '';
+                    if (!termino || searchStr.includes(termino)) {
+                        item.classList.remove('d-none');
+                        visibles++;
+                    } else {
+                        item.classList.add('d-none');
+                    }
+                });
+                if (sinResultadosClienteRenta) {
+                    if (visibles === 0) {
+                        sinResultadosClienteRenta.classList.remove('d-none');
+                    } else {
+                        sinResultadosClienteRenta.classList.add('d-none');
+                    }
+                }
+            }
+
+            if (inputBuscarClienteRenta && listaResultadosClienteRenta) {
+                inputBuscarClienteRenta.addEventListener('focus', function () {
+                    filtrarClientesRenta(this.value);
+                    listaResultadosClienteRenta.classList.remove('d-none');
+                });
+
+                inputBuscarClienteRenta.addEventListener('input', function () {
+                    filtrarClientesRenta(this.value);
+                    listaResultadosClienteRenta.classList.remove('d-none');
+                });
+
+                document.addEventListener('click', function (e) {
+                    const cont = document.getElementById('contenedorBuscarClienteRenta');
+                    if (cont && !cont.contains(e.target)) {
+                        listaResultadosClienteRenta.classList.add('d-none');
+                    }
+                });
+            }
+
+            itemsClienteRenta.forEach(function (item) {
+                item.addEventListener('click', function () {
+                    const clId = this.dataset.id;
+                    const clNombre = this.dataset.nombre;
+                    const clCorreo = this.dataset.correo;
+
+                    if (selectClienteCobroRenta) {
+                        selectClienteCobroRenta.value = clId;
+                    }
+                    if (inputBuscarClienteRenta) {
+                        inputBuscarClienteRenta.value = clNombre;
+                    }
+                    if (badgeClienteCobroRenta) {
+                        badgeClienteCobroRenta.textContent = '✓ Cambiado';
+                        badgeClienteCobroRenta.className = 'badge bg-primary text-white small';
+                    }
+                    if (btnLimpiarClienteRenta) {
+                        btnLimpiarClienteRenta.classList.remove('d-none');
+                    }
+                    if (listaResultadosClienteRenta) {
+                        listaResultadosClienteRenta.classList.add('d-none');
+                    }
+                    actualizarCorreoCobroRenta(clCorreo);
+                });
+            });
+
+            if (btnLimpiarClienteRenta) {
+                btnLimpiarClienteRenta.addEventListener('click', function () {
+                    if (inputBuscarClienteRenta) {
+                        inputBuscarClienteRenta.value = clienteOriginalNombre;
+                    }
+                    if (selectClienteCobroRenta) {
+                        selectClienteCobroRenta.value = '';
+                    }
+                    if (badgeClienteCobroRenta) {
+                        badgeClienteCobroRenta.textContent = 'Asignado';
+                        badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+                    }
+                    this.classList.add('d-none');
+                    actualizarCorreoCobroRenta(clienteOriginalCorreo);
+                    if (listaResultadosClienteRenta) {
+                        listaResultadosClienteRenta.classList.add('d-none');
+                    }
+                });
+            }
+
+            document.querySelectorAll('.btn-abrir-cobro').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.getElementById('cobroDetalleId').value = this.dataset.detalleId;
+                    document.getElementById('cobroEquipoNombre').textContent = this.dataset.equipoNombre;
+                    document.getElementById('cobroTiempoTotal').textContent = this.dataset.tiempo;
+
+                    clienteOriginalNombre = this.dataset.clienteNombre || '';
+                    clienteOriginalCorreo = (this.dataset.clienteCorreo || '').trim();
+
+                    if (inputBuscarClienteRenta) {
+                        inputBuscarClienteRenta.value = clienteOriginalNombre;
+                    }
+                    if (selectClienteCobroRenta) {
+                        selectClienteCobroRenta.value = '';
+                    }
+                    if (badgeClienteCobroRenta) {
+                        badgeClienteCobroRenta.textContent = 'Asignado';
+                        badgeClienteCobroRenta.className = 'badge bg-light text-muted border small';
+                    }
+                    if (btnLimpiarClienteRenta) {
+                        btnLimpiarClienteRenta.classList.add('d-none');
+                    }
+                    if (listaResultadosClienteRenta) {
+                        listaResultadosClienteRenta.classList.add('d-none');
+                    }
+
+                    cobroTotalActual = parseFloat((this.dataset.total || '0').replace(',', '.')) || 0;
+                    document.getElementById('cobroTotalTexto').textContent = `$${cobroTotalActual.toFixed(2)}`;
+
+                    // Reset calculadora
+                    const inputPaga = document.getElementById('inputPagaConRenta');
+                    if (inputPaga) {
+                        inputPaga.value = '';
+                        actualizarVueltoCobro();
+                    }
+
+                    actualizarCorreoCobroRenta(clienteOriginalCorreo);
+                });
+            });
+
+            function redondearCentavos(valor) {
+                return Math.round((valor + Number.EPSILON) * 100) / 100;
+            }
+
+            function actualizarVueltoCobro() {
+                const inputPaga = document.getElementById('inputPagaConRenta');
+                const vueltoTexto = document.getElementById('cobroVueltoTexto');
+                if (!inputPaga || !vueltoTexto) return;
+
+                const val = inputPaga.value.trim();
+                if (val === '') {
+                    vueltoTexto.textContent = '$0.00';
+                    vueltoTexto.className = 'fs-5 font-monospace text-dark';
+                    return;
+                }
+
+                let pagaCon = parseFloat(val.replace(',', '.')) || 0;
+                let total = redondearCentavos(cobroTotalActual);
+                pagaCon = redondearCentavos(pagaCon);
+                if (pagaCon > 99999.99) {
+                    pagaCon = 99999.99;
+                    inputPaga.value = pagaCon.toFixed(2);
+                }
+                if (pagaCon < 0) {
+                    pagaCon = 0;
+                    inputPaga.value = pagaCon.toFixed(2);
+                }
+                const diff = redondearCentavos(pagaCon - total);
+
+                if (diff >= 0) {
+                    vueltoTexto.textContent = `$${diff.toFixed(2)}`;
+                    vueltoTexto.className = 'fs-5 font-monospace text-success fw-bold';
+                } else {
+                    vueltoTexto.textContent = `Faltan $${Math.abs(diff).toFixed(2)}`;
+                    vueltoTexto.className = 'fs-5 font-monospace text-danger fw-bold';
+                }
+            }
+
+            const inputPagaRenta = document.getElementById('inputPagaConRenta');
+            if (inputPagaRenta) {
+                inputPagaRenta.addEventListener('input', actualizarVueltoCobro);
+            }
+
+            document.querySelectorAll('.btn-billete-cobro').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    const monto = this.dataset.monto;
+                    const inputPaga = document.getElementById('inputPagaConRenta');
+                    if (!inputPaga) return;
+
+                    if (monto === 'exacto') {
+                        let m = Math.round((cobroTotalActual + Number.EPSILON) * 100) / 100;
+                        if (m > 99999.99) m = 99999.99;
+                        if (m < 0) m = 0;
+                        inputPaga.value = m.toFixed(2);
+                    } else {
+                        let m = Math.round((parseFloat(monto) + Number.EPSILON) * 100) / 100;
+                        if (m > 99999.99) m = 99999.99;
+                        if (m < 0) m = 0;
+                        inputPaga.value = m.toFixed(2);
+                    }
+                    actualizarVueltoCobro();
+                    inputPaga.focus();
+                });
+            });
+
+            const modalCobroEl = document.getElementById('modalCobroRenta');
+            if (modalCobroEl) {
+                modalCobroEl.addEventListener('shown.bs.modal', function () {
+                    const inputPaga = document.getElementById('inputPagaConRenta');
+                    if (inputPaga) {
+                        inputPaga.focus();
+                    }
+                });
+            }
+
+            // Al confirmar cobro de renta: abrir factura PDF en pestaña nueva y refrescar rentas
+            const formCobroRenta = document.getElementById('formCobroRenta');
+            const btnConfirmarCobroRenta = document.getElementById('btnConfirmarCobroRenta');
+            if (formCobroRenta) {
+                formCobroRenta.addEventListener('submit', function () {
+                    if (btnConfirmarCobroRenta) {
+                        btnConfirmarCobroRenta.disabled = true;
+                        btnConfirmarCobroRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Procesando cobro...';
+                    }
+                    if (modalCobroEl && window.bootstrap) {
+                        setTimeout(function () {
+                            const modalInstance = bootstrap.Modal.getInstance(modalCobroEl);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        }, 600);
+                    }
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 1800);
+                });
+            }
+
+            // Al confirmar extensión de renta: abrir factura actualizada PDF en pestaña nueva y refrescar rentas
+            const formExtenderRenta = document.getElementById('formExtenderRenta');
+            const btnConfirmarExtenderRenta = document.getElementById('btnConfirmarExtenderRenta');
+            const modalExtenderEl = document.getElementById('modalExtenderRenta');
+            if (formExtenderRenta) {
+                formExtenderRenta.addEventListener('submit', function () {
+                    if (btnConfirmarExtenderRenta) {
+                        btnConfirmarExtenderRenta.disabled = true;
+                        btnConfirmarExtenderRenta.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Cobrando extensión...';
+                    }
+                    if (modalExtenderEl && window.bootstrap) {
+                        setTimeout(function () {
+                            const modalInstance = bootstrap.Modal.getInstance(modalExtenderEl);
+                            if (modalInstance) {
+                                modalInstance.hide();
+                            }
+                        }, 600);
+                    }
+                    setTimeout(function () {
+                        window.location.reload();
+                    }, 1800);
+                });
+            }
+
+            // -------------------------------------------------------------
+            // 6. MODAL DE INFO / HARDWARE DE EQUIPO
+            // -------------------------------------------------------------
+            document.querySelectorAll('.btn-info-equipo').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    document.getElementById('infoEquipoTitulo').innerHTML = '<i class="bi bi-pc-display me-2 text-coffee"></i>' + btn.dataset.nombre;
+                    document.getElementById('infoEquipoTipo').textContent = btn.dataset.tipo;
+                    document.getElementById('infoEquipoTarifa').textContent = btn.dataset.tarifa;
+                    document.getElementById('infoEquipoEstado').textContent = btn.dataset.estado;
+
+                    const seccionRenta = document.getElementById('seccionInfoRenta');
+                    if (btn.dataset.estado === 'En Uso' || btn.dataset.estado === 'Tiempo Terminado' || btn.dataset.estado === 'Pendiente de Revisión') {
+                        seccionRenta.classList.remove('d-none');
+                        document.getElementById('infoEquipoCliente').textContent = btn.dataset.cliente;
+                        document.getElementById('infoEquipoInicio').textContent = btn.dataset.inicio;
+                        document.getElementById('infoEquipoTiempo').textContent = btn.dataset.tiempo;
+                        document.getElementById('infoEquipoTotal').textContent = btn.dataset.total;
+                    } else {
+                        seccionRenta.classList.add('d-none');
+                    }
+
+                    // Lista de Componentes
+                    const lista = document.getElementById('listaComponentesEquipo');
+                    lista.innerHTML = '';
+                    const componentesRaw = btn.dataset.componentes;
+                    if (componentesRaw && componentesRaw !== 'Sin periféricos asignados') {
+                        const items = componentesRaw.split(';;');
+                        items.forEach(function (item) {
+                            if (item.trim()) {
+                                const li = document.createElement('div');
+                                li.className = 'list-group-item d-flex align-items-center gap-2 border-0 bg-light mb-1 rounded-3';
+                                li.innerHTML = '<i class="bi bi-check2-circle text-success"></i><span>' + item + '</span>';
+                                lista.appendChild(li);
+                            }
+                        });
+                    } else {
+                        lista.innerHTML = '<div class="text-muted small p-2 text-center">No tiene componentes asociados en bodega.</div>';
+                    }
+                });
+            });
         });
-    });
-});
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

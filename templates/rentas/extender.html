@@ -1,16 +1,24 @@
 <!-- Modal Extender Tiempo de Renta -->
 <div class="modal fade" id="modalExtenderRenta" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow rounded-4">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
             <form method="POST" action="{% url 'extender_renta' %}" target="_blank" id="formExtenderRenta">
                 {% csrf_token %}
                 <input type="hidden" name="detalle_renta_id" id="extenderDetalleId">
                 <input type="hidden" name="minutos_extra" id="extenderMinutosExtra" value="30">
+                <input type="hidden" name="ext_token" id="extToken" value="">
 
-                <div class="modal-header border-0 pb-0">
-                    <h5 class="modal-title fw-bold"><i class="bi bi-clock-history me-2 text-warning"></i>Extender Renta</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                <div class="modal-header bg-dark text-white rounded-top-4 py-3 px-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-clock-history text-warning fs-5"></i>
+                        <div>
+                            <h6 class="modal-title fw-bold mb-0">Extender Tiempo de Renta</h6>
+                            <small class="text-white-50" style="font-size: 0.75rem;">Cobro por adelantado de tiempo adicional</small>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
+
                 <div class="modal-body px-4 pt-3 pb-4">
                     <div class="bg-light p-3 rounded-3 mb-3 border">
                         <div class="d-flex justify-content-between mb-1">
@@ -27,7 +35,7 @@
                         </div>
                     </div>
 
-                    <label class="form-label fw-semibold">Seleccionar Tiempo a Agregar:</label>
+                    <label class="form-label fw-semibold small text-muted text-uppercase mb-1">Tiempo a Agregar:</label>
                     <div class="row g-2 mb-3">
                         <div class="col-6 col-sm-3">
                             <button type="button" class="btn btn-outline-secondary w-100 py-2 rounded-3 btn-preset-extender" data-min="15">
@@ -51,21 +59,50 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-warning border-0 rounded-3 mb-0 d-flex justify-content-between align-items-center py-2 px-3">
-                        <div>
-                            <span class="small d-block text-muted">Costo Adicional:</span>
-                            <strong class="fs-5 text-dark" id="extenderCostoExtra">+$0.00</strong>
+                    <!-- Costo Extra y Cambio -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Costo Extra</span>
+                                <strong class="fs-4 text-dark font-monospace" id="extenderCostoExtra">$0.00</strong>
+                            </div>
                         </div>
-                        <div class="text-end">
-                            <span class="small d-block text-muted">Tiempo a sumar:</span>
-                            <span class="badge bg-warning text-dark px-3 py-1 font-monospace fs-6" id="extenderBadgeMin">+30 min</span>
+                        <div class="col-6">
+                            <div class="bg-light p-2 rounded-3 border text-center h-100 d-flex flex-column justify-content-center">
+                                <span class="text-muted text-uppercase fw-semibold" style="font-size: 0.72rem;">Cambio / Vuelto</span>
+                                <strong class="fs-4 font-monospace text-dark" id="extenderVueltoTexto">$0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Efectivo Recibido con Billetes Rápidos -->
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label fw-semibold small text-muted text-uppercase mb-0">
+                                <i class="bi bi-cash-stack text-success me-1"></i>Efectivo Recibido <span class="text-danger">*</span>
+                            </label>
+                            <small class="text-muted">Máx: ${{ efectivo_maximo|default:100.00 }}</small>
+                        </div>
+                        <div class="input-group input-group-sm mb-2 shadow-xs">
+                            <span class="input-group-text bg-white fw-bold text-muted">$</span>
+                            <input type="number" step="0.01" min="0" max="{{ efectivo_maximo|default:100.00 }}" name="efectivo_recibido" id="inputPagaConExtender" class="form-control font-monospace fs-6 fw-bold" placeholder="0.00" inputmode="decimal" required>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="exacto">Exacto</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="1">$1</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="5">$5</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="10">$10</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="20">$20</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="50">$50</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 btn-billete-extender" data-monto="100">$100</button>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer border-0 pt-0 px-4 pb-4">
                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" id="btnConfirmarExtenderRenta" class="btn btn-coffee rounded-pill px-4 shadow-sm">
-                        <i class="bi bi-plus-circle me-1"></i> Cobrar y Confirmar Extensión
+                        <i class="bi bi-cash-stack me-1"></i> Cobrar y Extender
                     </button>
                 </div>
             </form>

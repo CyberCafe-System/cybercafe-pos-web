@@ -32,6 +32,10 @@
         <p class="text-muted small mb-0">Auditoría consolidada de cobros en punto de venta y rentas de equipo.</p>
     </div>
     <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
         <!-- Botón para abrir Modal de Filtros -->
         <button type="button" class="btn btn-coffee rounded-3 px-3 py-2 shadow-sm d-flex align-items-center gap-2 small fw-semibold"
             data-bs-toggle="modal" data-bs-target="#modalFiltrosReportes">
@@ -315,12 +319,16 @@
                         data-busqueda="{{ t.ticket|lower }} {{ t.cliente|lower }} {{ t.usuario|lower }} {{ t.tipo|lower }} {{ t.concepto|lower }}">
                         <td class="fw-bold font-monospace">#{{ t.ticket }}</td>
                         <td>
+                            {% if t.es_anulada %}
+                            <span class="badge bg-danger rounded-pill"><i class="bi bi-x-circle me-1"></i>Anulada</span>
+                            {% else %}
                             <span
                                 class="badge {% if t.es_venta %}bg-primary{% else %}bg-warning text-dark{% endif %} rounded-pill">
                                 {% if t.es_venta %}<i class="bi bi-cart me-1"></i>{% else %}<i
                                     class="bi bi-pc-display me-1"></i>{% endif %}
                                 {{ t.tipo }}
                             </span>
+                            {% endif %}
                         </td>
                         <td class="small">{{ t.fecha|date:"d/m/Y h:i A" }}</td>
                         <td class="small"><i class="bi bi-person me-1 text-muted"></i>{{ t.usuario }}</td>
@@ -328,21 +336,31 @@
                         <td class="small" style="max-width: 350px;">
                             <span class="text-dark fw-medium text-break" title="{{ t.concepto }}">{{ t.concepto }}</span>
                         </td>
-                        <td class="fw-bold text-success font-monospace text-end">${{ t.total|floatformat:2 }}</td>
+                        <td class="fw-bold {% if t.es_anulada %}text-muted text-decoration-line-through{% else %}text-success{% endif %} font-monospace text-end">
+                            ${{ t.total|floatformat:2 }}
+                        </td>
                         <td class="text-end d-print-none">
-                            {% if t.es_venta and t.venta_id %}
-                            <a href="{% url 'ticket_pdf_venta' venta_id=t.venta_id %}" target="_blank"
-                                class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Ticket PDF">
-                                <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
-                            </a>
-                            {% elif t.renta_id %}
-                            <a href="{% url 'factura_renta_id' renta_id=t.renta_id %}" target="_blank"
-                                class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Factura de Renta PDF">
-                                <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
-                            </a>
-                            {% else %}
-                            <span class="badge bg-light text-muted border small">Sin comprobante</span>
-                            {% endif %}
+                            <div class="d-flex justify-content-end align-items-center gap-1">
+                                {% if t.es_venta and t.venta_id %}
+                                <a href="{% url 'ticket_pdf_venta' venta_id=t.venta_id %}" target="_blank"
+                                    class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Ticket PDF">
+                                    <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
+                                </a>
+                                {% if request.user.es_admin and not t.es_anulada and t.es_mismo_dia %}
+                                <button type="button" class="btn btn-sm btn-outline-danger rounded-pill px-2 py-0 btn-anular-venta"
+                                    data-bs-toggle="modal" data-bs-target="#modalAnularVenta" data-venta-id="{{ t.venta_id }}" title="Anular venta">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                                {% endif %}
+                                {% elif t.renta_id %}
+                                <a href="{% url 'factura_renta_id' renta_id=t.renta_id %}" target="_blank"
+                                    class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-0" title="Ver Factura de Renta PDF">
+                                    <i class="bi bi-file-earmark-pdf text-danger"></i> PDF
+                                </a>
+                                {% else %}
+                                <span class="badge bg-light text-muted border small">Sin comprobante</span>
+                                {% endif %}
+                            </div>
                         </td>
                     </tr>
                     {% empty %}
@@ -493,5 +511,54 @@
             });
         }
     });
+</script>
+
+<!-- Modal Anular Venta (Admin Only) -->
+<div class="modal fade" id="modalAnularVenta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow rounded-4 overflow-hidden">
+            <form method="POST" action="" id="formAnularVenta">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white rounded-top-4 py-3 px-4">
+                    <h6 class="modal-title fw-bold mb-0">
+                        <i class="bi bi-exclamation-octagon-fill me-2"></i>Anular Venta POS
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small">
+                        Esta acción anulará la factura, restituirá las unidades vendidas al inventario automáticamente
+                        y dejará registro inmutable en auditoría.
+                    </p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted text-uppercase mb-1">
+                            Motivo de anulación <span class="text-danger">*</span>
+                        </label>
+                        <textarea name="motivo" class="form-control" rows="3" placeholder="Explique detalladamente el motivo de la anulación (mínimo 10 caracteres)..." minlength="10" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0 px-4 pb-4">
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4 shadow">
+                        <i class="bi bi-x-circle me-1"></i> Confirmar Anulación
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.btn-anular-venta').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var vid = this.dataset.ventaId;
+            var form = document.getElementById('formAnularVenta');
+            if (form) {
+                form.action = '/anular_venta/' + vid + '/';
+            }
+        });
+    });
+});
 </script>
 {% endblock %}

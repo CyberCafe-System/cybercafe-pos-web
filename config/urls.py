@@ -2,7 +2,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.urls import path
+from django.contrib.staticfiles.views import serve as staticfiles_serve
+from django.urls import path, re_path
+from django.views.static import serve as media_serve
 
 from categorias import views as categorias_views
 from clientes import views as clientes_views
@@ -17,7 +19,7 @@ from usuarios import views as usuarios_views
 from usuarios.forms import WebAuthenticationForm
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_URL.lstrip('/'), admin.site.urls),
 
     # --- RUTAS DE ACCESO ---
     path(
@@ -43,14 +45,17 @@ urlpatterns = [
     path('equipos/', equipos_views.equipo_list, name='equipos'),
     path('componentes/', componentes_views.componente_list, name='componentes'),
     path('usuarios/', usuarios_views.usuario_list, name='usuarios'),
+    path('auditoria/', usuarios_views.auditoria_list, name='auditoria'),
     path('revisiones/', revisiones_views.revisiones_list, name='revisiones'),
     path('revisiones/crear/', revisiones_views.crear_revision, name='crear_revision'),
     path('revisiones/reiniciar/<int:revision_id>/', revisiones_views.reiniciar_revision, name='reiniciar_revision'),
+    path('revisiones/editar/<int:revision_id>/', revisiones_views.editar_revision, name='editar_revision'),
     path('reportes/', pos_views.reportes, name='reportes'),
     path('reportes/exportar_csv/', pos_views.reportes_exportar_csv, name='reportes_exportar_csv'),
     path('reportes/exportar_excel/', pos_views.reportes_exportar_excel, name='reportes_exportar_excel'),
 
     # --- RENTAS ---
+    path('api/rentas_activas/', rentas_views.api_rentas_activas, name='api_rentas_activas'),
     path('crear_renta/', rentas_views.renta_create, name='crear_renta'),
     path('extender_renta/', rentas_views.renta_extender, name='extender_renta'),
     path('enviar_revision/', rentas_views.renta_enviar_revision, name='enviar_revision'),
@@ -64,17 +69,21 @@ urlpatterns = [
     path('quitar_carrito/', pos_views.quitar_carrito, name='quitar_carrito'),
     path('limpiar_carrito/', pos_views.limpiar_carrito, name='limpiar_carrito'),
     path('procesar_venta/', pos_views.procesar_venta, name='procesar_venta'),
+    path('anular_venta/<int:venta_id>/', pos_views.anular_venta, name='anular_venta'),
     path('ticket_pdf/', pos_views.ticket_pdf, name='ticket_pdf'),
     path('ticket_pdf/<int:venta_id>/', pos_views.ticket_pdf, name='ticket_pdf_venta'),
 
     # Clientes
+    path('clientes/buscar_ajax/', clientes_views.cliente_buscar_ajax, name='cliente_buscar_ajax'),
     path('crear_cliente/', clientes_views.cliente_create, name='crear_cliente'),
     path('modificar_cliente/', clientes_views.cliente_edit, name='modificar_cliente'),
+    path('desactivar_cliente/', clientes_views.cliente_toggle, name='desactivar_cliente'),
 
     # Inventario
     path('crear_producto/', inventario_views.producto_create, name='crear_producto'),
     path('modificar_producto/', inventario_views.producto_edit, name='modificar_producto'),
     path('desactivar_producto/', inventario_views.producto_toggle, name='desactivar_producto'),
+    path('ajustar_stock/', inventario_views.producto_ajustar_stock, name='ajustar_stock'),
 
     # Categorías
     path('crear_categoria/', categorias_views.categoria_create, name='crear_categoria'),
@@ -84,7 +93,8 @@ urlpatterns = [
     # Equipos
     path('crear_equipo/', equipos_views.equipo_create, name='crear_equipo'),
     path('modificar_equipo/', equipos_views.equipo_edit, name='modificar_equipo'),
-    path('eliminar_equipo/', equipos_views.equipo_delete, name='eliminar_equipo'),
+    path('habilitar_equipo/', equipos_views.equipo_habilitar, name='habilitar_equipo'),
+    path('desactivar_equipo/', equipos_views.equipo_toggle, name='desactivar_equipo'),
 
     # Componentes
     path('crear_componente/', componentes_views.componente_create, name='crear_componente'),
@@ -99,3 +109,8 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+else:
+    urlpatterns += [
+        re_path(r'^static/(?P<path>.*)$', staticfiles_serve, {'insecure': True}),
+        re_path(r'^media/(?P<path>.*)$', media_serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

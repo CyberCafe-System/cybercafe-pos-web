@@ -2,7 +2,10 @@ import os
 import uuid
 from PIL import Image, ImageOps
 from django.conf import settings
+from django.db import transaction
 from django.utils.text import slugify
+
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB máximo para prevenir agotamiento de RAM
 
 
 def procesar_imagen_a_webp(archivo, nombre_producto, max_dimension=(600, 600), calidad=85, imagen_anterior=None):
@@ -13,9 +16,12 @@ def procesar_imagen_a_webp(archivo, nombre_producto, max_dimension=(600, 600), c
     - Redimensiona proporcionalmente a un tamaño óptimo para catálogo/POS (por defecto max 600x600 px).
     - Comprime a formato WebP moderno de alta eficiencia.
     - Genera un nombre de archivo limpio, seguro y único.
-    - Limpia la imagen física previa del disco si se está actualizando el producto.
+    - Limpia la imagen física previa del disco tras confirmar la transacción de BD.
     Retorna la ruta relativa para el campo `imagen` de la base de datos (ej. 'productos/coca_cola_a1b2c3d4.webp').
     """
+    if hasattr(archivo, 'size') and archivo.size and archivo.size > MAX_UPLOAD_BYTES:
+        raise ValueError("El archivo de imagen supera el tamaño máximo permitido de 10 MB.")
+
     carpeta = settings.MEDIA_ROOT / 'productos'
     carpeta.mkdir(parents=True, exist_ok=True)
 
@@ -43,13 +49,17 @@ def procesar_imagen_a_webp(archivo, nombre_producto, max_dimension=(600, 600), c
     # Guardar en formato WebP optimizado
     img.save(ruta_destino, format='WEBP', quality=calidad, method=6)
 
-    # Eliminar imagen física anterior si existe y no es la misma
+    # Eliminar imagen física anterior solo después de que la transacción de BD haga commit
     if imagen_anterior:
         ruta_anterior = settings.MEDIA_ROOT / imagen_anterior
         if ruta_anterior.is_file() and ruta_anterior != ruta_destino:
-            try:
-                os.remove(ruta_anterior)
-            except OSError:
-                pass
+            def _eliminar_imagen_previa():
+                try:
+                    if ruta_anterior.is_file():
+                        os.remove(ruta_anterior)
+                except OSError:
+                    pass
+
+            transaction.on_commit(_eliminar_imagen_previa)
 
     return f"productos/{nombre_archivo}"

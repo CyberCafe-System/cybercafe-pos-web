@@ -3,9 +3,15 @@
 {% block contenido %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3><i class="bi bi-mouse2 me-2"></i>Inventario de Hardware y Periféricos</h3>
-    <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearComponente">
-        <i class="bi bi-plus-circle me-1"></i> Registrar Componente
-    </button>
+    <div class="d-flex align-items-center gap-2">
+        <button type="button" class="btn btn-outline-secondary rounded-3 px-3 py-2 shadow-xs d-flex align-items-center justify-content-center"
+            onclick="window.location.reload();" title="Recargar página">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+        <button class="btn btn-coffee" data-bs-toggle="modal" data-bs-target="#modalCrearComponente">
+            <i class="bi bi-plus-circle me-1"></i> Registrar Componente
+        </button>
+    </div>
 </div>
 
 <!-- Buscador -->
@@ -90,7 +96,7 @@
                                 data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
                                 data-serie="{{ comp.numero_serie|default:'' }}" data-tipo="{{ comp.tipo }}"
                                 data-estado="{{ comp.estado }}" data-equipo="{{ comp.equipo_id|default:'' }}"
-                                data-observaciones="{{ comp.observaciones|default:'' }}" title="Editar">
+                                data-descripcion="{{ comp.descripcion|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <form method="POST" action="{% url 'desactivar_componente' %}" class="d-inline">
@@ -144,7 +150,23 @@
             document.getElementById('editCompTipo').value = this.dataset.tipo;
             document.getElementById('editCompEstado').value = this.dataset.estado;
             document.getElementById('editCompEquipo').value = this.dataset.equipo;
-            document.getElementById('editCompObservaciones').value = this.dataset.observaciones;
+
+            // Extraer Marca y Modelo desde descripcion ("Marca: X | Modelo: Y")
+            const desc = this.dataset.descripcion || '';
+            let marca = '';
+            let modelo = '';
+            desc.split('|').forEach(function (part) {
+                const p = part.trim();
+                if (p.toLowerCase().startsWith('marca:')) {
+                    marca = p.substring(6).trim();
+                } else if (p.toLowerCase().startsWith('modelo:')) {
+                    modelo = p.substring(7).trim();
+                }
+            });
+            const inputMarca = document.getElementById('editCompMarca');
+            const inputModelo = document.getElementById('editCompModelo');
+            if (inputMarca) inputMarca.value = marca;
+            if (inputModelo) inputModelo.value = modelo;
         });
     });
 </script>

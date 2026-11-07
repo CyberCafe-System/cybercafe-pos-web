@@ -21,9 +21,24 @@ class Venta(models.Model):
         db_constraint=False,
         related_name='ventas',
     )
+    clave_idempotencia = models.CharField(max_length=32, null=True, blank=True)
     fecha = models.DateTimeField()
     iva = models.DecimalField(max_digits=10, decimal_places=2)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    estado = models.CharField(max_length=50, default='PAGADA')
+    efectivo_recibido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    cambio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    anulada_por = models.ForeignKey(
+        Usuario,
+        db_column='anulada_por',
+        on_delete=models.DO_NOTHING,
+        db_constraint=False,
+        null=True,
+        blank=True,
+        related_name='ventas_anuladas',
+    )
+    anulada_en = models.DateTimeField(null=True, blank=True)
+    motivo_anulacion = models.CharField(max_length=255, null=True, blank=True)
 
     class Meta:
         managed = False
@@ -37,6 +52,10 @@ class Venta(models.Model):
     @property
     def total(self):
         return self.subtotal + self.iva
+
+    @property
+    def es_anulada(self):
+        return self.estado == 'ANULADA'
 
 
 class DetalleVenta(models.Model):
