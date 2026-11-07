@@ -28,6 +28,12 @@ DEBUG = env.bool('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'testserver'])
 
+# Orígenes de confianza para peticiones POST (necesario detrás de un proxy HTTPS)
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+
+# Permite que Django detecte HTTPS cuando nginx u otro proxy termina el TLS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -192,12 +198,13 @@ SESSION_COOKIE_HTTPONLY = True
 
 # Seguridad de cookies en producción
 if not DEBUG:
+    # Permite trabajar con HTTP o HTTPS según la configuración del servidor
     SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
     CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
     SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=False)
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_HSTS_SECONDS = env.int('SECURE_HSTS_SECONDS', default=31536000)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool('SECURE_HSTS_INCLUDE_SUBDOMAINS', default=True)
+    SECURE_HSTS_PRELOAD = env.bool('SECURE_HSTS_PRELOAD', default=True)
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # Reglas de negocio financieras (Efectivo)
