@@ -14,7 +14,7 @@ from config.context_processors import obtener_rentas_activas_payload
 from equipos.models import Equipo
 from equipos.views import asegurar_columna_activo_equipo
 from usuarios.decorators import cajero_o_admin_required
-from usuarios.models import Usuario
+from usuarios.models import Usuario, registrar_auditoria
 
 from .models import DetalleRenta, ExtensionRenta, Notificacion, Renta
 from .ticket import generar_factura_renta_pdf
@@ -26,37 +26,44 @@ EFECTIVO_MAXIMO = getattr(settings, 'EFECTIVO_MAXIMO', Decimal('100.00'))
 def verificar_vencimiento_rentas_locales():
     """
     Revisa las rentas en curso y si ya alcanzaron o superaron su hora de vencimiento,
-    las transiciona automáticamente a TIEMPO_TERMINADO y notifica a los asistentes.
+    las transiciona atómicamente a TIEMPO_TERMINADO y notifica a los asistentes.
+    Usa select_for_update(skip_locked=True) para evitar condiciones de carrera con extensiones o cierres en vuelo.
     """
     ahora = timezone.now()
-    rentas_a_vencer = (
-        DetalleRenta.objects.filter(estado='ACTIVA', hora_vencimiento__lte=ahora)
-        .select_related('equipo', 'renta__cliente')
-    )
-    if not rentas_a_vencer.exists():
-        return
+    with transaction.atomic():
+        rentas_a_vencer = list(
+            DetalleRenta.objects.select_for_update(skip_locked=True)
+            .filter(estado='ACTIVA', hora_vencimiento__lte=ahora)
+            .select_related('equipo', 'renta__cliente')
+        )
+        if not rentas_a_vencer:
+            return
 
-    destinatarios = list(Usuario.objects.filter(activo=True, rol_id__in=[1, 3]))
+        destinatarios = list(Usuario.objects.filter(activo=True, rol_id__in=[1, 3]))
 
-    for detalle in rentas_a_vencer:
-        detalle.estado = 'TIEMPO_TERMINADO'
-        detalle.save(update_fields=['estado'])
+        for detalle in rentas_a_vencer:
+            detalle.estado = 'TIEMPO_TERMINADO'
+            detalle.save(update_fields=['estado'])
 
-        eq_nombre = detalle.equipo.nombre if detalle.equipo else f"Equipo #{detalle.equipo_id}"
-        cl_nombre = f"{detalle.renta.cliente.nombre} {detalle.renta.cliente.apellido}" if (detalle.renta and detalle.renta.cliente) else "Cliente"
-
-        # Registrar notificaciones para cada asistente y admin activo
-        for dest in destinatarios:
-            Notificacion.objects.get_or_create(
-                usuario_destino=dest,
-                tipo='TIEMPO_TERMINADO',
-                detalle_renta=detalle,
-                defaults={
-                    'titulo': f'Tiempo terminado: {eq_nombre}',
-                    'mensaje': f'La sesión de {cl_nombre} en {eq_nombre} ha terminado su tiempo contratado.',
-                    'creada_en': ahora,
-                }
+            eq_nombre = detalle.equipo.nombre if detalle.equipo else f"Equipo #{detalle.equipo_id}"
+            cl_nombre = (
+                f"{detalle.renta.cliente.nombre} {detalle.renta.cliente.apellido}"
+                if (detalle.renta and detalle.renta.cliente)
+                else "Cliente"
             )
+
+            # Registrar notificaciones para cada asistente y admin activo
+            for dest in destinatarios:
+                Notificacion.objects.get_or_create(
+                    usuario_destino=dest,
+                    tipo='TIEMPO_TERMINADO',
+                    detalle_renta=detalle,
+                    defaults={
+                        'titulo': f'Tiempo terminado: {eq_nombre}',
+                        'mensaje': f'La sesión de {cl_nombre} en {eq_nombre} ha terminado su tiempo contratado.',
+                        'creada_en': ahora,
+                    },
+                )
 
 
 def crear_notificaciones_revision(detalle):
@@ -167,15 +174,18 @@ def renta_list(request):
 def renta_extender(request):
     if request.method == 'POST':
         detalle_id = request.POST.get('detalle_renta_id')
-        token_ext = (request.POST.get('ext_token') or uuid.uuid4().hex).strip()
+        token_ext = (request.POST.get('ext_token') or '').strip()
 
         try:
+            if not token_ext:
+                raise ValueError("Token de operación inválido o expirado. Por favor, vuelva a abrir el formulario de extensión.")
+
             minutos_extra = int(request.POST.get('minutos_extra', 0))
             if minutos_extra < 1 or minutos_extra > 480:
                 raise ValueError("El tiempo adicional debe ser de entre 1 y 480 minutos.")
 
-            # Idempotencia por token persistido
-            ext_existente = ExtensionRenta.objects.filter(clave_idempotencia=token_ext).first()
+            # Idempotencia rápida previa por token persistido
+            ext_existente = ExtensionRenta.objects.filter(clave_idempotencia=token_ext).select_related('detalle_renta__renta').first()
             if ext_existente:
                 messages.warning(request, 'Esta extensión ya fue procesada anteriormente.')
                 return _respuesta_factura_renta(ext_existente.detalle_renta.renta)
@@ -186,13 +196,20 @@ def renta_extender(request):
                 detalle_prev = get_object_or_404(
                     DetalleRenta, pk=detalle_id, estado__in=['ACTIVA', 'TIEMPO_TERMINADO']
                 )
-                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta -> 3. Renta
                 equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
                     DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                     estado__in=['ACTIVA', 'TIEMPO_TERMINADO'],
                 )
+                renta = get_object_or_404(Renta.objects.select_for_update(), pk=detalle.renta_id)
+
+                # Re-verificar idempotencia dentro de la transacción tras adquirir locks
+                ext_concurrente = ExtensionRenta.objects.filter(clave_idempotencia=token_ext).first()
+                if ext_concurrente:
+                    messages.warning(request, 'Esta extensión ya fue procesada anteriormente.')
+                    return _respuesta_factura_renta(renta)
 
                 tarifa = Decimal(str(equipo.tarifa_por_hora))
                 horas_extra = Decimal(minutos_extra) / Decimal('60')
@@ -225,11 +242,13 @@ def renta_extender(request):
                     else:
                         detalle.hora_vencimiento = ahora + timezone.timedelta(minutes=minutos_extra)
 
+                tiempo_previo = (detalle.tiempo_de_renta or 0) + (detalle.tiempo_agregado or 0)
+                total_previo = str(renta.total)
+
                 detalle.tiempo_agregado = (detalle.tiempo_agregado or 0) + minutos_extra
                 detalle.subtotal = (detalle.subtotal + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 detalle.save(update_fields=['tiempo_agregado', 'subtotal', 'hora_vencimiento', 'estado'])
 
-                renta = detalle.renta
                 renta.total = (renta.total + costo_extra).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 renta.efectivo_recibido = ((renta.efectivo_recibido or Decimal('0.00')) + efectivo_recibido).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
                 renta.cambio = cambio_extra
@@ -245,6 +264,21 @@ def renta_extender(request):
                     cambio=cambio_extra,
                     clave_idempotencia=token_ext,
                     fecha=ahora,
+                )
+
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='EXTENDER_RENTA',
+                    entidad='Renta',
+                    entidad_id=renta.renta_id,
+                    valor_previo={'total': total_previo, 'minutos_totales': tiempo_previo},
+                    valor_nuevo={
+                        'nombre': equipo.nombre,
+                        'total': str(renta.total),
+                        'minutos_extra': minutos_extra,
+                        'costo_extra': str(costo_extra),
+                    },
+                    ip=request.META.get('REMOTE_ADDR'),
                 )
 
             messages.success(
@@ -271,7 +305,7 @@ def renta_create(request):
         tiempo_str = request.POST.get('tiempo_de_renta', '60')
         token_enviado = (request.POST.get('renta_token') or '').strip()
 
-        # Idempotencia
+        # Idempotencia rápida previa
         if token_enviado:
             renta_existente = Renta.objects.filter(clave_idempotencia=token_enviado).first()
             if renta_existente:
@@ -293,6 +327,13 @@ def renta_create(request):
                 equipo = get_object_or_404(
                     Equipo.objects.select_for_update(), pk=equipo_id
                 )
+
+                # Re-verificar idempotencia dentro de la transacción tras adquirir el lock del equipo
+                if token_enviado:
+                    renta_concurrente = Renta.objects.select_for_update().filter(clave_idempotencia=token_enviado).first()
+                    if renta_concurrente:
+                        messages.warning(request, f'La renta #{renta_concurrente.renta_id} ya fue registrada.')
+                        return _respuesta_factura_renta(renta_concurrente)
 
                 es_rentable, motivo = equipo.evaluar_rentabilidad()
                 if not es_rentable:
@@ -348,6 +389,19 @@ def renta_create(request):
                     estado='ACTIVA',
                 )
 
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='CREAR_RENTA',
+                    entidad='Renta',
+                    entidad_id=renta.renta_id,
+                    valor_nuevo={
+                        'nombre': equipo.nombre,
+                        'tiempo_de_renta': tiempo,
+                        'total': str(subtotal),
+                    },
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
+
                 request.session['renta_token'] = uuid.uuid4().hex
 
             # Envío de factura por correo si se solicitó
@@ -394,13 +448,16 @@ def renta_enviar_revision(request):
         detalle_id = request.POST.get('detalle_renta_id')
         try:
             with transaction.atomic():
+                detalle_prev = get_object_or_404(DetalleRenta, pk=detalle_id)
+                # Orden estricto de locks: 1. Equipo -> 2. DetalleRenta
+                equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=detalle_prev.equipo_id)
                 detalle = get_object_or_404(
                     DetalleRenta.objects.select_for_update().select_related('equipo', 'renta'),
                     pk=detalle_id,
                 )
                 if detalle.estado not in ('ACTIVA', 'TIEMPO_TERMINADO'):
                     raise ValueError(
-                        f"La sesión de {detalle.equipo.nombre} no está activa ni en tiempo terminado "
+                        f"La sesión de {equipo.nombre} no está activa ni en tiempo terminado "
                         f"(estado actual: {detalle.get_estado_display()})."
                     )
                 detalle.estado = 'PENDIENTE_REVISION'
@@ -437,11 +494,12 @@ def renta_finalizar(request):
                     DetalleRenta.objects.select_for_update().select_related('renta'),
                     pk=detalle_id,
                 )
+                renta = get_object_or_404(Renta.objects.select_for_update(), pk=detalle.renta_id)
 
-                if detalle.estado == 'FINALIZADA' and detalle.renta.estado_de_pago == 'PAGADO':
-                    messages.info(request, f'La renta #{detalle.renta.renta_id} ya fue finalizada anteriormente.')
-                    request.session['ultima_renta_id'] = detalle.renta.renta_id
-                    return _respuesta_factura_renta(detalle.renta)
+                if detalle.estado == 'FINALIZADA' and renta.estado_de_pago == 'PAGADO':
+                    messages.info(request, f'La renta #{renta.renta_id} ya fue finalizada anteriormente.')
+                    request.session['ultima_renta_id'] = renta.renta_id
+                    return _respuesta_factura_renta(renta)
 
                 if detalle.estado in ('ACTIVA', 'TIEMPO_TERMINADO'):
                     detalle.estado = 'PENDIENTE_REVISION'
@@ -449,7 +507,6 @@ def renta_finalizar(request):
                     detalle.save(update_fields=['estado', 'hora_fin'])
                     crear_notificaciones_revision(detalle)
 
-                renta = detalle.renta
                 renta.estado_de_pago = 'PAGADO'
                 renta.save(update_fields=['estado_de_pago'])
 
