@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from usuarios.decorators import admin_required, cajero_o_admin_required
+from usuarios.models import registrar_auditoria
 from .forms import ClienteForm
 from .models import Cliente
 
@@ -110,6 +111,14 @@ def cliente_create(request):
         if form.is_valid():
             try:
                 cliente = form.save()
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='CREAR_CLIENTE',
+                    entidad='Cliente',
+                    entidad_id=cliente.cliente_id,
+                    valor_nuevo={'nombre': f"{cliente.nombre} {cliente.apellido}", 'dui': cliente.dui},
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
                 msg = f'Cliente {cliente.nombre} {cliente.apellido} registrado exitosamente.'
                 messages.success(request, msg)
                 if is_ajax:
@@ -130,7 +139,7 @@ def cliente_create(request):
                 logger.exception('Error al registrar el cliente')
                 error_msg = 'Ocurrió un error al registrar el cliente. Intenta nuevamente.'
                 if is_ajax:
-                    return JsonResponse({'success': False, 'errors': {'__all__': [error_msg]}}, status=400)
+                    return JsonResponse({'success': False, 'errors': {'__all__': [error_msg]}}, status=500)
                 messages.error(request, error_msg)
         else:
             if is_ajax:
@@ -153,10 +162,20 @@ def cliente_edit(request):
     )
     if request.method == 'POST':
         cliente = get_object_or_404(Cliente, pk=request.POST.get('cliente_id'))
+        valor_prev = {'nombre': f"{cliente.nombre} {cliente.apellido}", 'dui': cliente.dui, 'correo': cliente.correo}
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             try:
                 cliente = form.save()
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='MODIFICAR_CLIENTE',
+                    entidad='Cliente',
+                    entidad_id=cliente.cliente_id,
+                    valor_previo=valor_prev,
+                    valor_nuevo={'nombre': f"{cliente.nombre} {cliente.apellido}", 'dui': cliente.dui, 'correo': cliente.correo},
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
                 msg = f'Cliente {cliente.nombre} {cliente.apellido} actualizado correctamente.'
                 messages.success(request, msg)
                 if is_ajax:
@@ -177,7 +196,7 @@ def cliente_edit(request):
                 logger.exception('Error al actualizar el cliente')
                 error_msg = 'Ocurrió un error al actualizar el cliente. Intenta nuevamente.'
                 if is_ajax:
-                    return JsonResponse({'success': False, 'errors': {'__all__': [error_msg]}}, status=400)
+                    return JsonResponse({'success': False, 'errors': {'__all__': [error_msg]}}, status=500)
                 messages.error(request, error_msg)
         else:
             if is_ajax:
@@ -196,8 +215,18 @@ def cliente_toggle(request):
     """Baja lógica y reactivación de clientes por parte del Administrador."""
     if request.method == 'POST':
         cliente = get_object_or_404(Cliente, pk=request.POST.get('cliente_id'))
+        activo_prev = cliente.activo
         cliente.activo = not cliente.activo
         cliente.save(update_fields=['activo'])
+        registrar_auditoria(
+            usuario=request.user,
+            accion='ACTIVAR_CLIENTE' if cliente.activo else 'DESACTIVAR_CLIENTE',
+            entidad='Cliente',
+            entidad_id=cliente.cliente_id,
+            valor_previo={'activo': activo_prev},
+            valor_nuevo={'activo': cliente.activo, 'nombre': f"{cliente.nombre} {cliente.apellido}"},
+            ip=request.META.get('REMOTE_ADDR'),
+        )
         estado = "reactivado" if cliente.activo else "desactivado"
         messages.success(request, f'Cliente {cliente.nombre} {cliente.apellido} {estado} correctamente.')
     return redirect('clientes')

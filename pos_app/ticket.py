@@ -1,5 +1,6 @@
 import os
 from io import BytesIO
+from xml.sax.saxutils import escape as xml_escape
 
 from django.utils import timezone
 from reportlab.lib import colors
@@ -111,14 +112,16 @@ def generar_factura_pdf(venta):
 
     # INFORMACIÓN DE LA FACTURA
     fecha = timezone.localtime(venta.fecha).strftime('%d/%m/%Y %H:%M')
+    cliente_txt = xml_escape(str(venta.cliente) if venta.cliente else 'Cliente General')
+    cajero_txt = xml_escape(venta.usuario.nombre if venta.usuario else 'Sistema')
     info = [
         [
             Paragraph('FACTURA N°', etiqueta), Paragraph(f'#{venta.venta_id:06d}', seccion),
             Paragraph('FECHA', etiqueta), Paragraph(fecha, seccion),
         ],
         [
-            Paragraph('CLIENTE', etiqueta), Paragraph(str(venta.cliente), seccion),
-            Paragraph('ATENDIDO POR', etiqueta), Paragraph(venta.usuario.nombre if venta.usuario else 'Sistema', seccion),
+            Paragraph('CLIENTE', etiqueta), Paragraph(cliente_txt, seccion),
+            Paragraph('ATENDIDO POR', etiqueta), Paragraph(cajero_txt, seccion),
         ],
     ]
 

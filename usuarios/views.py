@@ -4,6 +4,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import admin_required
@@ -107,32 +109,47 @@ def usuario_edit(request):
 @admin_required
 def usuario_toggle(request):
     if request.method == 'POST':
-        usuario = get_object_or_404(Usuario, pk=request.POST.get('usuario_id'))
-        # Prevenir auto-deshabilitación
-        if usuario.usuario_id == request.user.usuario_id:
-            messages.error(request, 'No puedes desactivar tu propia cuenta mientras estás en sesión.')
-            return redirect('usuarios')
+        try:
+            with transaction.atomic():
+                usuario = get_object_or_404(
+                    Usuario.objects.select_for_update().select_related('rol'),
+                    pk=request.POST.get('usuario_id'),
+                )
+                # Prevenir auto-deshabilitación
+                if usuario.usuario_id == request.user.usuario_id:
+                    messages.error(request, 'No puedes desactivar tu propia cuenta mientras estás en sesión.')
+                    return redirect('usuarios')
 
-        # Garantizar al menos un administrador activo en el sistema
-        if usuario.es_admin and usuario.activo:
-            otros_admins = Usuario.objects.filter(activo=True, rol_id=1).exclude(pk=usuario.pk).count()
-            if otros_admins == 0:
-                messages.error(request, 'No puedes desactivar al único Administrador activo del sistema.')
-                return redirect('usuarios')
+                # Garantizar al menos un administrador activo en el sistema con bloqueo pesimista
+                if usuario.es_admin and usuario.activo:
+                    admins_activos = list(
+                        Usuario.objects.select_for_update()
+                        .filter(activo=True)
+                        .filter(Q(rol_id=1) | Q(rol__nombre__iexact='admin') | Q(rol__nombre__iexact='administrador'))
+                        .exclude(pk=usuario.pk)
+                    )
+                    if not admins_activos:
+                        messages.error(request, 'No puedes desactivar al único Administrador activo del sistema.')
+                        return redirect('usuarios')
 
-        usuario.activo = not usuario.activo
-        usuario.save(update_fields=['activo'])
-        estado = 'activado' if usuario.activo else 'desactivado'
+                estado_prev = usuario.activo
+                usuario.activo = not usuario.activo
+                usuario.save(update_fields=['activo'])
+                estado = 'activado' if usuario.activo else 'desactivado'
 
-        registrar_auditoria(
-            usuario=request.user,
-            accion='TOGGLE_USUARIO',
-            entidad='Usuario',
-            entidad_id=usuario.usuario_id,
-            valor_nuevo={'activo': usuario.activo},
-            ip=request.META.get('REMOTE_ADDR'),
-        )
-        messages.success(request, f'Usuario {usuario.username} {estado} correctamente.')
+                registrar_auditoria(
+                    usuario=request.user,
+                    accion='ACTIVAR_USUARIO' if usuario.activo else 'DESACTIVAR_USUARIO',
+                    entidad='Usuario',
+                    entidad_id=usuario.usuario_id,
+                    valor_previo={'activo': estado_prev},
+                    valor_nuevo={'activo': usuario.activo, 'username': usuario.username},
+                    ip=request.META.get('REMOTE_ADDR'),
+                )
+            messages.success(request, f'Usuario {usuario.username} {estado} correctamente.')
+        except Exception:
+            logger.exception('Error al cambiar estado del usuario')
+            messages.error(request, 'Ocurrió un error al actualizar el estado del usuario.')
     return redirect('usuarios')
 
 

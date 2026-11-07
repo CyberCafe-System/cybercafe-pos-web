@@ -14,7 +14,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Sum
+from django.db.models import DecimalField, F, Sum
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -81,9 +82,13 @@ def inicio(request):
     ventas_hoy_qs = Venta.objects.filter(fecha__range=(inicio_hoy, fin_hoy)).exclude(estado='ANULADA')
     rentas_hoy_qs = Renta.objects.filter(fecha__range=(inicio_hoy, fin_hoy))
 
-    # Ingresos totales de hoy (POS sin anuladas + Rentas)
-    subtotal_ventas = sum((v.subtotal + v.iva) for v in ventas_hoy_qs) or Decimal('0.00')
-    subtotal_rentas = sum(r.total for r in rentas_hoy_qs) or Decimal('0.00')
+    # Ingresos totales de hoy calculados mediante agregación SQL (POS sin anuladas + Rentas)
+    subtotal_ventas = ventas_hoy_qs.aggregate(
+        total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00'))
+    )['total'] or Decimal('0.00')
+    subtotal_rentas = rentas_hoy_qs.aggregate(
+        total=Coalesce(Sum('total'), Decimal('0.00'))
+    )['total'] or Decimal('0.00')
     ingresos_hoy = (subtotal_ventas + subtotal_rentas).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
 
     # Equipos en uso o con tiempo terminado
@@ -164,13 +169,29 @@ def inicio(request):
     chart_ventas_data = []
     chart_rentas_data = []
 
+    tz_actual = timezone.get_current_timezone()
+    ventas_por_dia = dict(
+        Venta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
+        .exclude(estado='ANULADA')
+        .annotate(dia=TruncDate('fecha', tzinfo=tz_actual))
+        .values('dia')
+        .annotate(total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00')))
+        .values_list('dia', 'total')
+    )
+    rentas_por_dia = dict(
+        Renta.objects.filter(fecha__range=(inicio_semana_dt, fin_semana_dt))
+        .annotate(dia=TruncDate('fecha', tzinfo=tz_actual))
+        .values('dia')
+        .annotate(total=Coalesce(Sum('total'), Decimal('0.00')))
+        .values_list('dia', 'total')
+    )
+
     for i in range(7):
         dia = inicio_semana + timezone.timedelta(days=i)
         chart_dias_labels.append(dias_semana_es[i])
 
-        inicio_dia_dt, fin_dia_dt = _rango_fecha_local(dia)
-        v_sub = sum((v.subtotal + v.iva) for v in Venta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt)).exclude(estado='ANULADA')) or Decimal('0.00')
-        r_sub = sum(r.total for r in Renta.objects.filter(fecha__range=(inicio_dia_dt, fin_dia_dt))) or Decimal('0.00')
+        v_sub = ventas_por_dia.get(dia, Decimal('0.00')) or Decimal('0.00')
+        r_sub = rentas_por_dia.get(dia, Decimal('0.00')) or Decimal('0.00')
 
         chart_ventas_data.append(float(v_sub))
         chart_rentas_data.append(float(r_sub))
@@ -640,23 +661,30 @@ def anular_venta(request, venta_id):
             venta.motivo_anulacion = motivo
             venta.save(update_fields=['estado', 'anulada_por', 'anulada_en', 'motivo_anulacion'])
 
-            # Restaurar stock de cada detalle
-            for detalle in venta.detalles.select_related('producto'):
-                if detalle.producto_id:
-                    prod = Producto.objects.select_for_update().get(pk=detalle.producto_id)
-                    prod.cantidad += detalle.cantidad
-                    prod.version += 1
-                    prod.save(update_fields=['cantidad', 'version'])
+            # Restaurar stock de cada detalle bloqueando productos en orden determinista por producto_id (anti-deadlock)
+            detalles_raw = list(venta.detalles.select_related('producto'))
+            detalles_con_prod = [d for d in detalles_raw if getattr(d, 'producto_id', None)]
+            detalles_con_prod.sort(key=lambda d: d.producto_id)
+            ids_prod = sorted({d.producto_id for d in detalles_con_prod})
 
-                    MovimientoInventario.objects.create(
-                        producto=prod,
-                        usuario=request.user,
-                        tipo='ANULACION',
-                        delta=detalle.cantidad,
-                        stock_resultante=prod.cantidad,
-                        motivo=f'Anulación Factura #{venta.venta_id}: {motivo}',
-                        referencia_id=venta.venta_id,
-                    )
+            productos_lock_qs = Producto.objects.select_for_update().filter(producto_id__in=ids_prod).order_by('producto_id')
+            productos_lock = {p.producto_id: p for p in productos_lock_qs}
+
+            for detalle in detalles_con_prod:
+                prod = productos_lock.get(detalle.producto_id) or Producto.objects.select_for_update().get(pk=detalle.producto_id)
+                prod.cantidad += detalle.cantidad
+                prod.version += 1
+                prod.save(update_fields=['cantidad', 'version'])
+
+                MovimientoInventario.objects.create(
+                    producto=prod,
+                    usuario=request.user,
+                    tipo='ANULACION',
+                    delta=detalle.cantidad,
+                    stock_resultante=prod.cantidad,
+                    motivo=f'Anulación Factura #{venta.venta_id}: {motivo}',
+                    referencia_id=venta.venta_id,
+                )
 
             registrar_auditoria(
                 usuario=request.user,
@@ -694,6 +722,14 @@ def ticket_pdf(request, venta_id=None):
     return _respuesta_pdf(venta)
 
 
+def _sanitizar_celda_planilla(valor):
+    """Previene inyección de fórmulas (CSV/Excel Macro Injection) al abrir reportes en hojas de cálculo."""
+    texto = str(valor if valor is not None else '')
+    if texto.startswith(('=', '+', '-', '@', '\t', '\r')):
+        return f"'{texto}"
+    return texto
+
+
 def _construir_transacciones_reporte(request):
     """
     Construye de forma centralizada la lista de transacciones y totales para la vista
@@ -720,6 +756,11 @@ def _construir_transacciones_reporte(request):
     total_rentas = Decimal('0.00')
 
     if tipo_filtro in ['todos', 'ventas']:
+        agregado_v = ventas_qs.exclude(estado='ANULADA').aggregate(
+            total=Coalesce(Sum(F('subtotal') + F('iva'), output_field=DecimalField()), Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+        total_ventas = agregado_v.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
         for v in ventas_qs:
             items_nombres = []
             for d in v.detalles.all():
@@ -727,10 +768,8 @@ def _construir_transacciones_reporte(request):
                 items_nombres.append(f"{d.cantidad}x {prod_nombre}")
             articulos = ", ".join(items_nombres) if items_nombres else "Venta de mostrador"
             monto_v = (v.subtotal + v.iva).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            
+
             es_anulada = (v.estado == 'ANULADA')
-            if not es_anulada:
-                total_ventas += monto_v
 
             fecha_local = timezone.localtime(v.fecha) if timezone.is_aware(v.fecha) else v.fecha
             es_mismo_dia = (fecha_local.date() == timezone.localdate())
@@ -755,6 +794,11 @@ def _construir_transacciones_reporte(request):
             })
 
     if tipo_filtro in ['todos', 'rentas']:
+        agregado_r = rentas_qs.aggregate(
+            total=Coalesce(Sum('total'), Decimal('0.00'))
+        )['total'] or Decimal('0.00')
+        total_rentas = agregado_r.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+
         for r in rentas_qs:
             detalles = list(r.detalles.all())
             if detalles:
@@ -767,7 +811,6 @@ def _construir_transacciones_reporte(request):
             else:
                 concepto = "Renta de Equipo"
             monto_r = r.total.quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
-            total_rentas += monto_r
             transacciones.append({
                 'ticket': f"R-{r.renta_id}",
                 'fecha': r.fecha,
@@ -853,8 +896,14 @@ def reportes_exportar_csv(request):
     writer.writerow(['Ticket', 'Tipo de Ingreso', 'Estado', 'Fecha y Hora', 'Cajero / Atendido Por', 'Cliente', 'Detalle / Concepto', 'Total'])
     for f in transacciones:
         writer.writerow([
-            f['ticket'], f['tipo'], f.get('estado', 'Pagada'), f['fecha_str'],
-            f['usuario'], f['cliente'], f['concepto'], f"${f['total']}"
+            _sanitizar_celda_planilla(f['ticket']),
+            _sanitizar_celda_planilla(f['tipo']),
+            _sanitizar_celda_planilla(f.get('estado', 'Pagada')),
+            _sanitizar_celda_planilla(f['fecha_str']),
+            _sanitizar_celda_planilla(f['usuario']),
+            _sanitizar_celda_planilla(f['cliente']),
+            _sanitizar_celda_planilla(f['concepto']),
+            f"${f['total']}",
         ])
 
     return response
@@ -884,13 +933,13 @@ def reportes_exportar_excel(request):
         cell.alignment = header_alignment
 
     for row_idx, f in enumerate(transacciones, start=2):
-        ws.cell(row=row_idx, column=1, value=f['ticket'])
-        ws.cell(row=row_idx, column=2, value=f['tipo'])
-        ws.cell(row=row_idx, column=3, value=f.get('estado', 'Pagada'))
-        ws.cell(row=row_idx, column=4, value=f['fecha_str'])
-        ws.cell(row=row_idx, column=5, value=f['usuario'])
-        ws.cell(row=row_idx, column=6, value=f['cliente'])
-        ws.cell(row=row_idx, column=7, value=f['concepto'])
+        ws.cell(row=row_idx, column=1, value=_sanitizar_celda_planilla(f['ticket']))
+        ws.cell(row=row_idx, column=2, value=_sanitizar_celda_planilla(f['tipo']))
+        ws.cell(row=row_idx, column=3, value=_sanitizar_celda_planilla(f.get('estado', 'Pagada')))
+        ws.cell(row=row_idx, column=4, value=_sanitizar_celda_planilla(f['fecha_str']))
+        ws.cell(row=row_idx, column=5, value=_sanitizar_celda_planilla(f['usuario']))
+        ws.cell(row=row_idx, column=6, value=_sanitizar_celda_planilla(f['cliente']))
+        ws.cell(row=row_idx, column=7, value=_sanitizar_celda_planilla(f['concepto']))
         total_cell = ws.cell(row=row_idx, column=8, value=float(f['total']))
         total_cell.number_format = '$#,##0.00'
 

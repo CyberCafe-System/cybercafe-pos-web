@@ -25,7 +25,7 @@ class Venta(models.Model):
     fecha = models.DateTimeField()
     iva = models.DecimalField(max_digits=10, decimal_places=2)
     subtotal = models.DecimalField(max_digits=10, decimal_places=2)
-    estado = models.CharField(max_length=50, default='COMPLETADA')
+    estado = models.CharField(max_length=50, default='PAGADA')
     efectivo_recibido = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     cambio = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     anulada_por = models.ForeignKey(

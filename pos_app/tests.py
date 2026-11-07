@@ -2,21 +2,25 @@ import json
 from decimal import Decimal
 from unittest.mock import Mock, patch
 
+from django.contrib.messages import get_messages
 from django.contrib.messages.storage.fallback import FallbackStorage
 from django.test import SimpleTestCase
 from django.test.client import RequestFactory
 from django.urls import resolve, reverse
+from django.utils import timezone
 
 from clientes.models import Cliente
+from componentes.models import Componente
 from config.context_processors import contexto_global_sistema
 from equipos.forms import EquipoForm
 from equipos.models import Equipo
-from equipos.views import equipo_delete
+from equipos.views import equipo_create, equipo_toggle
 from inventario.models import Producto
-from pos_app.views import procesar_venta
-from rentas.views import api_rentas_activas
-from revisiones.models import RevisionEquipo
-from revisiones.views import editar_revision
+from pos_app.ticket import generar_factura_pdf
+from pos_app.views import _sanitizar_celda_planilla, procesar_venta
+from rentas.views import api_rentas_activas, renta_extender
+from revisiones.models import RevisionComponente, RevisionEquipo
+from revisiones.views import editar_revision, reiniciar_revision
 
 
 class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
@@ -27,6 +31,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.user.es_cajero = True
         self.user.es_admin = True
         self.user.es_asistente = False
+        self.user.username = 'admin_qa'
 
     def _preparar_request(self, path, post_data, session_data=None):
         request = self.factory.post(path, post_data)
@@ -43,10 +48,13 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/pos/')
 
+    @patch('pos_app.views.Venta.objects')
     @patch('pos_app.views.get_object_or_404')
     @patch('pos_app.views.Producto.objects')
     @patch('pos_app.views.transaction.atomic')
-    def test_procesar_venta_rechaza_por_stock_insuficiente(self, mock_atomic, mock_prod_objects, mock_get_cliente):
+    def test_procesar_venta_rechaza_por_stock_insuficiente(self, mock_atomic, mock_prod_objects, mock_get_cliente, mock_venta_objects):
+        mock_venta_objects.filter.return_value.first.return_value = None
+        mock_venta_objects.select_for_update.return_value.filter.return_value.first.return_value = None
         mock_cliente = Mock(spec=Cliente, pk=1, correo=None)
         mock_get_cliente.return_value = mock_cliente
 
@@ -65,7 +73,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         session = {'pos_token': 'token-valido', 'carrito': {'10': 2}}
         request = self._preparar_request(
             '/procesar_venta/',
-            {'cliente_id': 1, 'pos_token': 'token-valido'},
+            {'cliente_id': 1, 'pos_token': 'token-valido', 'efectivo_recibido': '10.00'},
             session_data=session,
         )
 
@@ -73,11 +81,17 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/pos/')
         self.assertEqual(request.session['carrito'], {'10': 2})
+        mock_prod_objects.select_for_update.assert_called_once()
+        mensajes = [m.message for m in get_messages(request)]
+        self.assertTrue(any('Inventario insuficiente' in msg for msg in mensajes))
 
+    @patch('pos_app.views.Venta.objects')
     @patch('pos_app.views.get_object_or_404')
     @patch('pos_app.views.Producto.objects')
     @patch('pos_app.views.transaction.atomic')
-    def test_procesar_venta_rechaza_producto_desactivado(self, mock_atomic, mock_prod_objects, mock_get_cliente):
+    def test_procesar_venta_rechaza_producto_desactivado(self, mock_atomic, mock_prod_objects, mock_get_cliente, mock_venta_objects):
+        mock_venta_objects.filter.return_value.first.return_value = None
+        mock_venta_objects.select_for_update.return_value.filter.return_value.first.return_value = None
         mock_cliente = Mock(spec=Cliente, pk=1, correo=None)
         mock_get_cliente.return_value = mock_cliente
 
@@ -96,7 +110,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         session = {'pos_token': 'token-valido', 'carrito': {'12': 1}}
         request = self._preparar_request(
             '/procesar_venta/',
-            {'cliente_id': 1, 'pos_token': 'token-valido'},
+            {'cliente_id': 1, 'pos_token': 'token-valido', 'efectivo_recibido': '5.00'},
             session_data=session,
         )
 
@@ -104,11 +118,17 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/pos/')
         self.assertEqual(request.session['carrito'], {'12': 1})
+        mock_prod_objects.select_for_update.assert_called_once()
+        mensajes = [m.message for m in get_messages(request)]
+        self.assertTrue(any('ha sido desactivado' in msg for msg in mensajes))
 
+    @patch('pos_app.views.Venta.objects')
     @patch('pos_app.views.get_object_or_404')
     @patch('pos_app.views.Producto.objects')
     @patch('pos_app.views.transaction.atomic')
-    def test_procesar_venta_rechaza_categoria_desactivada(self, mock_atomic, mock_prod_objects, mock_get_cliente):
+    def test_procesar_venta_rechaza_categoria_desactivada(self, mock_atomic, mock_prod_objects, mock_get_cliente, mock_venta_objects):
+        mock_venta_objects.filter.return_value.first.return_value = None
+        mock_venta_objects.select_for_update.return_value.filter.return_value.first.return_value = None
         mock_cliente = Mock(spec=Cliente, pk=1, correo=None)
         mock_get_cliente.return_value = mock_cliente
 
@@ -127,7 +147,7 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         session = {'pos_token': 'token-valido', 'carrito': {'15': 1}}
         request = self._preparar_request(
             '/procesar_venta/',
-            {'cliente_id': 1, 'pos_token': 'token-valido'},
+            {'cliente_id': 1, 'pos_token': 'token-valido', 'efectivo_recibido': '5.00'},
             session_data=session,
         )
 
@@ -135,28 +155,34 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/pos/')
         self.assertEqual(request.session['carrito'], {'15': 1})
+        mock_prod_objects.select_for_update.assert_called_once()
+        mensajes = [m.message for m in get_messages(request)]
+        self.assertTrue(any('ha sido desactivado' in msg for msg in mensajes))
 
+    @patch('equipos.views.asegurar_columna_activo_equipo')
+    @patch('equipos.views.transaction.atomic')
     @patch('equipos.views.DetalleRenta.objects')
     @patch('equipos.views.get_object_or_404')
-    def test_equipo_delete_bloqueado_con_historial_rentas(self, mock_get_equipo, mock_dr_objects):
-        equipo_mock = Mock(spec=Equipo, equipo_id=3, nombre='PC-Gamer-03')
+    def test_equipo_toggle_bloqueado_con_renta_activa(self, mock_get_equipo, mock_dr_objects, mock_atomic, mock_asegurar):
+        equipo_mock = Mock(spec=Equipo, equipo_id=3, nombre='PC-Gamer-03', activo=True)
         mock_get_equipo.return_value = equipo_mock
         mock_dr_objects.filter.return_value.exists.return_value = True
 
-        request = self._preparar_request('/eliminar_equipo/', {'equipo_id': 3})
-        response = equipo_delete(request)
+        request = self._preparar_request('/desactivar_equipo/', {'equipo_id': 3})
+        response = equipo_toggle(request)
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, '/equipos/')
-        equipo_mock.delete.assert_not_called()
+        equipo_mock.save.assert_not_called()
 
+    @patch('revisiones.views.registrar_auditoria')
     @patch('revisiones.views.transaction.atomic')
     @patch('revisiones.views.get_object_or_404')
-    def test_ruta_editar_revision_registrada_y_valida_estado(self, mock_get_obj, mock_atomic):
+    def test_ruta_editar_revision_registrada_y_valida_estado(self, mock_get_obj, mock_atomic, mock_aud):
         url = reverse('editar_revision', kwargs={'revision_id': 5})
         self.assertEqual(url, '/revisiones/editar/5/')
 
-        rev_mock = Mock(spec=RevisionEquipo, revision_equipo_id=5)
+        rev_mock = Mock(spec=RevisionEquipo, revision_equipo_id=5, inspeccion_pasada=True, observaciones='OK')
         rev_mock.detalle_renta = Mock(equipo_id=7)
         eq_mock = Mock(spec=Equipo, equipo_id=7, estado='DISPONIBLE')
         mock_get_obj.side_effect = [rev_mock, eq_mock]
@@ -264,13 +290,13 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
     @patch('pos_app.views.transaction.atomic')
     def test_anular_venta_por_admin_restituye_stock(self, mock_atomic, mock_venta_objs, mock_prod_objs, mock_mov_create, mock_aud):
         from pos_app.views import anular_venta
-        venta_mock = Mock(venta_id=88, estado='PAGADA')
+        venta_mock = Mock(venta_id=88, estado='PAGADA', fecha=timezone.now())
         det_mock = Mock(producto_id=5, cantidad=2)
         venta_mock.detalles.select_related.return_value = [det_mock]
         mock_venta_objs.select_for_update.return_value.get.return_value = venta_mock
 
         prod_mock = Mock(producto_id=5, cantidad=10, version=1)
-        mock_prod_objs.select_for_update.return_value.get.return_value = prod_mock
+        mock_prod_objs.select_for_update.return_value.filter.return_value.order_by.return_value = [prod_mock]
 
         req = self._preparar_request('/pos/anular/88/', {'motivo': 'Cliente devolvió el producto por defecto'})
         res = anular_venta(req, venta_id=88)
@@ -291,3 +317,119 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         eq.estado = 'DANIOS_MENORES'
         self.assertFalse(eq.es_rentable)
         self.assertFalse(eq.evaluar_rentabilidad()[0])
+
+    def test_renta_extender_rechaza_token_vacio(self):
+        req = self._preparar_request(
+            '/extender_renta/',
+            {
+                'detalle_renta_id': 10,
+                'ext_token': '',
+                'minutos_extra': '30',
+                'efectivo_recibido': '5.00',
+            },
+        )
+        res = renta_extender(req)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res.url, '/rentas/')
+        mensajes = [m.message for m in get_messages(req)]
+        self.assertTrue(any('Token de operación inválido' in msg for msg in mensajes))
+
+    @patch('equipos.views.Componente.objects')
+    @patch('equipos.views.transaction.atomic')
+    @patch('equipos.forms.Equipo.objects')
+    def test_equipo_create_bloquea_robo_de_componentes_ajenos(self, mock_eq_objs, mock_atomic, mock_comp_objs):
+        mock_eq_objs.filter.return_value.exists.return_value = False
+        comp_ocupado = Mock(spec=Componente, componente_id=7, nombre='Mouse Gamer', equipo_id=99, activo=True, estado='DISPONIBLE')
+        mock_comp_objs.select_for_update.return_value.filter.return_value = [comp_ocupado]
+
+        req = self._preparar_request(
+            '/crear_equipo/',
+            {
+                'nombre': 'PC-Nueva-10',
+                'tipo': 'PC',
+                'tarifa_por_hora': '1.50',
+                'estado': 'DISPONIBLE',
+                'componentes': ['7'],
+            },
+        )
+        res = equipo_create(req)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res.url, '/equipos/')
+        mensajes = [m.message for m in get_messages(req)]
+        self.assertTrue(any('ya están asignados a otro equipo' in msg for msg in mensajes))
+
+    @patch('revisiones.views.registrar_auditoria')
+    @patch('componentes.models.Componente.objects')
+    @patch('revisiones.views.RevisionComponente.objects')
+    @patch('revisiones.views.DetalleRenta.objects')
+    @patch('revisiones.views.get_object_or_404')
+    @patch('revisiones.views.transaction.atomic')
+    def test_reiniciar_revision_restaura_estado_previo_componente(
+        self, mock_atomic, mock_get_obj, mock_dr_objs, mock_rc_objs, mock_comp_objs, mock_aud
+    ):
+        eq_mock = Mock(spec=Equipo, equipo_id=2, nombre='PC-02')
+        det_mock = Mock(detalle_renta_id=20, equipo_id=2, estado='FINALIZADA')
+        rev_mock = Mock(
+            spec=RevisionEquipo,
+            revision_equipo_id=15,
+            detalle_renta_id=20,
+            detalle_renta=det_mock,
+            inspeccion_pasada=False,
+            observaciones='Daño severo',
+        )
+        mock_get_obj.side_effect = [rev_mock, eq_mock, det_mock]
+        mock_dr_objs.filter.return_value.exists.return_value = False
+        mock_dr_objs.filter.return_value.exclude.return_value.exists.return_value = False
+
+        rc_mock = Mock(spec=RevisionComponente, componente_id=33, estado_previo='DANIOS_MENORES')
+        mock_rc_qs = Mock()
+        mock_rc_qs.__iter__ = Mock(return_value=iter([rc_mock]))
+        mock_rc_objs.filter.return_value = mock_rc_qs
+
+        comp_mock = Mock(
+            spec=Componente,
+            componente_id=33,
+            estado='REQUIERE_REEMPLAZO',
+            observaciones=(
+                '[REVISIÓN: #15 | FECHA: 06/11/2026 08:00 PM]\nDescripción: Tecla rota\n'
+                '--------------------------------------------------\n'
+                '[REVISIÓN: #11 | FECHA: 01/11/2026 04:00 PM]\nDescripción: Desgaste leve\n'
+                '--------------------------------------------------'
+            ),
+        )
+        mock_comp_objs.select_for_update.return_value.filter.return_value = [comp_mock]
+
+        req = self._preparar_request('/revisiones/reiniciar/15/', {})
+        res = reiniciar_revision(req, revision_id=15)
+
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(det_mock.estado, 'PENDIENTE_REVISION')
+        # Aunque queda el bloque de la revisión #11, el estado debe volver a DANIOS_MENORES y no quedarse en REQUIERE_REEMPLAZO
+        self.assertEqual(comp_mock.estado, 'DANIOS_MENORES')
+        self.assertNotIn('#15', comp_mock.observaciones)
+        self.assertIn('#11', comp_mock.observaciones)
+        rev_mock.delete.assert_called_once()
+
+    def test_sanitizar_celda_planilla_neutraliza_formulas_csv_excel(self):
+        self.assertEqual(_sanitizar_celda_planilla('=CMD|" /C calc"!A0'), "'=CMD|\" /C calc\"!A0")
+        self.assertEqual(_sanitizar_celda_planilla('+SUM(A1:A10)'), "'+SUM(A1:A10)")
+        self.assertEqual(_sanitizar_celda_planilla('-10+20'), "'-10+20")
+        self.assertEqual(_sanitizar_celda_planilla('@HYPERLINK("http://evil")'), "'@HYPERLINK(\"http://evil\")")
+        self.assertEqual(_sanitizar_celda_planilla('Cliente Normal'), 'Cliente Normal')
+
+    def test_generar_factura_pdf_escapa_caracteres_xml_especiales(self):
+        venta_mock = Mock(
+            venta_id=501,
+            estado='PAGADA',
+            fecha=timezone.now(),
+            cliente='Café & Postres <Especiales>',
+            usuario=Mock(nombre='Cajero & Admin <1>'),
+            subtotal=Decimal('10.00'),
+            iva=Decimal('1.30'),
+            total=Decimal('11.30'),
+            efectivo_recibido=Decimal('20.00'),
+            cambio=Decimal('8.70'),
+        )
+        venta_mock.detalles.select_related.return_value = []
+        pdf_bytes = generar_factura_pdf(venta_mock)
+        self.assertTrue(pdf_bytes.startswith(b'%PDF'))

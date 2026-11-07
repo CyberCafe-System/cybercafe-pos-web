@@ -230,6 +230,7 @@ class Auditoria(models.Model):
         'MODIFICAR_USUARIO': 'Modificar usuario',
         'ACTIVAR_USUARIO': 'Activar usuario',
         'DESACTIVAR_USUARIO': 'Desactivar usuario',
+        'TOGGLE_USUARIO': 'Cambiar estado de usuario',
         'CREAR_EQUIPO': 'Crear equipo',
         'MODIFICAR_EQUIPO': 'Modificar equipo',
         'HABILITAR_EQUIPO': 'Habilitar equipo',
@@ -241,6 +242,23 @@ class Auditoria(models.Model):
         'AJUSTAR_STOCK': 'Ajustar stock',
         'ACTIVAR_PRODUCTO': 'Activar producto',
         'DESACTIVAR_PRODUCTO': 'Desactivar producto',
+        'TOGGLE_PRODUCTO': 'Cambiar estado de producto',
+        'CREAR_CATEGORIA': 'Crear categoría',
+        'MODIFICAR_CATEGORIA': 'Modificar categoría',
+        'ACTIVAR_CATEGORIA': 'Activar categoría',
+        'DESACTIVAR_CATEGORIA': 'Desactivar categoría',
+        'CREAR_CLIENTE': 'Crear cliente',
+        'MODIFICAR_CLIENTE': 'Modificar cliente',
+        'ACTIVAR_CLIENTE': 'Activar cliente',
+        'DESACTIVAR_CLIENTE': 'Desactivar cliente',
+        'CREAR_COMPONENTE': 'Crear componente',
+        'MODIFICAR_COMPONENTE': 'Modificar componente',
+        'ACTIVAR_COMPONENTE': 'Activar componente',
+        'DESACTIVAR_COMPONENTE': 'Desactivar componente',
+        'CREAR_RENTA': 'Iniciar renta',
+        'EXTENDER_RENTA': 'Extender renta',
+        'CREAR_REVISION': 'Registrar revisión',
+        'MODIFICAR_REVISION': 'Modificar revisión',
         'ANULAR_VENTA': 'Anular venta',
         'REINICIAR_REVISION': 'Revocar revisión',
     }
@@ -397,11 +415,12 @@ class Auditoria(models.Model):
 def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, valor_previo=None, valor_nuevo=None, origen='WEB', ip=None):
     """
     Registra un evento append-only en la tabla de auditoría.
-    Falla de manera silenciosa para no bloquear operaciones principales ante errores de auditoría.
+    Registra en log de advertencia si ocurre un fallo para no bloquear operaciones principales.
     """
     try:
+        usuario_instancia = usuario if isinstance(usuario, Usuario) else None
         Auditoria.objects.create(
-            usuario=usuario,
+            usuario=usuario_instancia,
             accion=accion,
             entidad=entidad,
             entidad_id=entidad_id,
@@ -410,5 +429,11 @@ def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, val
             origen=origen,
             ip=ip,
         )
-    except Exception:
-        pass
+    except Exception as exc:
+        if exc.__class__.__name__ == 'DatabaseOperationForbidden':
+            return
+        import logging
+        logging.getLogger(__name__).warning(
+            "No se pudo registrar evento de auditoría (%s en %s#%s)",
+            accion, entidad, entidad_id, exc_info=True,
+        )
