@@ -1,9 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.db.migrations.loader import MigrationLoader
 from django.test import SimpleTestCase
+from django.test.client import RequestFactory
 
 from .models import Rol, Usuario
+from .views import usuario_edit, usuario_toggle
 
 
 class UsuarioModelTests(SimpleTestCase):
@@ -79,6 +81,174 @@ class UsuarioModelTests(SimpleTestCase):
             self.assertTrue(user.es_asistente)
             self.assertFalse(user.is_superuser)
 
+
+
+class UsuarioGestionRolesTests(SimpleTestCase):
+    """Reglas de rol/estado y serialización para evitar carreras entre administradores."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+        self.mock_atomic = self._patch('usuarios.views.transaction.atomic')
+        self.mock_ids_admin = self._patch('usuarios.views._ids_roles_administrador')
+        self.mock_ids_admin.return_value = {1}
+        self.mock_lock = self._patch('usuarios.views._bloquear_administradores')
+        self.mock_lock.return_value = []
+        self.mock_audit = self._patch('usuarios.views.registrar_auditoria')
+        self.mock_error = self._patch('usuarios.views.messages.error')
+        self.mock_success = self._patch('usuarios.views.messages.success')
+
+    def _patch(self, target):
+        patcher = patch(target)
+        mock = patcher.start()
+        self.addCleanup(patcher.stop)
+        return mock
+
+    def _request(self, actor_id, target_id, rol=None, url='/modificar_usuario/'):
+        data = {'usuario_id': str(target_id)}
+        if rol is not None:
+            data['rol'] = str(rol)
+        request = self.factory.post(url, data=data)
+        request.user = Mock()
+        request.user.is_authenticated = True
+        request.user.es_admin = True
+        request.user.usuario_id = actor_id
+        return request
+
+    def _usuario(self, usuario_id, rol_id, activo=True):
+        usuario = Mock()
+        usuario.usuario_id = usuario_id
+        usuario.pk = usuario_id
+        usuario.rol_id = rol_id
+        usuario.activo = activo
+        usuario.nombre = f'Usuario {usuario_id}'
+        usuario.correo = f'usuario{usuario_id}@test.com'
+        usuario.username = f'usuario{usuario_id}'
+        return usuario
+
+    def _form_edit(self, valido, guardado=None):
+        mock_form_cls = self._patch('usuarios.views.UsuarioEditForm')
+        mock_form_cls.return_value.is_valid.return_value = valido
+        mock_form_cls.return_value.errors = {}
+        if guardado is not None:
+            mock_form_cls.return_value.save.return_value = guardado
+        return mock_form_cls
+
+    def _target(self, usuario):
+        self._patch('usuarios.views.get_object_or_404').return_value = usuario
+
+    # --- Cambio de rol ---------------------------------------------------
+
+    def test_admin_cannot_change_own_role(self):
+        usuario_actual = self._usuario(7, 1)
+        self._target(usuario_actual)
+        mock_form_cls = self._form_edit(valido=True)
+        self.mock_lock.return_value = [usuario_actual]
+
+        response = usuario_edit(self._request(actor_id=7, target_id=7, rol=2))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_not_called()
+        self.mock_error.assert_called_once()
+        self.assertIn('propio rol', self.mock_error.call_args[0][1])
+
+    def test_admin_can_save_own_profile_keeping_same_role(self):
+        usuario_actual = self._usuario(7, 1)
+        self._target(usuario_actual)
+        mock_form_cls = self._form_edit(valido=False)
+        self.mock_lock.return_value = [usuario_actual]
+
+        response = usuario_edit(self._request(actor_id=7, target_id=7, rol=1))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_called_once()
+        self.mock_error.assert_not_called()
+
+    def test_admin_can_change_role_of_another_user(self):
+        otro_usuario = self._usuario(8, 2)
+        self._target(otro_usuario)
+        mock_form_cls = self._form_edit(valido=False)
+        self.mock_lock.return_value = [self._usuario(7, 1), otro_usuario]
+
+        response = usuario_edit(self._request(actor_id=7, target_id=8, rol=3))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_called_once()
+        self.mock_error.assert_not_called()
+
+    def test_cannot_demote_last_active_admin(self):
+        # Escenario de carrera: el actor ya fue degradado por otra transacción,
+        # por lo que el único admin activo restante es el objetivo.
+        objetivo = self._usuario(8, 1, activo=True)
+        self._target(objetivo)
+        guardado = self._usuario(8, 2, activo=True)
+        self._form_edit(valido=True, guardado=guardado)
+        self.mock_lock.return_value = [objetivo]
+
+        response = usuario_edit(self._request(actor_id=7, target_id=8, rol=2))
+
+        self.assertEqual(response.status_code, 302)
+        self.mock_error.assert_called_once()
+        self.assertIn('único Administrador activo', self.mock_error.call_args[0][1])
+        guardado.save.assert_not_called()
+        self.mock_audit.assert_not_called()
+
+    def test_can_demote_admin_when_another_active_admin_remains(self):
+        objetivo = self._usuario(8, 1, activo=True)
+        self._target(objetivo)
+        guardado = self._usuario(8, 2, activo=True)
+        self._form_edit(valido=True, guardado=guardado)
+        self.mock_lock.return_value = [objetivo, self._usuario(9, 1, activo=True)]
+
+        response = usuario_edit(self._request(actor_id=7, target_id=8, rol=2))
+
+        self.assertEqual(response.status_code, 302)
+        guardado.save.assert_called_once()
+        self.mock_audit.assert_called_once()
+        self.mock_success.assert_called_once()
+        self.mock_error.assert_not_called()
+
+    # --- Activación / desactivación --------------------------------------
+
+    def test_cannot_deactivate_last_active_admin(self):
+        objetivo = self._usuario(8, 1, activo=True)
+        self._target(objetivo)
+        self.mock_lock.return_value = [objetivo]
+
+        response = usuario_toggle(self._request(actor_id=7, target_id=8, url='/desactivar_usuario/'))
+
+        self.assertEqual(response.status_code, 302)
+        self.mock_error.assert_called_once()
+        self.assertIn('único Administrador activo', self.mock_error.call_args[0][1])
+        objetivo.save.assert_not_called()
+        self.mock_audit.assert_not_called()
+
+    def test_can_deactivate_admin_when_another_active_admin_remains(self):
+        objetivo = self._usuario(8, 1, activo=True)
+        self._target(objetivo)
+        self.mock_lock.return_value = [objetivo, self._usuario(9, 1, activo=True)]
+
+        response = usuario_toggle(self._request(actor_id=7, target_id=8, url='/desactivar_usuario/'))
+
+        self.assertEqual(response.status_code, 302)
+        objetivo.save.assert_called_once_with(update_fields=['activo'])
+        self.mock_audit.assert_called_once()
+        self.mock_success.assert_called_once()
+        self.mock_error.assert_not_called()
+
+    def test_cannot_deactivate_own_account(self):
+        objetivo = self._usuario(7, 1, activo=True)
+        self._target(objetivo)
+        self.mock_lock.return_value = [objetivo, self._usuario(9, 1, activo=True)]
+
+        response = usuario_toggle(self._request(actor_id=7, target_id=7, url='/desactivar_usuario/'))
+
+        self.assertEqual(response.status_code, 302)
+        self.mock_error.assert_called_once()
+        self.assertIn('propia cuenta', self.mock_error.call_args[0][1])
+        objetivo.save.assert_not_called()
 
 
 class DecoratorTests(SimpleTestCase):
