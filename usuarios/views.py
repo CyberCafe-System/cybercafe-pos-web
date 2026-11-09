@@ -69,6 +69,20 @@ def usuario_create(request):
 def usuario_edit(request):
     if request.method == 'POST':
         usuario = get_object_or_404(Usuario, pk=request.POST.get('usuario_id'))
+
+        # Un administrador no puede cambiar su propio rol (evita auto-degradarse).
+        rol_solicitado = request.POST.get('rol')
+        if (
+            usuario.usuario_id == request.user.usuario_id
+            and rol_solicitado
+            and str(rol_solicitado) != str(usuario.rol_id)
+        ):
+            messages.error(
+                request,
+                'No puedes cambiar tu propio rol. Solicita a otro administrador que realice el cambio.',
+            )
+            return redirect('usuarios')
+
         valor_previo = {'nombre': usuario.nombre, 'correo': usuario.correo, 'rol_id': usuario.rol_id}
         form = UsuarioEditForm(request.POST, instance=usuario)
         if form.is_valid():

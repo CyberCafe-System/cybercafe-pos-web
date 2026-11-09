@@ -87,7 +87,9 @@
                                 data-bs-toggle="modal" data-bs-target="#modalModificarUsuario"
                                 data-id="{{ usuario.usuario_id }}" data-username="{{ usuario.username }}"
                                 data-nombre="{{ usuario.nombre }}" data-correo="{{ usuario.correo }}"
-                                data-rol="{{ usuario.rol_id }}" title="Editar">
+                                data-rol="{{ usuario.rol_id }}"
+                                data-es-usuario-actual="{{ usuario.es_usuario_actual|yesno:'true,false' }}"
+                                title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
                             <form method="POST" action="{% url 'desactivar_usuario' %}" class="d-inline">
@@ -143,7 +145,20 @@
             document.getElementById('editarUsuarioNombre').value = btn.dataset.nombre;
             document.getElementById('editarUsuarioUsername').value = btn.dataset.username;
             document.getElementById('editarUsuarioCorreo').value = btn.dataset.correo;
-            document.getElementById('editarUsuarioRol').value = btn.dataset.rol;
+
+            // Un usuario no puede cambiar su propio rol: se bloquea el selector.
+            const rolSelect = document.getElementById('editarUsuarioRol');
+            const esUsuarioActual = btn.dataset.esUsuarioActual === 'true';
+            const rolActual = btn.dataset.rol;
+            Array.from(rolSelect.options).forEach(function (option) {
+                option.disabled = esUsuarioActual && option.value !== rolActual;
+            });
+            rolSelect.value = rolActual;
+            const ayudaRol = document.getElementById('editarRolAyuda');
+            if (ayudaRol) {
+                ayudaRol.classList.toggle('d-none', !esUsuarioActual);
+            }
+
             // Limpiar campo de nueva contraseña y restablecer a oculto
             const passInput = document.getElementById('editarUsuarioPassword');
             if (passInput) {

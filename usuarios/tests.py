@@ -1,9 +1,11 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.db.migrations.loader import MigrationLoader
 from django.test import SimpleTestCase
+from django.test.client import RequestFactory
 
 from .models import Rol, Usuario
+from .views import usuario_edit
 
 
 class UsuarioModelTests(SimpleTestCase):
@@ -79,6 +81,71 @@ class UsuarioModelTests(SimpleTestCase):
             self.assertTrue(user.es_asistente)
             self.assertFalse(user.is_superuser)
 
+
+
+class UsuarioSelfRoleChangeTests(SimpleTestCase):
+    """Un administrador no puede modificar su propio rol (auto-degradarse)."""
+
+    def setUp(self):
+        self.factory = RequestFactory()
+
+    def _build_request(self, usuario_id, rol):
+        request = self.factory.post(
+            '/modificar_usuario/',
+            data={'usuario_id': str(usuario_id), 'rol': str(rol)},
+        )
+        request.user = Mock()
+        request.user.is_authenticated = True
+        request.user.es_admin = True
+        request.user.usuario_id = usuario_id
+        return request
+
+    @patch('usuarios.views.messages.error')
+    @patch('usuarios.views.UsuarioEditForm')
+    @patch('usuarios.views.get_object_or_404')
+    def test_admin_cannot_change_own_role(self, mock_get_object, mock_form_cls, mock_msg_error):
+        usuario_actual = Mock(usuario_id=7, rol_id=1)
+        mock_get_object.return_value = usuario_actual
+
+        response = usuario_edit(self._build_request(usuario_id=7, rol=2))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_not_called()
+        mock_msg_error.assert_called_once()
+        self.assertIn('propio rol', mock_msg_error.call_args[0][1])
+
+    @patch('usuarios.views.messages.error')
+    @patch('usuarios.views.UsuarioEditForm')
+    @patch('usuarios.views.get_object_or_404')
+    def test_admin_can_save_own_profile_keeping_same_role(self, mock_get_object, mock_form_cls, mock_msg_error):
+        usuario_actual = Mock(usuario_id=7, rol_id=1)
+        mock_get_object.return_value = usuario_actual
+        mock_form_cls.return_value.is_valid.return_value = False
+        mock_form_cls.return_value.errors = {}
+
+        response = usuario_edit(self._build_request(usuario_id=7, rol=1))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_called_once()
+        mock_msg_error.assert_not_called()
+
+    @patch('usuarios.views.messages.error')
+    @patch('usuarios.views.UsuarioEditForm')
+    @patch('usuarios.views.get_object_or_404')
+    def test_admin_can_change_role_of_another_user(self, mock_get_object, mock_form_cls, mock_msg_error):
+        otro_usuario = Mock(usuario_id=8, rol_id=2)
+        mock_get_object.return_value = otro_usuario
+        mock_form_cls.return_value.is_valid.return_value = False
+        mock_form_cls.return_value.errors = {}
+
+        response = usuario_edit(self._build_request(usuario_id=7, rol=3))
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, '/usuarios/')
+        mock_form_cls.assert_called_once()
+        mock_msg_error.assert_not_called()
 
 
 class DecoratorTests(SimpleTestCase):
