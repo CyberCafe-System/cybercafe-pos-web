@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import admin_required
@@ -14,6 +14,29 @@ from .models import Auditoria, Rol, Usuario, registrar_auditoria
 from .validators import validar_password_intermedia
 
 logger = logging.getLogger(__name__)
+
+
+def _ids_roles_administrador():
+    """IDs de los roles que el modelo considera administradores (mismo criterio que Usuario.es_admin)."""
+    ids = {1}
+    for rol_id, nombre in Rol.objects.values_list('rol_id', 'nombre'):
+        if (nombre or '').strip().lower() in ('admin', 'administrador'):
+            ids.add(rol_id)
+    return ids
+
+
+def _bloquear_administradores(ids_roles_admin):
+    """
+    Bloquea (SELECT ... FOR UPDATE) todas las filas de administradores en orden
+    determinista. Actúa como mutex para serializar cualquier cambio de rol o de
+    estado que pueda alterar la cantidad de administradores activos y así evitar
+    interbloqueos y degradaciones simultáneas.
+    """
+    return list(
+        Usuario.objects.select_for_update()
+        .filter(rol_id__in=ids_roles_admin)
+        .order_by('usuario_id')
+    )
 
 
 @login_required
@@ -67,22 +90,58 @@ def usuario_create(request):
 @login_required
 @admin_required
 def usuario_edit(request):
-    if request.method == 'POST':
-        usuario = get_object_or_404(Usuario, pk=request.POST.get('usuario_id'))
-        valor_previo = {'nombre': usuario.nombre, 'correo': usuario.correo, 'rol_id': usuario.rol_id}
-        form = UsuarioEditForm(request.POST, instance=usuario)
-        if form.is_valid():
-            try:
+    if request.method != 'POST':
+        return redirect('usuarios')
+
+    try:
+        with transaction.atomic():
+            # Mutex: serializa cambios de rol/estado entre administradores.
+            ids_roles_admin = _ids_roles_administrador()
+            admins_bloqueados = _bloquear_administradores(ids_roles_admin)
+
+            usuario = get_object_or_404(
+                Usuario.objects.select_for_update().select_related('rol'),
+                pk=request.POST.get('usuario_id'),
+            )
+
+            # Un administrador no puede cambiar su propio rol (evita auto-degradarse).
+            rol_solicitado = request.POST.get('rol')
+            if (
+                usuario.usuario_id == request.user.usuario_id
+                and rol_solicitado
+                and str(rol_solicitado) != str(usuario.rol_id)
+            ):
+                messages.error(
+                    request,
+                    'No puedes cambiar tu propio rol. Solicita a otro administrador que realice el cambio.',
+                )
+                return redirect('usuarios')
+
+            valor_previo = {'nombre': usuario.nombre, 'correo': usuario.correo, 'rol_id': usuario.rol_id}
+            era_admin_activo = usuario.activo and usuario.rol_id in ids_roles_admin
+
+            form = UsuarioEditForm(request.POST, instance=usuario)
+            if form.is_valid():
                 usuario_guardado = form.save(commit=False)
+                nuevo_es_admin = usuario_guardado.rol_id in ids_roles_admin
+
+                # Garantizar al menos un administrador activo en el sistema.
+                if era_admin_activo and not nuevo_es_admin:
+                    otros_admins_activos = [
+                        u for u in admins_bloqueados
+                        if u.usuario_id != usuario.usuario_id and u.activo
+                    ]
+                    if not otros_admins_activos:
+                        messages.error(
+                            request,
+                            'No puedes quitar el rol de Administrador al único Administrador activo del sistema.',
+                        )
+                        return redirect('usuarios')
+
                 nueva_password = request.POST.get('nueva_password', '').strip()
                 if nueva_password:
-                    try:
-                        validar_password_intermedia(nueva_password, user=usuario_guardado)
-                        usuario_guardado.set_password(nueva_password)
-                    except ValidationError as e:
-                        for msg in e.messages:
-                            messages.error(request, f'Contraseña inválida: {msg}')
-                        return redirect('usuarios')
+                    validar_password_intermedia(nueva_password, user=usuario_guardado)
+                    usuario_guardado.set_password(nueva_password)
                 usuario_guardado.save()
 
                 registrar_auditoria(
@@ -95,61 +154,73 @@ def usuario_edit(request):
                     ip=request.META.get('REMOTE_ADDR'),
                 )
                 messages.success(request, 'Usuario actualizado correctamente.')
-            except Exception:
-                logger.exception('Error al actualizar el usuario')
-                messages.error(request, 'Ocurrió un error al actualizar el usuario. Intenta nuevamente.')
-        else:
-            for field, error_list in form.errors.items():
-                for err in error_list:
-                    messages.error(request, err)
+            else:
+                for field, error_list in form.errors.items():
+                    for err in error_list:
+                        messages.error(request, err)
+    except ValidationError as e:
+        for msg in e.messages:
+            messages.error(request, f'Contraseña inválida: {msg}')
+    except Http404:
+        raise
+    except Exception:
+        logger.exception('Error al actualizar el usuario')
+        messages.error(request, 'Ocurrió un error al actualizar el usuario. Intenta nuevamente.')
     return redirect('usuarios')
 
 
 @login_required
 @admin_required
 def usuario_toggle(request):
-    if request.method == 'POST':
-        try:
-            with transaction.atomic():
-                usuario = get_object_or_404(
-                    Usuario.objects.select_for_update().select_related('rol'),
-                    pk=request.POST.get('usuario_id'),
-                )
-                # Prevenir auto-deshabilitación
-                if usuario.usuario_id == request.user.usuario_id:
-                    messages.error(request, 'No puedes desactivar tu propia cuenta mientras estás en sesión.')
+    if request.method != 'POST':
+        return redirect('usuarios')
+
+    try:
+        with transaction.atomic():
+            # Mutex: serializa cambios de rol/estado entre administradores.
+            ids_roles_admin = _ids_roles_administrador()
+            admins_bloqueados = _bloquear_administradores(ids_roles_admin)
+
+            usuario = get_object_or_404(
+                Usuario.objects.select_for_update().select_related('rol'),
+                pk=request.POST.get('usuario_id'),
+            )
+
+            # Prevenir auto-deshabilitación
+            if usuario.usuario_id == request.user.usuario_id:
+                messages.error(request, 'No puedes desactivar tu propia cuenta mientras estás en sesión.')
+                return redirect('usuarios')
+
+            # Garantizar al menos un administrador activo en el sistema.
+            if usuario.activo and usuario.rol_id in ids_roles_admin:
+                otros_admins_activos = [
+                    u for u in admins_bloqueados
+                    if u.usuario_id != usuario.usuario_id and u.activo
+                ]
+                if not otros_admins_activos:
+                    messages.error(request, 'No puedes desactivar al único Administrador activo del sistema.')
                     return redirect('usuarios')
 
-                # Garantizar al menos un administrador activo en el sistema con bloqueo pesimista
-                if usuario.es_admin and usuario.activo:
-                    admins_activos = list(
-                        Usuario.objects.select_for_update()
-                        .filter(activo=True)
-                        .filter(Q(rol_id=1) | Q(rol__nombre__iexact='admin') | Q(rol__nombre__iexact='administrador'))
-                        .exclude(pk=usuario.pk)
-                    )
-                    if not admins_activos:
-                        messages.error(request, 'No puedes desactivar al único Administrador activo del sistema.')
-                        return redirect('usuarios')
+            estado_prev = usuario.activo
+            usuario.activo = not usuario.activo
+            usuario.save(update_fields=['activo'])
+            estado = 'activado' if usuario.activo else 'desactivado'
 
-                estado_prev = usuario.activo
-                usuario.activo = not usuario.activo
-                usuario.save(update_fields=['activo'])
-                estado = 'activado' if usuario.activo else 'desactivado'
-
-                registrar_auditoria(
-                    usuario=request.user,
-                    accion='ACTIVAR_USUARIO' if usuario.activo else 'DESACTIVAR_USUARIO',
-                    entidad='Usuario',
-                    entidad_id=usuario.usuario_id,
-                    valor_previo={'activo': estado_prev},
-                    valor_nuevo={'activo': usuario.activo, 'username': usuario.username},
-                    ip=request.META.get('REMOTE_ADDR'),
-                )
-            messages.success(request, f'Usuario {usuario.username} {estado} correctamente.')
-        except Exception:
-            logger.exception('Error al cambiar estado del usuario')
-            messages.error(request, 'Ocurrió un error al actualizar el estado del usuario.')
+            registrar_auditoria(
+                usuario=request.user,
+                accion='ACTIVAR_USUARIO' if usuario.activo else 'DESACTIVAR_USUARIO',
+                entidad='Usuario',
+                entidad_id=usuario.usuario_id,
+                valor_previo={'activo': estado_prev},
+                valor_nuevo={'activo': usuario.activo, 'username': usuario.username},
+                ip=request.META.get('REMOTE_ADDR'),
+            )
+        messages.success(request, f'Usuario {usuario.username} {estado} correctamente.')
+    except Http404:
+        raise
+    except Exception:
+        logger.exception('Error al cambiar estado del usuario')
+        messages.error(request, 'Ocurrió un error al actualizar el estado del usuario.')
     return redirect('usuarios')
 
 
