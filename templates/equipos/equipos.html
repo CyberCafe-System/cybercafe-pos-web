@@ -155,6 +155,7 @@
                                 data-nombre="{{ equipo.nombre }}" data-tipo="{{ equipo.tipo }}"
                                 data-tarifa="{{ equipo.tarifa_por_hora|floatformat:2 }}"
                                 data-estado="{{ equipo.estado }}" data-descripcion="{{ equipo.descripcion|default:'' }}"
+                                data-bloqueado="{{ equipo.bloqueado_operacion|yesno:'true,false' }}"
                                 data-componentes="[{% for c in equipo.componentes.all %}{{ c.componente_id }}{% if not forloop.last %},{% endif %}{% endfor %}]"
                                 title="Editar">
                                 <i class="bi bi-pencil-square"></i>
@@ -417,6 +418,11 @@
             document.getElementById('editEquipoTarifa').value = tarifaRaw;
             document.getElementById('editEquipoEstado').value = this.dataset.estado;
             document.getElementById('editEquipoDescripcion').value = this.dataset.descripcion;
+
+            const alertaEqBloqueado = document.getElementById('alertaEquipoBloqueado');
+            if (alertaEqBloqueado) {
+                alertaEqBloqueado.classList.toggle('d-none', this.dataset.bloqueado !== 'true');
+            }
 
             if (inputBuscarCompEditar) {
                 inputBuscarCompEditar.value = '';

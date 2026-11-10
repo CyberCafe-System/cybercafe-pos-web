@@ -10,6 +10,10 @@ class WebAuthenticationForm(AuthenticationForm):
     Formulario de autenticación para la plataforma Web.
     Bloquea el inicio de sesión a usuarios con rol Asistente, reservándolo exclusivamente para la app móvil.
     """
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        return (username or '').strip().lower()
+
     def confirm_login_allowed(self, user):
         super().confirm_login_allowed(user)
         if getattr(user, 'es_asistente', False):
@@ -52,6 +56,15 @@ class UsuarioCreationForm(forms.ModelForm):
     class Meta:
         model = Usuario
         fields = ('username', 'nombre', 'correo', 'rol', 'activo', 'is_superuser')
+
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip().lower()
+        qs = Usuario.objects.filter(username__iexact=username)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('No pueden haber dos usernames iguales.')
+        return username
 
     def clean_password1(self):
         password = self.cleaned_data.get('password1')
@@ -107,6 +120,15 @@ class UsuarioChangeForm(forms.ModelForm):
             'last_login',
         )
 
+    def clean_username(self):
+        username = (self.cleaned_data.get('username') or '').strip().lower()
+        qs = Usuario.objects.filter(username__iexact=username)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise forms.ValidationError('No pueden haber dos usernames iguales.')
+        return username
+
 
 class UsuarioCreateForm(forms.ModelForm):
     nombre = forms.CharField(
@@ -152,8 +174,8 @@ class UsuarioCreateForm(forms.ModelForm):
         return user
 
     def clean_username(self):
-        username = self.cleaned_data.get('username')
-        if Usuario.objects.filter(username=username).exists():
+        username = (self.cleaned_data.get('username') or '').strip().lower()
+        if Usuario.objects.filter(username__iexact=username).exists():
             raise forms.ValidationError('No pueden haber dos usernames iguales.')
         return username
 
@@ -201,8 +223,8 @@ class UsuarioEditForm(forms.ModelForm):
         return user
 
     def clean_username(self):
-        username = self.cleaned_data.get('username')
-        qs = Usuario.objects.filter(username=username)
+        username = (self.cleaned_data.get('username') or '').strip().lower()
+        qs = Usuario.objects.filter(username__iexact=username)
         if self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():

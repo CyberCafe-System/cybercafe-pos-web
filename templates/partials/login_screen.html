@@ -45,7 +45,8 @@
                     Nombre de Usuario
                 </label>
                 <input type="text" name="username" class="form-control glass-input"
-                    placeholder="Ingresa tu nombre de usuario" required autofocus>
+                    placeholder="Ingresa tu nombre de usuario" style="text-transform: lowercase;"
+                    oninput="this.value = this.value.toLowerCase()" required autofocus>
             </div>
 
             <div class="mb-4">

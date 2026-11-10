@@ -740,6 +740,19 @@ def ticket_pdf(request, venta_id=None):
         messages.error(request, 'No hay ninguna venta registrada para generar el ticket.')
         return redirect('pos')
 
+    if not getattr(request.user, 'es_admin', False):
+        fecha_venta_local = (
+            timezone.localtime(venta.fecha).date()
+            if timezone.is_aware(venta.fecha)
+            else venta.fecha.date()
+        )
+        if venta.usuario_id != getattr(request.user, 'usuario_id', None) or fecha_venta_local != timezone.localdate():
+            messages.error(
+                request,
+                'Solo tienes permiso para visualizar las facturas de las ventas realizadas por ti durante el día de hoy.',
+            )
+            return redirect('reportes')
+
     return _respuesta_pdf(venta)
 
 
@@ -755,11 +768,24 @@ def _construir_transacciones_reporte(request):
     """
     Construye de forma centralizada la lista de transacciones y totales para la vista
     de reportes y para las exportaciones a CSV y Excel.
+    Si el usuario es Cajero (no Administrador), fuerza la consulta únicamente a sus
+    propias operaciones realizadas durante el día actual.
     """
-    fecha_inicio_str = request.GET.get('fecha_inicio')
-    fecha_fin_str = request.GET.get('fecha_fin')
+    es_admin = getattr(request.user, 'es_admin', False)
     tipo_filtro = request.GET.get('tipo', 'todos')
-    usuario_id_str = request.GET.get('usuario')
+    if tipo_filtro not in ('todos', 'ventas', 'rentas'):
+        tipo_filtro = 'todos'
+
+    if es_admin:
+        fecha_inicio_str = request.GET.get('fecha_inicio')
+        fecha_fin_str = request.GET.get('fecha_fin')
+        usuario_id_str = request.GET.get('usuario')
+    else:
+        hoy_str = timezone.localdate().isoformat()
+        fecha_inicio_str = hoy_str
+        fecha_fin_str = hoy_str
+        uid_actual = getattr(request.user, 'usuario_id', None)
+        usuario_id_str = str(uid_actual) if uid_actual is not None else ''
 
     ventas_qs = Venta.objects.select_related('cliente', 'usuario', 'anulada_por').prefetch_related('detalles__producto').order_by('-fecha')
     rentas_qs = Renta.objects.select_related('cliente', 'usuario').prefetch_related('detalles__equipo').order_by('-fecha')
@@ -767,7 +793,11 @@ def _construir_transacciones_reporte(request):
     ventas_qs = _filtrar_por_fechas(ventas_qs, fecha_inicio_str, fecha_fin_str)
     rentas_qs = _filtrar_por_fechas(rentas_qs, fecha_inicio_str, fecha_fin_str)
 
-    if usuario_id_str and usuario_id_str.isdigit():
+    if not es_admin:
+        uid_actual = getattr(request.user, 'usuario_id', None)
+        ventas_qs = ventas_qs.filter(usuario_id=uid_actual)
+        rentas_qs = rentas_qs.filter(usuario_id=uid_actual)
+    elif usuario_id_str and usuario_id_str.isdigit():
         uid = int(usuario_id_str)
         ventas_qs = ventas_qs.filter(usuario_id=uid)
         rentas_qs = rentas_qs.filter(usuario_id=uid)
@@ -861,7 +891,7 @@ def _construir_transacciones_reporte(request):
 
 
 @login_required
-@admin_required
+@cajero_o_admin_required
 def reportes(request):
     datos = _construir_transacciones_reporte(request)
     transacciones = datos['transacciones']
@@ -882,7 +912,10 @@ def reportes(request):
     paginator = Paginator(transacciones, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
 
-    usuarios = Usuario.objects.filter(activo=True).order_by('username')
+    if getattr(request.user, 'es_admin', False):
+        usuarios = Usuario.objects.filter(activo=True).order_by('username')
+    else:
+        usuarios = Usuario.objects.filter(pk=getattr(request.user, 'usuario_id', None))
 
     return render(request, 'reportes.html', {
         'transacciones': page_obj,
