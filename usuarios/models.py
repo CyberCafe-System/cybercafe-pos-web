@@ -1,3 +1,5 @@
+import ipaddress
+
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
 
@@ -31,7 +33,7 @@ class UsuarioManager(BaseUserManager):
             if extra_fields.get(field) is None:
                 raise ValueError(f'El campo {field} es obligatorio.')
 
-        username = self.model.normalize_username(username)
+        username = self.model.normalize_username(username).strip().lower()
         rol = extra_fields.pop('rol')
         user = self.model(username=username, **extra_fields)
         if isinstance(rol, Rol):
@@ -89,6 +91,8 @@ class Usuario(AbstractBaseUser):
         return (getattr(cached_rol, 'nombre', '') or '').strip().lower()
 
     def save(self, *args, **kwargs):
+        if self.username:
+            self.username = self.username.strip().lower()
         es_admin_rol = (self.rol_id == 1) or (self._obtener_nombre_rol() in ('admin', 'administrador'))
         self.is_superuser = bool(es_admin_rol)
         super().save(*args, **kwargs)
@@ -412,6 +416,97 @@ class Auditoria(models.Model):
         return badges
 
 
+_CABECERAS_IP_PROXY = (
+    'HTTP_CF_CONNECTING_IP',
+    'HTTP_TRUE_CLIENT_IP',
+    'HTTP_X_REAL_IP',
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_CLIENT_IP',
+    'HTTP_CLIENT_IP',
+    'HTTP_X_FORWARDED',
+    'HTTP_FORWARDED_FOR',
+    'HTTP_FORWARDED',
+    'REMOTE_ADDR',
+)
+
+
+def _limpiar_ip_individual(valor: str) -> str | None:
+    """Limpia y valida un candidato a dirección IPv4 o IPv6."""
+    if not valor:
+        return None
+    candidato = valor.strip().strip('"').strip("'")
+    if not candidato or candidato.lower() == 'unknown':
+        return None
+    if candidato.lower().startswith('for='):
+        candidato = candidato[4:].strip().strip('"').strip("'")
+    # Formato [IPv6]:puerto
+    if candidato.startswith('[') and ']' in candidato:
+        candidato = candidato[1:candidato.index(']')]
+    # Formato IPv4:puerto
+    elif candidato.count(':') == 1 and '.' in candidato:
+        candidato = candidato.split(':', 1)[0]
+    try:
+        ip_obj = ipaddress.ip_address(candidato)
+        if getattr(ip_obj, 'ipv4_mapped', None):
+            ip_obj = ip_obj.ipv4_mapped
+        return str(ip_obj)[:45]
+    except ValueError:
+        return None
+
+
+def obtener_ip_cliente(request_o_meta) -> str | None:
+    """
+    Obtiene la IP real del dispositivo cliente, funcionando tanto en entorno local
+    como en un VPS detrás de Nginx, Cloudflare, Caddy, Apache o Docker.
+    Prioriza IPs públicas válidas, luego IPs de red privada (LAN) y por último loopback.
+    """
+    if request_o_meta is None:
+        return None
+
+    if isinstance(request_o_meta, str):
+        limpia = _limpiar_ip_individual(request_o_meta)
+        return limpia or request_o_meta.strip()[:45] or None
+
+    meta = getattr(request_o_meta, 'META', None)
+    if meta is None and isinstance(request_o_meta, dict):
+        meta = request_o_meta
+    if not isinstance(meta, dict):
+        return None
+
+    candidatas_publicas = []
+    candidatas_privadas = []
+    candidatas_loopback = []
+
+    for header in _CABECERAS_IP_PROXY:
+        raw_val = meta.get(header)
+        if not raw_val or not isinstance(raw_val, str):
+            continue
+        # X-Forwarded-For o Forwarded pueden traer múltiples IPs separadas por coma o punto y coma
+        partes = [p for bloque in raw_val.split(';') for p in bloque.split(',')]
+        for parte in partes:
+            ip_limpia = _limpiar_ip_individual(parte)
+            if not ip_limpia:
+                continue
+            try:
+                ip_obj = ipaddress.ip_address(ip_limpia)
+                if ip_obj.is_loopback or ip_obj.is_unspecified:
+                    candidatas_loopback.append(ip_limpia)
+                elif ip_obj.is_private or ip_obj.is_link_local:
+                    candidatas_privadas.append(ip_limpia)
+                else:
+                    candidatas_publicas.append(ip_limpia)
+            except ValueError:
+                continue
+
+    if candidatas_publicas:
+        return candidatas_publicas[0]
+    if candidatas_privadas:
+        return candidatas_privadas[0]
+    if candidatas_loopback:
+        return candidatas_loopback[0]
+    return None
+
+
 def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, valor_previo=None, valor_nuevo=None, origen='WEB', ip=None):
     """
     Registra un evento append-only en la tabla de auditoría.
@@ -419,6 +514,7 @@ def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, val
     """
     try:
         usuario_instancia = usuario if isinstance(usuario, Usuario) else None
+        ip_normalizada = obtener_ip_cliente(ip) if ip is not None else None
         Auditoria.objects.create(
             usuario=usuario_instancia,
             accion=accion,
@@ -427,7 +523,7 @@ def registrar_auditoria(usuario, accion: str, entidad: str, entidad_id: int, val
             valor_previo=valor_previo,
             valor_nuevo=valor_nuevo,
             origen=origen,
-            ip=ip,
+            ip=ip_normalizada,
         )
     except Exception as exc:
         if exc.__class__.__name__ == 'DatabaseOperationForbidden':

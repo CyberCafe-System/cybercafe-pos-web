@@ -104,6 +104,8 @@
                     <a href="{% url 'usuarios' %}"><i class="bi bi-person-badge"></i> Usuarios</a>
                     {% endif %}
                 </li>
+                {% endif %}
+                {% if request.user.es_admin or request.user.es_cajero %}
                 <li>
                     {% if nav_reportes %}
                     <a href="{% url 'reportes' %}" class="active"><i class="bi bi-graph-up"></i> Reportes</a>

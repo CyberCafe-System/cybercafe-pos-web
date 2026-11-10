@@ -39,9 +39,28 @@ def _bloquear_administradores(ids_roles_admin):
     )
 
 
+_USERNAMES_NORMALIZADOS = False
+
+
+def _normalizar_usernames_minusculas():
+    """Garantiza que todos los nombres de usuario en la base de datos estén guardados en minúsculas."""
+    global _USERNAMES_NORMALIZADOS
+    if _USERNAMES_NORMALIZADOS:
+        return
+    try:
+        for u in Usuario.objects.all():
+            uname_clean = (u.username or '').strip().lower()
+            if u.username != uname_clean and uname_clean:
+                Usuario.objects.filter(pk=u.pk).update(username=uname_clean)
+        _USERNAMES_NORMALIZADOS = True
+    except Exception:
+        logger.debug('No se pudo ejecutar la normalización automática de usernames a minúsculas', exc_info=True)
+
+
 @login_required
 @admin_required
 def usuario_list(request):
+    _normalizar_usernames_minusculas()
     usuarios_qs = Usuario.objects.select_related('rol').all().order_by('usuario_id')
     paginator = Paginator(usuarios_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -117,7 +136,12 @@ def usuario_edit(request):
                 )
                 return redirect('usuarios')
 
-            valor_previo = {'nombre': usuario.nombre, 'correo': usuario.correo, 'rol_id': usuario.rol_id}
+            valor_previo = {
+                'username': usuario.username,
+                'nombre': usuario.nombre,
+                'correo': usuario.correo,
+                'rol_id': usuario.rol_id,
+            }
             era_admin_activo = usuario.activo and usuario.rol_id in ids_roles_admin
 
             form = UsuarioEditForm(request.POST, instance=usuario)
@@ -150,7 +174,12 @@ def usuario_edit(request):
                     entidad='Usuario',
                     entidad_id=usuario_guardado.usuario_id,
                     valor_previo=valor_previo,
-                    valor_nuevo={'nombre': usuario_guardado.nombre, 'correo': usuario_guardado.correo, 'rol_id': usuario_guardado.rol_id},
+                    valor_nuevo={
+                        'username': usuario_guardado.username,
+                        'nombre': usuario_guardado.nombre,
+                        'correo': usuario_guardado.correo,
+                        'rol_id': usuario_guardado.rol_id,
+                    },
                     ip=request.META.get('REMOTE_ADDR'),
                 )
                 messages.success(request, 'Usuario actualizado correctamente.')

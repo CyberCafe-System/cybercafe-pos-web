@@ -26,13 +26,18 @@ if not SECRET_KEY:
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'testserver'])
+ALLOWED_HOSTS = [
+    h.strip() for h in env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', 'testserver']) if h.strip()
+] or ['localhost', '127.0.0.1', 'testserver']
 
 # Orígenes de confianza para peticiones POST (necesario detrás de un proxy HTTPS)
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[])
+CSRF_TRUSTED_ORIGINS = [
+    o.strip() for o in env.list('CSRF_TRUSTED_ORIGINS', default=[]) if o.strip()
+]
 
-# Permite que Django detecte HTTPS cuando nginx u otro proxy termina el TLS
+# Permite que Django detecte HTTPS y cabeceras de host cuando nginx u otro proxy termina el TLS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # Application definition
 INSTALLED_APPS = [
@@ -67,6 +72,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 MIDDLEWARE = [
+    'usuarios.middleware.RealClientIPMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -84,6 +90,15 @@ AXES_COOLOFF_TIME = 2  # 2 horas de bloqueo
 AXES_LOCKOUT_PARAMETERS = ['username', 'ip_address']
 AXES_RESET_ON_SUCCESS = True
 AXES_LOCKOUT_TEMPLATE = 'login.html'
+AXES_IPWARE_META_PRECEDENCE_ORDER = [
+    'HTTP_CF_CONNECTING_IP',
+    'HTTP_TRUE_CLIENT_IP',
+    'HTTP_X_REAL_IP',
+    'HTTP_X_FORWARDED_FOR',
+    'HTTP_X_CLIENT_IP',
+    'HTTP_CLIENT_IP',
+    'REMOTE_ADDR',
+]
 
 ROOT_URLCONF = 'config.urls'
 ADMIN_URL = env('ADMIN_URL', default='gestion-interna/')

@@ -167,8 +167,14 @@
                             {% endif %}
                         </td>
                         <td class="text-end small text-muted font-monospace">
-                            <div><i class="bi bi-globe me-1"></i>{{ a.origen }}</div>
-                            {% if a.ip %}<small class="text-secondary">{{ a.ip }}</small>{% endif %}
+                            <div>
+                                {% if a.origen == 'API' %}
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle"><i class="bi bi-phone me-1"></i>{{ a.origen }}</span>
+                                {% else %}
+                                <span class="badge bg-light text-dark border"><i class="bi bi-globe me-1"></i>{{ a.origen }}</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-secondary d-block mt-1"><i class="bi bi-router me-1"></i>{{ a.ip|default:"No registrada" }}</small>
                         </td>
                     </tr>
                     {% endfor %}

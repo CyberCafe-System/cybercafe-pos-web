@@ -96,6 +96,7 @@
                                 data-id="{{ comp.componente_id }}" data-nombre="{{ comp.nombre }}"
                                 data-serie="{{ comp.numero_serie|default:'' }}" data-tipo="{{ comp.tipo }}"
                                 data-estado="{{ comp.estado }}" data-equipo="{{ comp.equipo_id|default:'' }}"
+                                data-bloqueado="{{ comp.equipo_bloqueado|yesno:'true,false' }}"
                                 data-descripcion="{{ comp.descripcion|default:'' }}" title="Editar">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -150,6 +151,11 @@
             document.getElementById('editCompTipo').value = this.dataset.tipo;
             document.getElementById('editCompEstado').value = this.dataset.estado;
             document.getElementById('editCompEquipo').value = this.dataset.equipo;
+
+            const alertaBloqueo = document.getElementById('alertaCompEquipoBloqueado');
+            if (alertaBloqueo) {
+                alertaBloqueo.classList.toggle('d-none', this.dataset.bloqueado !== 'true');
+            }
 
             // Extraer Marca y Modelo desde descripcion ("Marca: X | Modelo: Y")
             const desc = this.dataset.descripcion || '';
