@@ -16,6 +16,7 @@ from .models import Equipo
 
 logger = logging.getLogger(__name__)
 _EQUIPO_ACTIVO_VERIFICADO = False
+ESTADOS_RENTA_BLOQUEANTES = ('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION')
 
 
 def asegurar_columna_activo_equipo():
@@ -47,6 +48,11 @@ def equipo_list(request):
     equipos_qs = Equipo.objects.prefetch_related('componentes').all().order_by('equipo_id')
     paginator = Paginator(equipos_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
+    equipos_bloqueados_ids = set(
+        DetalleRenta.objects.filter(estado__in=ESTADOS_RENTA_BLOQUEANTES).values_list('equipo_id', flat=True)
+    )
+    for eq in page_obj:
+        eq.bloqueado_operacion = (eq.equipo_id in equipos_bloqueados_ids)
     # En edición mostramos los componentes libres operativos y también los ya asignados a algún equipo
     # (incluyendo si alguno asignado está desactivado o requiere reemplazo para poder verlo/desvincularlo)
     componentes = Componente.objects.select_related('equipo').filter(
@@ -61,6 +67,7 @@ def equipo_list(request):
         'page_obj': page_obj,
         'componentes': componentes,
         'componentes_libres': componentes_libres,
+        'equipos_bloqueados_ids': list(equipos_bloqueados_ids),
     })
 
 
@@ -136,6 +143,7 @@ def equipo_edit(request):
 
                 with transaction.atomic():
                     equipo_lock = get_object_or_404(Equipo.objects.select_for_update(), pk=equipo.equipo_id)
+                    estado_prev = equipo_lock.estado
                     equipo = form.save(commit=False)
 
                     # Bloquear periféricos actuales y los solicitados en orden determinista
@@ -145,6 +153,26 @@ def equipo_edit(request):
                         .order_by('componente_id')
                     )
                     mapa_comps = {c.componente_id: c for c in comps_actuales_y_nuevos}
+                    ids_actuales = {c.componente_id for c in comps_actuales_y_nuevos if c.equipo_id == equipo_lock.equipo_id}
+                    ids_solicitados = set(componentes_ids)
+
+                    # Regla estricta: si el equipo está en renta activa o con revisión pendiente,
+                    # no se puede cambiar su estado físico ni manipular/quitar/agregar sus componentes.
+                    tiene_renta_o_revision = DetalleRenta.objects.filter(
+                        equipo=equipo_lock,
+                        estado__in=ESTADOS_RENTA_BLOQUEANTES,
+                    ).exists()
+                    if tiene_renta_o_revision:
+                        if equipo.estado != estado_prev:
+                            raise ValueError(
+                                f'No se puede cambiar el estado del equipo "{equipo_lock.nombre}" mientras tenga '
+                                'una renta activa o una revisión pendiente. Debe estar libre de rentas y de revisión.'
+                            )
+                        if ids_actuales != ids_solicitados:
+                            raise ValueError(
+                                f'No se pueden quitar ni modificar los componentes del equipo "{equipo_lock.nombre}" '
+                                'mientras tenga una renta activa o una revisión pendiente. Debe estar libre de rentas y de revisión.'
+                            )
 
                     ajenos = [
                         mapa_comps[cid].nombre
@@ -220,6 +248,15 @@ def equipo_habilitar(request):
         try:
             with transaction.atomic():
                 equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=request.POST.get('equipo_id'))
+                if DetalleRenta.objects.filter(
+                    equipo=equipo,
+                    estado__in=ESTADOS_RENTA_BLOQUEANTES,
+                ).exists():
+                    messages.error(
+                        request,
+                        f'No se puede habilitar ni cambiar el estado del equipo "{equipo.nombre}" mientras tenga una renta activa o una revisión pendiente.',
+                    )
+                    return redirect('equipos')
                 comps_equipo = list(Componente.objects.select_for_update().filter(equipo=equipo))
 
                 comps_reemplazo = [c for c in comps_equipo if c.estado == 'REQUIERE_REEMPLAZO']
@@ -274,13 +311,13 @@ def equipo_toggle(request):
         try:
             with transaction.atomic():
                 equipo = get_object_or_404(Equipo.objects.select_for_update(), pk=request.POST.get('equipo_id'))
-                if equipo.activo and DetalleRenta.objects.filter(
+                if DetalleRenta.objects.filter(
                     equipo=equipo,
-                    estado__in=('ACTIVA', 'TIEMPO_TERMINADO', 'PENDIENTE_REVISION'),
+                    estado__in=ESTADOS_RENTA_BLOQUEANTES,
                 ).exists():
                     messages.error(
                         request,
-                        f'No se puede desactivar el equipo "{equipo.nombre}" mientras tenga una sesión de renta en curso o pendiente de revisión.'
+                        f'No se puede cambiar el estado del equipo "{equipo.nombre}" mientras tenga una sesión de renta en curso o pendiente de revisión.'
                     )
                     return redirect('equipos')
 

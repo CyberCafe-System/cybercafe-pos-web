@@ -57,7 +57,7 @@
                         <select name="equipo" class="form-select">
                             <option value="">— Sin asignar (Bodega) —</option>
                             {% for equipo in equipos %}
-                            <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }})</option>
+                            <option value="{{ equipo.equipo_id }}" {% if equipo.bloqueado_operacion %}disabled{% endif %}>{{ equipo.nombre }} ({{ equipo.get_tipo_display }}){% if equipo.bloqueado_operacion %} — [En renta / revisión pendiente]{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>

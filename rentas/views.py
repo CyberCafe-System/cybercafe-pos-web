@@ -536,4 +536,17 @@ def renta_factura_pdf(request, renta_id=None):
         messages.error(request, 'No hay ninguna renta registrada para generar la factura.')
         return redirect('rentas')
 
+    if not getattr(request.user, 'es_admin', False):
+        fecha_renta_local = (
+            timezone.localtime(renta.fecha).date()
+            if timezone.is_aware(renta.fecha)
+            else renta.fecha.date()
+        )
+        if renta.usuario_id != getattr(request.user, 'usuario_id', None) or fecha_renta_local != timezone.localdate():
+            messages.error(
+                request,
+                'Solo tienes permiso para visualizar los comprobantes de las rentas realizadas por ti durante el día de hoy.',
+            )
+            return redirect('reportes')
+
     return _respuesta_factura_renta(renta)

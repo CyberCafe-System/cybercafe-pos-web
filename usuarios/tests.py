@@ -469,3 +469,71 @@ class UsuarioValidationRulesTests(SimpleTestCase):
         self.assertEqual(edit_form.fields['nombre'].max_length, 50)
         self.assertEqual(edit_form.fields['username'].max_length, 50)
         self.assertEqual(edit_form.fields['correo'].max_length, 75)
+
+    def test_username_normalized_to_lowercase_on_save_and_forms(self):
+        from django.contrib.auth.base_user import AbstractBaseUser
+        from usuarios.forms import UsuarioCreateForm, UsuarioEditForm, WebAuthenticationForm
+
+        user = Usuario(username='  CaJeRo_PrInCiPaL  ', rol_id=2)
+        with patch.object(AbstractBaseUser, 'save', autospec=True):
+            user.save()
+        self.assertEqual(user.username, 'cajero_principal')
+
+        form_create = UsuarioCreateForm()
+        form_create.cleaned_data = {'username': '  AdMiN_NuEvO  '}
+        with patch('usuarios.forms.Usuario.objects.filter') as mock_filter:
+            mock_filter.return_value.exists.return_value = False
+            self.assertEqual(form_create.clean_username(), 'admin_nuevo')
+            mock_filter.assert_called_once_with(username__iexact='admin_nuevo')
+
+        form_edit = UsuarioEditForm()
+        form_edit.instance = Mock(pk=5)
+        form_edit.cleaned_data = {'username': '  UsUaRiO_EdItAdO '}
+        with patch('usuarios.forms.Usuario.objects.filter') as mock_filter_edit:
+            mock_filter_edit.return_value.exclude.return_value.exists.return_value = False
+            self.assertEqual(form_edit.clean_username(), 'usuario_editado')
+            mock_filter_edit.assert_called_once_with(username__iexact='usuario_editado')
+
+        auth_form = WebAuthenticationForm()
+        auth_form.cleaned_data = {'username': '  CAJERO01 '}
+        self.assertEqual(auth_form.clean_username(), 'cajero01')
+
+    def test_obtener_ip_cliente_y_middleware_detras_de_proxy_vps(self):
+        from usuarios.middleware import RealClientIPMiddleware
+        from usuarios.models import obtener_ip_cliente, registrar_auditoria
+
+        factory = RequestFactory()
+        # 1. X-Forwarded-For con IP pública del cliente y proxy interno
+        req = factory.get(
+            '/usuarios/',
+            REMOTE_ADDR='127.0.0.1',
+            HTTP_X_FORWARDED_FOR='190.86.45.12, 10.0.0.1',
+        )
+        self.assertEqual(obtener_ip_cliente(req), '190.86.45.12')
+
+        # 2. Cloudflare CF-Connecting-IP tiene prioridad
+        req_cf = factory.get(
+            '/usuarios/',
+            REMOTE_ADDR='127.0.0.1',
+            HTTP_CF_CONNECTING_IP='168.243.10.99',
+            HTTP_X_FORWARDED_FOR='172.18.0.2',
+        )
+        self.assertEqual(obtener_ip_cliente(req_cf), '168.243.10.99')
+
+        # 3. Middleware actualiza REMOTE_ADDR para todas las vistas y axes
+        middleware = RealClientIPMiddleware(lambda r: r)
+        middleware(req)
+        self.assertEqual(req.META['REMOTE_ADDR'], '190.86.45.12')
+        self.assertEqual(req.client_ip, '190.86.45.12')
+
+        # 4. registrar_auditoria limpia la IP antes de guardar
+        with patch('usuarios.models.Auditoria.objects.create') as mock_create:
+            registrar_auditoria(
+                usuario=None,
+                accion='CREAR_USUARIO',
+                entidad='Usuario',
+                entidad_id=1,
+                ip='::ffff:190.86.45.12',
+            )
+            mock_create.assert_called_once()
+            self.assertEqual(mock_create.call_args.kwargs['ip'], '190.86.45.12')

@@ -433,3 +433,182 @@ class PosIdempotenciaYConcurrenciaTests(SimpleTestCase):
         venta_mock.detalles.select_related.return_value = []
         pdf_bytes = generar_factura_pdf(venta_mock)
         self.assertTrue(pdf_bytes.startswith(b'%PDF'))
+
+    @patch('pos_app.views.Renta.objects')
+    @patch('pos_app.views.Venta.objects')
+    def test_reportes_cajero_restringe_a_sus_operaciones_del_mismo_dia(self, mock_venta_objs, mock_renta_objs):
+        from pos_app.views import _construir_transacciones_reporte, reportes_exportar_csv
+
+        cajero = Mock()
+        cajero.is_authenticated = True
+        cajero.es_admin = False
+        cajero.es_cajero = True
+        cajero.usuario_id = 7
+        cajero.username = 'cajero07'
+
+        # Intenta forzar fechas antiguas y otro usuario en la URL
+        req = self.factory.get('/reportes/?fecha_inicio=2020-01-01&fecha_fin=2020-12-31&usuario=1')
+        req.user = cajero
+        setattr(req, 'session', {})
+        setattr(req, '_messages', FallbackStorage(req))
+
+        v_qs = Mock()
+        v_qs.filter.return_value = v_qs
+        v_qs.exclude.return_value.aggregate.return_value = {'total': Decimal('15.00')}
+        v_qs.__iter__ = Mock(return_value=iter([]))
+        mock_venta_objs.select_related.return_value.prefetch_related.return_value.order_by.return_value = v_qs
+
+        r_qs = Mock()
+        r_qs.filter.return_value = r_qs
+        r_qs.aggregate.return_value = {'total': Decimal('5.00')}
+        r_qs.__iter__ = Mock(return_value=iter([]))
+        mock_renta_objs.select_related.return_value.prefetch_related.return_value.order_by.return_value = r_qs
+
+        datos = _construir_transacciones_reporte(req)
+        hoy_str = timezone.localdate().isoformat()
+        self.assertEqual(datos['fecha_inicio_str'], hoy_str)
+        self.assertEqual(datos['fecha_fin_str'], hoy_str)
+        self.assertEqual(datos['usuario_id_str'], '7')
+        v_qs.filter.assert_any_call(usuario_id=7)
+        r_qs.filter.assert_any_call(usuario_id=7)
+
+        # Cajero no puede descargar CSV (redirige a inicio con error)
+        res_csv = reportes_exportar_csv(req)
+        self.assertEqual(res_csv.status_code, 302)
+        self.assertEqual(res_csv.url, '/')
+
+    @patch('pos_app.views.Venta.objects')
+    def test_ticket_pdf_cajero_bloquea_venta_de_otro_usuario_o_dia_anterior(self, mock_venta_objs):
+        from pos_app.views import ticket_pdf
+
+        cajero = Mock()
+        cajero.is_authenticated = True
+        cajero.es_admin = False
+        cajero.es_cajero = True
+        cajero.usuario_id = 7
+
+        venta_ajena = Mock(
+            venta_id=99,
+            usuario_id=2,  # Otro cajero
+            fecha=timezone.now(),
+        )
+        mock_venta_objs.filter.return_value.first.return_value = venta_ajena
+
+        req = self.factory.get('/ticket_pdf/99/')
+        req.user = cajero
+        setattr(req, 'session', {})
+        setattr(req, '_messages', FallbackStorage(req))
+
+        res = ticket_pdf(req, venta_id=99)
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res.url, '/reportes/')
+        mensajes = [m.message for m in get_messages(req)]
+        self.assertTrue(any('Solo tienes permiso' in msg for msg in mensajes))
+
+    @patch('componentes.views.DetalleRenta.objects')
+    @patch('componentes.views.Equipo.objects')
+    @patch('componentes.views.Componente.objects')
+    @patch('componentes.views.get_object_or_404')
+    @patch('componentes.views.transaction.atomic')
+    def test_componente_edit_bloquea_quitar_o_cambiar_equipo_en_renta_o_revision_pendiente(
+        self, mock_atomic, mock_get_obj, mock_comp_objs, mock_eq_objs, mock_dr_objs
+    ):
+        from componentes.views import componente_edit
+
+        eq_actual = Mock(spec=Equipo, equipo_id=3, nombre='PC Gamer 03')
+        comp_inst = Mock(
+            spec=Componente,
+            componente_id=50,
+            nombre='Teclado Mecánico RGB',
+            numero_serie='SN-050',
+            tipo='TECLADO',
+            estado='DISPONIBLE',
+            equipo_id=3,
+            equipo=eq_actual,
+            descripcion='Marca: HyperX',
+            activo=True,
+        )
+        mock_get_obj.side_effect = [comp_inst, comp_inst]
+        mock_eq_objs.select_for_update.return_value.filter.return_value.order_by.return_value = [eq_actual]
+        # Simular que el equipo 3 está en PENDIENTE_REVISION o ACTIVA
+        mock_dr_objs.filter.return_value.exists.return_value = True
+
+        # Intenta quitar el componente (equipo='') enviándolo a bodega
+        req = self._preparar_request('/modificar_componente/', {
+            'componente_id': '50',
+            'nombre': 'Teclado Mecánico RGB',
+            'numero_serie': 'SN-050',
+            'tipo': 'TECLADO',
+            'estado': 'DISPONIBLE',
+            'equipo': '',
+        })
+        with patch('componentes.views.ComponenteForm') as mock_form_cls:
+            form_mock = Mock()
+            form_mock.is_valid.return_value = True
+            form_mock.cleaned_data = {
+                'nombre': 'Teclado Mecánico RGB',
+                'estado': 'DISPONIBLE',
+                'equipo': None,
+            }
+            mock_form_cls.return_value = form_mock
+
+            res = componente_edit(req)
+
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res.url, '/componentes/')
+        form_mock.save.assert_not_called()
+        mensajes = [m.message for m in get_messages(req)]
+        self.assertTrue(any('No se puede quitar ni cambiar de equipo' in msg for msg in mensajes))
+
+    @patch('equipos.views.DetalleRenta.objects')
+    @patch('equipos.views.Componente.objects')
+    @patch('equipos.views.get_object_or_404')
+    @patch('equipos.views.transaction.atomic')
+    def test_equipo_edit_bloquea_cambiar_estado_o_quitar_componentes_en_renta_o_revision(
+        self, mock_atomic, mock_get_obj, mock_comp_objs, mock_dr_objs
+    ):
+        from equipos.views import equipo_edit
+
+        eq_inst = Mock(
+            spec=Equipo,
+            equipo_id=4,
+            nombre='Consola PS5 #1',
+            tipo='CONSOLA',
+            tarifa_por_hora=Decimal('2.50'),
+            estado='DISPONIBLE',
+            activo=True,
+        )
+        mock_get_obj.side_effect = [eq_inst, eq_inst]
+        comp_asignado = Mock(spec=Componente, componente_id=77, nombre='Control DualSense', equipo_id=4, activo=True, estado='DISPONIBLE')
+        mock_comp_objs.select_for_update.return_value.filter.return_value.order_by.return_value = [comp_asignado]
+        # El equipo tiene renta activa o revisión pendiente
+        mock_dr_objs.filter.return_value.exists.return_value = True
+
+        # Intenta desmarcar el componente 77 (lista vacía de componentes)
+        req = self._preparar_request('/modificar_equipo/', {
+            'equipo_id': '4',
+            'nombre': 'Consola PS5 #1',
+            'tipo': 'CONSOLA',
+            'tarifa_por_hora': '2.50',
+            'estado': 'DISPONIBLE',
+            'componentes': [],
+        })
+        with patch('equipos.views.EquipoForm') as mock_eq_form_cls:
+            form_mock = Mock()
+            form_mock.is_valid.return_value = True
+            eq_unsaved = Mock(
+                equipo_id=4,
+                nombre='Consola PS5 #1',
+                estado='DISPONIBLE',
+                tarifa_por_hora=Decimal('2.50'),
+            )
+            form_mock.save.return_value = eq_unsaved
+            mock_eq_form_cls.return_value = form_mock
+
+            res = equipo_edit(req)
+
+        self.assertEqual(res.status_code, 302)
+        self.assertEqual(res.url, '/equipos/')
+        eq_unsaved.save.assert_not_called()
+        mensajes = [m.message for m in get_messages(req)]
+        self.assertTrue(any('No se pueden quitar ni modificar los componentes' in msg for msg in mensajes))

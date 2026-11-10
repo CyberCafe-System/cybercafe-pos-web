@@ -32,7 +32,9 @@
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Nombre de Usuario (Username) <span class="text-danger fw-bold">*</span></label>
-                        <input type="text" name="username" class="form-control rounded-3" placeholder="Ej. rmorales" maxlength="50" required>
+                        <input type="text" name="username" class="form-control rounded-3" placeholder="Ej. rmorales" maxlength="50"
+                            style="text-transform: lowercase;" oninput="this.value = this.value.toLowerCase()" required>
+                        <div class="form-text small text-muted mt-1">Se guardará automáticamente en minúsculas.</div>
                     </div>
 
                     <div class="mb-3">

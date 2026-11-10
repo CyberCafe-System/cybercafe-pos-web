@@ -9,6 +9,10 @@
             <form method="POST" action="{% url 'modificar_componente' %}">
                 {% csrf_token %}
                 <div class="modal-body p-4">
+                    <div id="alertaCompEquipoBloqueado" class="alert alert-warning border-warning small d-none mb-3">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        <strong>Equipo en renta o revisión pendiente:</strong> No es posible quitar este componente del equipo, cambiarlo a otro equipo ni modificar su estado físico hasta que el equipo esté libre de rentas y concluya su revisión.
+                    </div>
                     <p class="text-muted small mb-3">Los campos marcados con <span class="text-danger fw-bold">*</span> son obligatorios.</p>
                     <input type="hidden" name="componente_id" id="editCompId">
 
@@ -58,7 +62,7 @@
                         <select name="equipo" id="editCompEquipo" class="form-select">
                             <option value="">— Sin asignar (Bodega) —</option>
                             {% for equipo in equipos %}
-                            <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }})</option>
+                            <option value="{{ equipo.equipo_id }}">{{ equipo.nombre }} ({{ equipo.get_tipo_display }}){% if equipo.bloqueado_operacion %} — [En renta / revisión pendiente]{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
