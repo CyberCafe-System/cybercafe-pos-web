@@ -2,6 +2,7 @@ import ipaddress
 
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.db import models
+from django.utils import timezone
 
 
 class Rol(models.Model):
@@ -414,6 +415,27 @@ class Auditoria(models.Model):
             })
 
         return badges
+
+
+class LoginIntento(models.Model):
+    """
+    Estado persistente del limitador de intentos de inicio de sesión web.
+    Se guarda en base de datos para que todos los workers compartan el mismo contador
+    y el estado sobreviva a reinicios del servicio.
+    """
+    clave = models.CharField(max_length=150, unique=True)
+    intentos = models.PositiveIntegerField(default=0)
+    bloqueos = models.PositiveIntegerField(default=0)
+    bloqueado_hasta = models.DateTimeField(null=True, blank=True)
+    ultimo_intento = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        db_table = 'web_login_intentos'
+        verbose_name = 'intento de inicio de sesión'
+        verbose_name_plural = 'intentos de inicio de sesión'
+
+    def __str__(self):
+        return f"{self.clave} ({self.intentos} intentos)"
 
 
 _CABECERAS_IP_PROXY = (

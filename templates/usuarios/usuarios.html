@@ -23,19 +23,44 @@
 
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-body">
-        <div class="row g-2 align-items-center">
-            <div class="col-md-6">
+        <form method="GET" action="{% url 'usuarios' %}" class="row g-2 align-items-center">
+            <div class="col-md-5">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" id="buscadorUsuarios" class="form-control border-start-0"
-                        placeholder="Buscar usuario...">
-                </div>
-                <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
-                    <i class="bi bi-info-circle text-primary"></i>
-                    <span>Buscando en: <strong class="text-dark">Username</strong>, <strong
-                            class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
+                    <input type="text" name="q" id="buscadorUsuarios" class="form-control border-start-0"
+                        placeholder="Buscar usuario..." value="{{ q|default:'' }}">
                 </div>
             </div>
+            <div class="col-md-3">
+                <select name="estado" class="form-select" onchange="this.form.submit()">
+                    <option value="todos" {% if estado == 'todos' or not estado %}selected{% endif %}>Todos los Estados</option>
+                    <option value="activos" {% if estado == 'activos' %}selected{% endif %}>Solo Activos</option>
+                    <option value="inactivos" {% if estado == 'inactivos' %}selected{% endif %}>Solo Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="rol" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los Roles</option>
+                    {% for r in roles %}
+                    <option value="{{ r.rol_id }}" {% if rol_id == r.rol_id|stringformat:'s' %}selected{% endif %}>{{ r.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-dark w-100" title="Aplicar filtros">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                {% if q or estado and estado != 'todos' or rol_id %}
+                <a href="{% url 'usuarios' %}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+        <div class="mt-2 d-flex align-items-center gap-1 text-muted small">
+            <i class="bi bi-info-circle text-primary"></i>
+            <span>Buscando en: <strong class="text-dark">Username</strong>, <strong
+                    class="text-dark">Nombre</strong> y <strong class="text-dark">Correo</strong></span>
         </div>
     </div>
 </div>
