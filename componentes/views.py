@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from equipos.models import Equipo
@@ -31,11 +32,36 @@ def _equipo_tiene_renta_o_revision(equipo_id) -> bool:
 @login_required
 @admin_required
 def componente_list(request):
+    q = (request.GET.get('q') or '').strip()
+    tipo = (request.GET.get('tipo') or '').strip()
+    estado = (request.GET.get('estado') or '').strip()
+    activo = (request.GET.get('activo') or 'todos').strip().lower()
+
     componentes_qs = (
         Componente.objects.select_related('equipo')
         .all()
         .order_by('equipo__nombre', 'nombre')
     )
+
+    if q:
+        componentes_qs = componentes_qs.filter(
+            Q(nombre__icontains=q)
+            | Q(numero_serie__icontains=q)
+            | Q(equipo__nombre__icontains=q)
+            | Q(descripcion__icontains=q)
+        )
+
+    if tipo:
+        componentes_qs = componentes_qs.filter(tipo=tipo)
+
+    if estado:
+        componentes_qs = componentes_qs.filter(estado=estado)
+
+    if activo == 'activos':
+        componentes_qs = componentes_qs.filter(activo=True)
+    elif activo == 'inactivos':
+        componentes_qs = componentes_qs.filter(activo=False)
+
     paginator = Paginator(componentes_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
     equipos = list(Equipo.objects.all().order_by('nombre'))
@@ -51,6 +77,12 @@ def componente_list(request):
         'page_obj': page_obj,
         'equipos': equipos,
         'equipos_bloqueados_ids': list(equipos_bloqueados_ids),
+        'tipo_choices': Componente.TIPO_CHOICES,
+        'estado_choices': Componente.ESTADO_CHOICES,
+        'q': q,
+        'tipo': tipo,
+        'estado': estado,
+        'activo': activo,
     })
 
 

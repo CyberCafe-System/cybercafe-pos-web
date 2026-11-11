@@ -54,3 +54,55 @@ class WebPImageProcessingTests(SimpleTestCase):
             self.assertFalse(form.is_valid())
             self.assertIn('precio_compra', form.errors)
             self.assertIn('cantidad', form.errors)
+
+    def test_producto_form_rejects_oversized_images(self):
+        with patch.object(Categoria.objects, 'filter') as mock_cat_filter:
+            mock_cat_filter.return_value.order_by.return_value = Categoria.objects.none()
+            # Crear un JPEG válido y expandir su tamaño por encima de 3 MB
+            buf = io.BytesIO()
+            img = Image.new('RGB', (20, 20), color='blue')
+            img.save(buf, format='JPEG')
+            raw = buf.getvalue() + (b'\x00' * (4 * 1024 * 1024))
+            oversized_file = SimpleUploadedFile(
+                'foto_pesada.jpg',
+                raw,
+                content_type='image/jpeg',
+            )
+            form = ProductoForm(
+                data={
+                    'nombre': 'Doritos',
+                    'categoria': 1,
+                    'precio_compra': '0.50',
+                    'precio_venta': '1.00',
+                    'cantidad': '5',
+                },
+                files={'imagen_upload': oversized_file},
+            )
+            self.assertFalse(form.is_valid())
+            self.assertIn('imagen_upload', form.errors)
+            self.assertIn('supera el tamaño máximo permitido de 3 MB', form.errors['imagen_upload'][0])
+
+    def test_producto_list_filtros_categoria_estado_stock(self):
+        from django.test.client import RequestFactory
+        from inventario.views import producto_list
+
+        factory = RequestFactory()
+        req = factory.get('/inventario/?q=Doritos&categoria=2&estado=activos&stock=bajo_stock')
+        req.user = Mock()
+        req.user.is_authenticated = True
+        req.user.es_admin = True
+
+        with patch('inventario.views.Producto.objects.select_related') as mock_sr, \
+             patch('inventario.views.Categoria.objects.filter') as mock_cat, \
+             patch('inventario.views.render') as mock_render:
+            mock_qs = mock_sr.return_value.all.return_value.order_by.return_value
+            mock_qs.filter.return_value = mock_qs
+
+            producto_list(req)
+            self.assertTrue(mock_qs.filter.called)
+            mock_render.assert_called_once()
+            ctx = mock_render.call_args[0][2]
+            self.assertEqual(ctx['q'], 'Doritos')
+            self.assertEqual(ctx['categoria_id'], '2')
+            self.assertEqual(ctx['estado'], 'activos')
+            self.assertEqual(ctx['stock'], 'bajo_stock')

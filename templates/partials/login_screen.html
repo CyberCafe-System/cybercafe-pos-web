@@ -12,10 +12,16 @@
         </div>
         <h5 class="text-center fw-bold text-dark mb-4">Inicia Sesión</h5>
 
-        <form method="POST" action="{{ form_action }}">
+        <form method="POST" action="{{ form_action }}" id="loginForm">
             {% csrf_token %}
 
-            {% if messages %}
+            {% if lockout_error %}
+            <div class="alert alert-danger rounded-4 py-2 text-center small mb-3">
+                {{ lockout_error }}
+            </div>
+            {% endif %}
+
+            {% if messages and not lockout_error %}
             {% for message in messages %}
             <div class="alert alert-{% if message.tags == 'error' %}danger{% elif message.tags %}{{ message.tags }}{% else %}warning{% endif %} rounded-4 py-2 text-center small mb-3">
                 {{ message }}
@@ -23,14 +29,19 @@
             {% endfor %}
             {% endif %}
 
-            {% if form.errors %}
+            {% if form.errors and not lockout_error %}
             <div class="alert alert-danger rounded-4 py-2 text-center small mb-3">
                 {% if form.non_field_errors %}
                     {% for error in form.non_field_errors %}
                         {{ error }}<br>
                     {% endfor %}
                 {% else %}
-                    Usuario o contraseña incorrectos.
+                    Usuario o contraseña incorrectos.<br>
+                {% endif %}
+                {% if intentos_restantes is not None %}
+                <div class="mt-1 fw-bold">
+                    Le quedan {{ intentos_restantes }} intento(s) antes del bloqueo temporal.
+                </div>
                 {% endif %}
             </div>
             {% endif %}
@@ -44,8 +55,9 @@
                     <div class="icon-circle-glass"><i class="bi bi-person-fill"></i></div>
                     Nombre de Usuario
                 </label>
-                <input type="text" name="username" class="form-control glass-input"
+                <input type="text" name="username" id="loginUsername" class="form-control glass-input"
                     placeholder="Ingresa tu nombre de usuario" style="text-transform: lowercase;"
+                    value="{{ form.username.value|default:''|lower }}"
                     oninput="this.value = this.value.toLowerCase()" required autofocus>
             </div>
 
@@ -54,12 +66,12 @@
                     <div class="icon-circle-glass"><i class="bi bi-lock-fill"></i></div>
                     Contraseña
                 </label>
-                <input type="password" name="password" class="form-control glass-input"
+                <input type="password" name="password" id="loginPassword" class="form-control glass-input"
                     placeholder="Ingresa tu contraseña" required>
             </div>
 
             <div class="text-center mt-5">
-                <button type="submit" class="btn glass-btn">Iniciar Sesión</button>
+                <button type="submit" id="btnLoginSubmit" class="btn glass-btn">Iniciar Sesión</button>
             </div>
         </form>
 

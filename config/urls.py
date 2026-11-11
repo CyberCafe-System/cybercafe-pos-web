@@ -24,11 +24,7 @@ urlpatterns = [
     # --- RUTAS DE ACCESO ---
     path(
         'login/',
-        LoginView.as_view(
-            template_name='login.html',
-            authentication_form=WebAuthenticationForm,
-            redirect_authenticated_user=True,
-        ),
+        usuarios_views.PosLoginView.as_view(),
         name='login',
     ),
     path('logout/', LogoutView.as_view(), name='logout'),

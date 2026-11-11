@@ -2,15 +2,18 @@ import logging
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Q
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 
 from .decorators import admin_required
-from .forms import UsuarioCreateForm, UsuarioEditForm
-from .models import Auditoria, Rol, Usuario, registrar_auditoria
+from .forms import UsuarioCreateForm, UsuarioEditForm, WebAuthenticationForm
+from .models import Auditoria, Rol, Usuario, registrar_auditoria, obtener_ip_cliente
+from .rate_limiter import formatear_espera, login_rate_limiter
 from .validators import validar_password_intermedia
 
 logger = logging.getLogger(__name__)
@@ -57,11 +60,94 @@ def _normalizar_usernames_minusculas():
         logger.debug('No se pudo ejecutar la normalización automática de usernames a minúsculas', exc_info=True)
 
 
+class PosLoginView(LoginView):
+    """
+    Login web con un único limitador de intentos (persistente en base de datos).
+    Toda la información de intentos restantes y tiempo de espera proviene de ese limitador.
+    """
+    template_name = 'login.html'
+    authentication_form = WebAuthenticationForm
+    redirect_authenticated_user = True
+
+    @staticmethod
+    def _mensaje_bloqueo(segundos):
+        return f"Demasiados intentos fallidos. Tiempo estimado de espera: {formatear_espera(segundos)}."
+
+    def _respuesta_bloqueada(self, segundos, form=None):
+        """Respuesta 429 con el tiempo real restante (sin evaluar credenciales)."""
+        if form is None:
+            form = self.get_form_class()(request=self.request)
+        context = self.get_context_data(
+            form=form,
+            lockout_error=self._mensaje_bloqueo(segundos),
+            wait_seconds=segundos,
+        )
+        response = self.render_to_response(context)
+        response.status_code = 429
+        response['Retry-After'] = str(segundos)
+        return response
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.setdefault('max_intentos', login_rate_limiter.max_attempts)
+        # Al recargar la página (GET) se sigue mostrando el bloqueo vigente de esta IP.
+        if 'lockout_error' not in context and self.request.method == 'GET':
+            estado = login_rate_limiter.bloqueo_activo_por_ip(obtener_ip_cliente(self.request))
+            if estado is not None:
+                context['lockout_error'] = self._mensaje_bloqueo(estado.segundos_restantes)
+                context['wait_seconds'] = estado.segundos_restantes
+        return context
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.method == 'POST' and not request.user.is_authenticated:
+            username = request.POST.get('username', '')
+            client_key = login_rate_limiter.get_client_key(request, username)
+            estado = login_rate_limiter.estado(client_key)
+            if estado.bloqueado:
+                return self._respuesta_bloqueada(estado.segundos_restantes)
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        username = form.cleaned_data.get('username', '')
+        login_rate_limiter.registrar_exito(login_rate_limiter.get_client_key(self.request, username))
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        username = self.request.POST.get('username', '')
+        client_key = login_rate_limiter.get_client_key(self.request, username)
+        estado = login_rate_limiter.registrar_fallo(client_key)
+        if estado.bloqueado:
+            return self._respuesta_bloqueada(estado.segundos_restantes, form=form)
+        return self.render_to_response(
+            self.get_context_data(form=form, intentos_restantes=estado.intentos_restantes)
+        )
+
+
 @login_required
 @admin_required
 def usuario_list(request):
     _normalizar_usernames_minusculas()
+    q = (request.GET.get('q') or '').strip()
+    estado = (request.GET.get('estado') or 'todos').strip().lower()
+    rol_id = (request.GET.get('rol') or '').strip()
+
     usuarios_qs = Usuario.objects.select_related('rol').all().order_by('usuario_id')
+
+    if q:
+        usuarios_qs = usuarios_qs.filter(
+            Q(username__icontains=q)
+            | Q(nombre__icontains=q)
+            | Q(correo__icontains=q)
+        )
+
+    if estado == 'activos':
+        usuarios_qs = usuarios_qs.filter(activo=True)
+    elif estado == 'inactivos':
+        usuarios_qs = usuarios_qs.filter(activo=False)
+
+    if rol_id.isdigit():
+        usuarios_qs = usuarios_qs.filter(rol_id=int(rol_id))
+
     paginator = Paginator(usuarios_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
     current_uid = getattr(request.user, 'usuario_id', None)
@@ -75,6 +161,9 @@ def usuario_list(request):
             'usuarios': page_obj,
             'page_obj': page_obj,
             'roles': roles,
+            'q': q,
+            'estado': estado,
+            'rol_id': rol_id,
         },
     )
 
