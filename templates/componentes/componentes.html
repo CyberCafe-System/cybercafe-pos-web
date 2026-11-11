@@ -14,17 +14,53 @@
     </div>
 </div>
 
-<!-- Buscador -->
+<!-- Buscador y Filtros -->
 <div class="card shadow-sm border-0 rounded-4 mb-4">
     <div class="card-body">
-        <div class="input-group">
-            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-            <input type="text" id="buscadorComponentes" class="form-control border-start-0"
-                placeholder="Buscar componente...">
-        </div>
-        <small class="text-muted mt-1 d-block">
-            <i class="bi bi-info-circle me-1"></i>Buscando en: <strong>Nombre, N° Serie, Tipo, Equipo Asignado y
-                Estado</strong>
+        <form method="GET" action="{% url 'componentes' %}" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                    <input type="text" name="q" id="buscadorComponentes" class="form-control border-start-0"
+                        placeholder="Buscar componente..." value="{{ q|default:'' }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <select name="tipo" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los Tipos</option>
+                    {% for code, label in tipo_choices %}
+                    <option value="{{ code }}" {% if tipo == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="estado" class="form-select" onchange="this.form.submit()">
+                    <option value="">Todos los Estados</option>
+                    {% for code, label in estado_choices %}
+                    <option value="{{ code }}" {% if estado == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select name="activo" class="form-select" onchange="this.form.submit()">
+                    <option value="todos" {% if activo == 'todos' or not activo %}selected{% endif %}>Activos / Inactivos</option>
+                    <option value="activos" {% if activo == 'activos' %}selected{% endif %}>Solo Activos</option>
+                    <option value="inactivos" {% if activo == 'inactivos' %}selected{% endif %}>Solo Inactivos</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-outline-dark w-100" title="Aplicar filtros">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                {% if q or tipo or estado or activo and activo != 'todos' %}
+                <a href="{% url 'componentes' %}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                    <i class="bi bi-x-circle"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+        <small class="text-muted mt-2 d-block">
+            <i class="bi bi-info-circle me-1"></i>Buscando en: <strong>Nombre, N° Serie, Marca/Modelo y Equipo Asignado</strong>
         </small>
     </div>
 </div>

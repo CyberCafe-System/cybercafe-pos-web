@@ -76,6 +76,18 @@ class ProductoForm(forms.ModelForm):
             raise forms.ValidationError("La cantidad no puede ser negativa.")
         return cantidad
 
+    def clean_imagen_upload(self):
+        archivo = self.cleaned_data.get('imagen_upload')
+        if archivo and hasattr(archivo, 'size') and archivo.size:
+            from .utils import MAX_UPLOAD_BYTES
+            if archivo.size > MAX_UPLOAD_BYTES:
+                limite_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
+                peso_mb = round(archivo.size / (1024 * 1024), 2)
+                raise forms.ValidationError(
+                    f"La imagen seleccionada pesa {peso_mb} MB y supera el tamaño máximo permitido de {limite_mb} MB."
+                )
+        return archivo
+
     def save(self, commit=True):
         producto = super().save(commit=False)
         archivo = self.cleaned_data.get('imagen_upload')

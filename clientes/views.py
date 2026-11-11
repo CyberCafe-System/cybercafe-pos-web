@@ -44,6 +44,7 @@ def _asegurar_columna_direccion_opcional():
 def cliente_list(request):
     _asegurar_columna_direccion_opcional()
     query = (request.GET.get('q') or '').strip()
+    estado = (request.GET.get('estado') or 'todos').strip().lower()
     clientes_qs = Cliente.objects.all().order_by('cliente_id')
     if query:
         clientes_qs = clientes_qs.filter(
@@ -51,7 +52,12 @@ def cliente_list(request):
             | Q(apellido__icontains=query)
             | Q(dui__icontains=query)
             | Q(telefono__icontains=query)
+            | Q(correo__icontains=query)
         )
+    if estado == 'activos':
+        clientes_qs = clientes_qs.filter(activo=True)
+    elif estado == 'inactivos':
+        clientes_qs = clientes_qs.filter(activo=False)
 
     paginator = Paginator(clientes_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
@@ -62,6 +68,7 @@ def cliente_list(request):
             'clientes': page_obj,
             'page_obj': page_obj,
             'query': query,
+            'estado': estado,
         },
     )
 

@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db import transaction
 from django.utils.text import slugify
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB máximo para prevenir agotamiento de RAM
+MAX_UPLOAD_BYTES = 3 * 1024 * 1024  # 3 MB máximo para prevenir agotamiento de RAM
 
 
 def procesar_imagen_a_webp(archivo, nombre_producto, max_dimension=(600, 600), calidad=85, imagen_anterior=None):
@@ -20,7 +20,8 @@ def procesar_imagen_a_webp(archivo, nombre_producto, max_dimension=(600, 600), c
     Retorna la ruta relativa para el campo `imagen` de la base de datos (ej. 'productos/coca_cola_a1b2c3d4.webp').
     """
     if hasattr(archivo, 'size') and archivo.size and archivo.size > MAX_UPLOAD_BYTES:
-        raise ValueError("El archivo de imagen supera el tamaño máximo permitido de 10 MB.")
+        limite_mb = MAX_UPLOAD_BYTES // (1024 * 1024)
+        raise ValueError(f"El archivo de imagen supera el tamaño máximo permitido de {limite_mb} MB.")
 
     carpeta = settings.MEDIA_ROOT / 'productos'
     carpeta.mkdir(parents=True, exist_ok=True)

@@ -186,3 +186,23 @@ class ClienteViewsAjaxTests(SimpleTestCase):
         self.assertFalse(data['success'])
         self.assertIn('dui', data['errors'])
 
+    @patch('clientes.views.render')
+    @patch.object(Cliente.objects, 'all')
+    def test_cliente_list_filtros_estado_y_busqueda(self, mock_all, mock_render):
+        from clientes.views import cliente_list
+
+        mock_qs = mock_all.return_value.order_by.return_value
+        mock_qs.filter.return_value = mock_qs
+
+        req = self.factory.get('/clientes/?q=Carlos&estado=activos')
+        req.user = Mock()
+        req.user.is_authenticated = True
+        req.user.es_admin = True
+
+        cliente_list(req)
+        self.assertTrue(mock_qs.filter.called)
+        mock_render.assert_called_once()
+        ctx = mock_render.call_args[0][2]
+        self.assertEqual(ctx['query'], 'Carlos')
+        self.assertEqual(ctx['estado'], 'activos')
+

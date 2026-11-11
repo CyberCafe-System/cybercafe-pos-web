@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db import transaction
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 
 from categorias.models import Categoria
@@ -21,7 +22,33 @@ logger = logging.getLogger(__name__)
 @login_required
 @admin_required
 def producto_list(request):
+    q = (request.GET.get('q') or '').strip()
+    categoria_id = (request.GET.get('categoria') or '').strip()
+    estado = (request.GET.get('estado') or 'todos').strip().lower()
+    stock = (request.GET.get('stock') or 'todos').strip().lower()
+
     productos_qs = Producto.objects.select_related('categoria').all().order_by('producto_id')
+
+    if q:
+        productos_qs = productos_qs.filter(
+            Q(nombre__icontains=q) | Q(categoria__nombre__icontains=q)
+        )
+
+    if categoria_id.isdigit():
+        productos_qs = productos_qs.filter(categoria_id=int(categoria_id))
+
+    if estado == 'activos':
+        productos_qs = productos_qs.filter(activo=True)
+    elif estado == 'inactivos':
+        productos_qs = productos_qs.filter(activo=False)
+
+    if stock == 'con_stock':
+        productos_qs = productos_qs.filter(cantidad__gt=0)
+    elif stock == 'sin_stock':
+        productos_qs = productos_qs.filter(cantidad=0)
+    elif stock == 'bajo_stock':
+        productos_qs = productos_qs.filter(cantidad__gt=0, cantidad__lte=5)
+
     paginator = Paginator(productos_qs, 10)
     page_obj = paginator.get_page(request.GET.get('page'))
     categorias = Categoria.objects.filter(activa=True).order_by('nombre')
@@ -32,6 +59,10 @@ def producto_list(request):
             'productos': page_obj,
             'page_obj': page_obj,
             'categorias': categorias,
+            'q': q,
+            'categoria_id': categoria_id,
+            'estado': estado,
+            'stock': stock,
         },
     )
 
@@ -73,6 +104,8 @@ def producto_create(request):
                     messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente con imagen optimizada.')
                 else:
                     messages.success(request, f'Producto "{producto.nombre}" registrado exitosamente.')
+            except ValueError as e:
+                messages.error(request, str(e))
             except Exception:
                 logger.exception('Error al registrar el producto')
                 messages.error(request, 'Ocurrió un error al registrar el producto. Intenta nuevamente.')
@@ -122,6 +155,8 @@ def producto_edit(request):
                     )
 
                 messages.success(request, f'Producto "{producto.nombre}" actualizado correctamente.')
+            except ValueError as e:
+                messages.error(request, str(e))
             except Exception:
                 logger.exception('Error al actualizar el producto')
                 messages.error(request, 'Ocurrió un error al actualizar el producto. Intenta nuevamente.')

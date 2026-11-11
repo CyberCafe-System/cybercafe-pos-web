@@ -1,7 +1,7 @@
 from unittest.mock import Mock, patch
 
 from django.db.migrations.loader import MigrationLoader
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, TestCase
 from django.test.client import RequestFactory
 
 from .models import Rol, Usuario
@@ -537,3 +537,163 @@ class UsuarioValidationRulesTests(SimpleTestCase):
             )
             mock_create.assert_called_once()
             self.assertEqual(mock_create.call_args.kwargs['ip'], '190.86.45.12')
+
+    def test_usuarios_filtros_estado_rol_busqueda(self):
+        from usuarios.views import usuario_list
+
+        factory = RequestFactory()
+        req = factory.get('/usuarios/?q=admin&estado=activos&rol=1')
+        req.user = Usuario(usuario_id=1, username='admin', rol_id=1)
+
+        with patch('usuarios.views.Usuario.objects.select_related') as mock_sr, \
+             patch('usuarios.views.Rol.objects.all') as mock_roles, \
+             patch('usuarios.views.render') as mock_render:
+            mock_qs = mock_sr.return_value.all.return_value.order_by.return_value
+            mock_qs.filter.return_value = mock_qs
+
+            usuario_list(req)
+            self.assertTrue(mock_qs.filter.called)
+            mock_render.assert_called_once()
+            ctx = mock_render.call_args[0][2]
+            self.assertEqual(ctx['q'], 'admin')
+            self.assertEqual(ctx['estado'], 'activos')
+            self.assertEqual(ctx['rol_id'], '1')
+
+
+class LoginRateLimiterDBTests(TestCase):
+    """Limitador persistente: contador, tiempo real, progresión y estado compartido."""
+
+    def setUp(self):
+        from usuarios.rate_limiter import login_rate_limiter
+        login_rate_limiter.reset_all()
+        self.limiter = login_rate_limiter
+
+    def _limiter(self, **kw):
+        from usuarios.rate_limiter import LoginRateLimiter
+        base = dict(max_attempts=3, lockout_seconds=10, max_lockout_seconds=100,
+                    lockout_multiplier=2.0, escalation_window=300)
+        base.update(kw)
+        return LoginRateLimiter(**base)
+
+    def test_contador_baja_en_cada_fallo_y_bloquea_al_limite(self):
+        lim = self._limiter()
+        key = '10.0.0.1:cajero'
+        e1 = lim.registrar_fallo(key)
+        e2 = lim.registrar_fallo(key)
+        self.assertEqual((e1.intentos_restantes, e2.intentos_restantes), (2, 1))
+        self.assertFalse(e2.bloqueado)
+        e3 = lim.registrar_fallo(key)
+        self.assertTrue(e3.bloqueado)
+        self.assertEqual(e3.intentos, 3)  # el fallo que bloquea suma exactamente 1
+        self.assertEqual(e3.segundos_restantes, 10)
+
+    def test_dos_instancias_comparten_el_mismo_contador(self):
+        """Simula dos workers: ambos deben ver el mismo estado (antes era memoria por proceso)."""
+        worker_a, worker_b = self._limiter(), self._limiter()
+        key = '10.0.0.2:admin'
+        worker_a.registrar_fallo(key)
+        estado_b = worker_b.registrar_fallo(key)
+        self.assertEqual(estado_b.intentos, 2)
+        self.assertEqual(worker_a.estado(key).intentos_restantes, 1)
+
+    def test_segundos_restantes_son_reales_y_decrecen(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from usuarios.models import LoginIntento
+        lim = self._limiter()
+        key = '10.0.0.3:u'
+        for _ in range(3):
+            lim.registrar_fallo(key)
+        LoginIntento.objects.filter(clave=key).update(
+            bloqueado_hasta=timezone.now() + timedelta(seconds=4)
+        )
+        estado = lim.estado(key)
+        self.assertTrue(estado.bloqueado)
+        self.assertIn(estado.segundos_restantes, (3, 4))
+
+    def test_bloqueo_cumplido_reinicia_ciclo_y_segunda_espera_se_duplica(self):
+        from django.utils import timezone
+        from usuarios.models import LoginIntento
+        lim = self._limiter()
+        key = '10.0.0.4:u'
+        for _ in range(3):
+            primero = lim.registrar_fallo(key)
+        self.assertEqual(primero.segundos_restantes, 10)
+
+        # Bloqueo cumplido: el vencimiento queda en el pasado.
+        LoginIntento.objects.filter(clave=key).update(bloqueado_hasta=timezone.now())
+        self.assertFalse(lim.estado(key).bloqueado)
+        for _ in range(3):
+            segundo = lim.registrar_fallo(key)
+        self.assertTrue(segundo.bloqueado)
+        self.assertEqual(segundo.segundos_restantes, 20)
+
+    def test_exito_reinicia_y_tope_maximo(self):
+        lim = self._limiter(max_lockout_seconds=15)
+        key = '10.0.0.5:u'
+        for _ in range(3):
+            lim.registrar_fallo(key)
+        lim.registrar_exito(key)
+        self.assertEqual(lim.estado(key).intentos, 0)
+
+    def test_formatear_espera(self):
+        from usuarios.rate_limiter import formatear_espera
+        self.assertEqual(formatear_espera(45), '45 s')
+        self.assertEqual(formatear_espera(120), '2 min')
+        self.assertEqual(formatear_espera(90), '1 min 30 s')
+
+
+class PosLoginViewFlujoTests(TestCase):
+    """Flujo completo de la vista: intentos restantes, bloqueo 429 y tiempo real."""
+
+    def setUp(self):
+        from usuarios.rate_limiter import login_rate_limiter
+        login_rate_limiter.reset_all()
+        self.limiter = login_rate_limiter
+        # La tabla `usuarios` es externa (managed=False): se simulan credenciales inválidas.
+        patcher = patch('django.contrib.auth.forms.authenticate', return_value=None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _post(self, username='noexiste', password='mala'):
+        return self.client.post('/login/', {'username': username, 'password': password})
+
+    def test_intentos_restantes_se_actualizan_en_cada_intento(self):
+        maximo = self.limiter.max_attempts
+        for n in range(1, maximo):
+            resp = self._post()
+            self.assertEqual(resp.status_code, 200)
+            self.assertEqual(resp.context['intentos_restantes'], maximo - n)
+            self.assertContains(resp, f'Le quedan {maximo - n} intento(s)')
+
+    def test_bloqueo_devuelve_429_con_tiempo_real_y_sin_doble_conteo(self):
+        maximo = self.limiter.max_attempts
+        for _ in range(maximo - 1):
+            self._post()
+        resp = self._post()  # intento que bloquea
+        self.assertEqual(resp.status_code, 429)
+        self.assertEqual(resp.context['wait_seconds'], self.limiter.lockout_seconds)
+        self.assertEqual(int(resp['Retry-After']), self.limiter.lockout_seconds)
+        self.assertContains(resp, 'Tiempo estimado de espera:', status_code=429)
+
+        # Intento durante el bloqueo: sigue 429 y NO suma otro fallo.
+        resp2 = self._post()
+        self.assertEqual(resp2.status_code, 429)
+        from usuarios.models import LoginIntento
+        self.assertEqual(LoginIntento.objects.get().intentos, maximo)
+
+    def test_get_mantiene_el_bloqueo_vigente(self):
+        for _ in range(self.limiter.max_attempts):
+            self._post()
+        resp = self.client.get('/login/')
+        self.assertIn('wait_seconds', resp.context)
+        self.assertGreater(resp.context['wait_seconds'], 0)
+
+    def test_usuario_se_repinta_tras_fallo(self):
+        resp = self._post(username='Cajero01')
+        self.assertContains(resp, 'value="cajero01"')
+
+    def test_axes_ya_no_participa_en_el_login(self):
+        from django.conf import settings
+        self.assertNotIn('axes.middleware.AxesMiddleware', settings.MIDDLEWARE)
+        self.assertNotIn('axes.backends.AxesStandaloneBackend', settings.AUTHENTICATION_BACKENDS)
